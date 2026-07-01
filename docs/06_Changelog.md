@@ -4,6 +4,21 @@ All notable changes to the GymTrackPro project will be documented in this file. 
 
 ---
 
+## [v2.0.0-rc1.scaffold] - 2026-07-02
+
+### Added
+*   **Solution Structure:** Created `src/GymTrackPro.slnx` containing three C# projects:
+    *   `GymTrackPro.Shared` (Class Library)
+    *   `GymTrackPro.API` (Web API)
+    *   `GymTrackPro.Mobile` (.NET MAUI Mobile App)
+*   **Project References:** Setup reference paths (`GymTrackPro.API` and `GymTrackPro.Mobile` both reference `GymTrackPro.Shared`).
+*   **Installed NuGet Packages:**
+    *   `GymTrackPro.API`: `Microsoft.EntityFrameworkCore.SqlServer`, `Microsoft.AspNetCore.Authentication.JwtBearer`, and `BCrypt.Net-Next`.
+    *   `GymTrackPro.Mobile`: `CommunityToolkit.Mvvm` and `sqlite-net-pcl`.
+*   **Build Validation:** Verified solution restore and build with zero errors.
+
+---
+
 ## [v2.0.0-rc1.rev1] - 2026-07-02
 
 ### Added

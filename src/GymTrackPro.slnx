@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="GymTrackPro.API/GymTrackPro.API.csproj" />
+  <Project Path="GymTrackPro.Mobile/GymTrackPro.Mobile.csproj" />
+  <Project Path="GymTrackPro.Shared/GymTrackPro.Shared.csproj" />
+</Solution>
