@@ -1,0 +1,60 @@
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Re]leases/
+x64/
+x86/
+SDKRedirects/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio 2015/2017/2019/2022 cache/options directory
+.vs/
+# Generated files
+Generated\ Files/
+
+# MSTest ResolveAssemblyReference cache
+*.cache
+# Microsoft Fakes
+FakesAssemblies/
+
+# GhostDoc Local Settings DB
+*.GhostDoc.xml
+
+# Rider
+.idea/
+*.sln.iml
+
+# Visual Studio Code
+.vscode/
+
+# Node.js (for our parser)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+temp-parser/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Databases & local configs
+*.db
+*.sqlite
+*.sqlite3
+appsettings.Development.json
+appsettings.local.json
+.env
+.env.local
