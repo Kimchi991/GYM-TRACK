@@ -1,57 +1,91 @@
 # System Architecture
 
-GymTrackPro uses a Clean Architecture design coupled with a layered Presentation system on the client. It is engineered with an **Offline-First** mindset to support constant operability at gym check-in desks.
+GymTrackPro uses a simplified C# solution architecture coupled with a layered Presentation system on the client. It is engineered with an **Offline-First** mindset to support constant operability at gym check-in desks.
 
 ---
 
-## 🏛️ Clean Architecture Layers Diagram
+## 🏛️ Simplified Solution Layering
 
-The project structure decouples our core domain models and business rules from external details like databases, UI frameworks, and ORMs.
+To prevent over-complication for a three-person student team, our architecture is grouped into exactly three projects under `src/`:
 
 ```mermaid
 graph TD
-    subgraph Core
-        Domain[Domain Layer - Entities, Rules]
-        App[Application Layer - Interfaces, DTOs, Use Cases]
+    subgraph GymTrackPro.Shared
+        Contracts[DTOs, Enums, Constants, General Helpers, Validators]
     end
 
-    subgraph Infrastructure & Hosts
-        Infra[Infrastructure Layer - Data Access, Offline Sync Queue, APIs]
-        Shared[Shared Layer - Enums, Constants, Utilities]
-        ServerHost[Server API / Host Layer]
-        ClientHost[Mobile UI Client Page / VM Layer]
+    subgraph GymTrackPro.Mobile (MAUI Client)
+        Views[XAML Views]
+        VMs[ViewModels]
+        ClientServices[Client Services - Sync, Network]
+        ClientRepos[Client Repositories - SQLite]
+        SQLite[(SQLite Local DB)]
+        
+        Views <--> VMs
+        VMs <--> ClientServices
+        ClientServices <--> ClientRepos
+        ClientRepos <--> SQLite
     end
 
-    App --> Domain
-    Infra --> App
-    ServerHost --> App
-    ServerHost --> Infra
-    ClientHost --> App
-    ClientHost --> Infra
-    Infra -.-> Shared
-    App -.-> Shared
+    subgraph GymTrackPro.API (ASP.NET Core Server)
+        Controllers[API Controllers]
+        ServerServices[Business Services]
+        ServerRepos[Repositories - EF Core]
+        SQLServer[(SQL Server MonsterASP)]
+        
+        Controllers <--> ServerServices
+        ServerServices <--> ServerRepos
+        ServerRepos <--> SQLServer
+    end
+
+    GymTrackPro.Mobile -- References --> GymTrackPro.Shared
+    GymTrackPro.API -- References --> GymTrackPro.Shared
+    GymTrackPro.Mobile -- HTTPS REST (JWT) --> GymTrackPro.API
 ```
 
-### 1. Domain Layer (`GymTrackPro.Domain`)
-The core of the application. It contains the business entities, value objects, exceptions, and core domain constraints.
-*   **Rule:** It has zero dependencies on other layers or third-party libraries (except for basic framework types). It is entirely decoupled from database technology or UI bindings.
+### 1. Shared Project (`GymTrackPro.Shared`)
+Contains the common definitions used by both the Mobile app and the Web API.
+*   **Contents:** Data Transfer Objects (DTOs), common enums (e.g. `MembershipStatus`), static constants (e.g. error strings), shared helper classes, common validation rules, and core domain model definitions.
+*   **Rule:** This project is a simple .NET Class Library. It has no dependencies on external web hosting or UI frameworks.
 
-### 2. Application Layer (`GymTrackPro.Application`)
-Defines the behavior and capabilities of the system. It houses the interfaces, data transfer contracts (DTOs), validators, and use-case handlers.
-*   **Rule:** It depends only on the Domain Layer. It defines interfaces (e.g. `IMemberRepository`) but does not implement them.
+### 2. Backend Web API (`GymTrackPro.API`)
+Acts as the central business logic controller and handles secure data persistence on the server.
+*   **Contents:** Controllers (REST endpoints), business services, repositories (using EF Core), the database context (`DbContext`) pointing to Microsoft SQL Server hosted on MonsterASP, custom authentication middlewares, and password utilities (BCrypt).
+*   **Rule:** The API never has dependency references to MAUI or mobile libraries. It is a standalone web host.
 
-### 3. Infrastructure Layer (`GymTrackPro.Infrastructure`)
-Contains all the concrete implementations of interfaces defined in the Application layer, such as data persistence providers, synchronization coordinators, and external service adapters.
-*   **Rule:** It handles database queries, network status monitoring, and sync queue processing.
+### 3. Mobile Client (`GymTrackPro.Mobile`)
+A cross-platform native app built with .NET MAUI running on the Windows/Android/macOS/iOS devices at the gym front desk.
+*   **Views:** Bind to ViewModels using native XAML bindings. No logic exists in code-behind files.
+*   **ViewModels:** Expose UI state and handle commands (using `CommunityToolkit.Mvvm`).
+*   **Services:** Manage network connectivity, local workflows, and synchronization.
+*   **Repositories:** Execute queries against the local **SQLite** database.
 
-### 4. Shared Layer (`GymTrackPro.Shared`)
-A common utility project containing enums, global constants, validation helpers, and general utilities used across multiple projects (API, Client, and Core).
-*   **Rule:** It has zero business logic and depends on nothing but basic System namespace assemblies.
+---
 
-### 5. Presentation / Client Host (`GymTrackPro.Mobile`)
-Implements the user interface for gym receptionists and admins. It follows the **MVVM (Model-View-ViewModel)** pattern.
-*   **Views:** Bind to ViewModels. They must never contain logic or talk to repositories directly.
-*   **ViewModels:** Expose properties and commands, dispatching user intents to Application-level interfaces.
+## 🔑 Authentication & Firebase Boundaries
+
+Our identity management is divided cleanly to minimize dependencies and support offline operation:
+
+```
+                  ┌──────────────────────────────────────────────┐
+                  │                 User login                   │
+                  └──────────────────────┬───────────────────────┘
+                                         │
+                        ┌────────────────┴────────────────┐
+                        │                                 │
+                 [ Device Online ]                [ Device Offline ]
+                        │                                 │
+            ┌───────────▼───────────┐           ┌─────────▼─────────┐
+            │ Connect to Web API    │           │ Validate against  │
+            │ Validate BCrypt Hash  │           │ locally cached    │
+            │ Issue JWT Session     │           │ user token credentials
+            └───────────────────────┘           └───────────────────┘
+```
+
+1.  **Authentication Control:** Handled entirely by our ASP.NET Core API using BCrypt to verify hashed passwords stored in SQL Server and generating JSON Web Tokens (JWT) for authenticated sessions.
+2.  **Firebase Limitations:** Firebase is **not** used as an identity provider or database. Its usage is strictly restricted to supporting side-channels:
+    *   **Firebase Cloud Messaging (FCM):** Sends background push notifications (such as membership expiry alerts).
+    *   **Firebase Email Service:** Dispatches email verification links and password reset emails initiated by our backend API.
 
 ---
 
@@ -59,28 +93,16 @@ Implements the user interface for gym receptionists and admins. It follows the *
 
 To ensure the gym receptionist can check in members even during an internet outage, GymTrackPro writes data locally first and syncs upstream asynchronously.
 
-### 🗳️ The Synchronization Queue
-1.  **Write Operations:** When a user creates or edits a record, the client app writes the change directly to the local database.
-2.  **Queue Entry:** A sync queue entry is written to local storage containing the target table name, target record ID, the action type (Create, Update, Delete), and a `LastModified` timestamp.
+### 🗳&nbsp; The Synchronization Queue
+1.  **Write Operations:** When a user creates or edits a record, the client app writes the change directly to the local SQLite database.
+2.  **Queue Entry:** A sync queue entry is written to SQLite containing the target table name, target record ID, the action type (Create, Update, Delete), and a `LastModified` timestamp.
 3.  **Connection Monitor:** The app listens to the network status. When a connection is detected, a background worker processes the sync queue:
     *   It retrieves the pending queue items in order.
     *   It sends HTTP requests with payloads to the Server API.
     *   Upon receiving an HTTP 200 OK from the API, it marks the local record as "Synced" and purges the sync queue entry.
 
-### ⚔️ Conflict Resolution ("Newest Update Wins")
+### ⚔&nbsp; Conflict Resolution ("Newest Update Wins")
 When the API receives an update for a record that has also been modified elsewhere:
 *   It compares the `LastModified` timestamp from the incoming client payload with the database record's `LastModified` timestamp.
 *   The record with the **newest** timestamp is saved.
 *   An audit log entry is written to record the resolution.
-
-### 🗑️ Soft Deletion Rules
-Records are never deleted immediately.
-1.  On delete, a `Deleted` flag (or `Status = 'Inactive'`) is set on the local database.
-2.  An update is queued in the sync queue.
-3.  The API processes the soft delete.
-4.  Only after confirmation is the local record updated accordingly.
-
----
-
-## 🔒 Architectural Constraints (Phase 0 Pending)
-*   **Database & ORM Choice:** The specific database engine (MySQL/PostgreSQL/SQL Server for remote, SQLite/LiteDB for local) and Data Access technology (EF Core vs Dapper vs ADO.NET) are currently **pending validation** in Phase 0. No code or scaffolding for persistence should begin until these choices are explicitly approved in the ADRs.

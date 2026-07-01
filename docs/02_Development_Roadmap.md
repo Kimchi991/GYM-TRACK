@@ -11,9 +11,9 @@ gantt
     title GymTrackPro Implementation Roadmap
     dateFormat  YYYY-MM-DD
     section Phase 0
-    Tech Decisions & Architecture Validation :active, p0, 2026-07-02, 3d
+    Technology Choices Locked  :done, p0, 2026-07-02, 1d
     section Phase 1
-    Scaffolding & Clean Architecture Setup  : p1, after p0, 7d
+    Scaffolding & Architecture Validation :active, p1, after p0, 5d
     section Phase 2
     Core System Modules       : p2, after p1, 14d
     section Phase 3
@@ -30,63 +30,63 @@ gantt
 
 ## 🔍 Phase Breakdown
 
-### 🎯 Phase 0 – Technology Decisions & Architecture Validation
-Before creating project files, we must analyze the specification and formally decide our technology stack.
-*   **Tasks:**
-    *   Evaluate and approve the Server-side database (MySQL vs SQL Server vs PostgreSQL).
-    *   Evaluate and approve the Client-side local database (SQLite vs LiteDB).
-    *   Evaluate and approve the Server-side Data Access Layer (Entity Framework Core vs Dapper vs ADO.NET).
-    *   Evaluate and approve the Authentication provider/pattern (Custom JWT vs ASP.NET Identity vs external OAuth).
-    *   Define hosting, deployment strategies, and external integration providers (GCash, SMS gateways).
-*   **Deliverables:** Formally signed off Architectural Decision Records (ADRs) for each category.
+### 🎯 Phase 0 – Technology Decisions (Complete)
+Core technology decisions have been locked:
+*   **Mobile Framework:** .NET MAUI (C#) using MVVM.
+*   **Web API:** ASP.NET Core Web API.
+*   **ORM:** Entity Framework Core (EF Core).
+*   **Server Database:** Microsoft SQL Server hosted on MonsterASP.
+*   **Local Database:** SQLite.
+*   **Authentication:** Custom JWT generation + BCrypt password hashing.
+*   **Firebase Services:** Email resets, verification emails, and push notifications only.
 
-### 🛠️ Phase 1 – Scaffolding & Clean Architecture Setup
-Set up the base code infrastructure according to the approved tech choices.
+### 🛠️ Phase 1 – Scaffolding & Architecture Validation
+Set up the base code infrastructure and verify the dependency graph and compilation.
 *   **Tasks:**
-    *   Initialize solution structure following Clean Architecture principles:
-        *   `GymTrackPro.Domain` (Entities, Value Objects, Domain Exceptions)
-        *   `GymTrackPro.Application` (Interfaces, DTOs, CQRS/Use Cases, Validators)
-        *   `GymTrackPro.Infrastructure` (Data Access, Sync Queue, External Services)
-        *   `GymTrackPro.Shared` (Enums, Constants, General Utilities)
-        *   `GymTrackPro.Server` / `GymTrackPro.API` (Web Host, Controllers, Middleware)
-        *   `GymTrackPro.Client` / `GymTrackPro.Mobile` (MAUI Views, ViewModels, Sync background workers)
-    *   Configure CI workflows and PR templates in GitHub.
-    *   Create base DB Context/Connections and run initial verification.
-*   **Deliverables:** Compilation-ready base solution with CI passing and base directories structured.
+    *   Create a blank solution `GymTrackPro.sln` inside `src/`.
+    *   Scaffold exactly three projects:
+        *   `GymTrackPro.Shared` (Class Library)
+        *   `GymTrackPro.API` (ASP.NET Core Web API)
+        *   `GymTrackPro.Mobile` (.NET MAUI Mobile App)
+    *   Set up dependency references:
+        *   `GymTrackPro.API` references `GymTrackPro.Shared`.
+        *   `GymTrackPro.Mobile` references `GymTrackPro.Shared`.
+    *   Verify target frameworks (.NET 8/9), workload installations, and compile the blank solution.
+    *   Verify the GitHub build CI pipeline runs successfully on this scaffolded solution.
+*   **Deliverables:** A compiling, clean 3-project solution inside `src/` passing GitHub Actions CI check.
 
 ### 👥 Phase 2 – Core System Modules
-Build the primary administrative and membership records in the system.
+Build the primary administrative and membership records in the system. Evolve migrations table-by-table.
 *   **Build Order:**
-    1.  **User Management:** Accounts creation, roles, and status (Admin Only).
-    2.  **Member Management:** Registering, search, filtering, and deactivation.
-    3.  **Membership Plans:** Creation, pricing, and duration setup.
-    4.  **Membership Subscriptions:** Plan assignment and renewal logic.
-    5.  **Membership Pause:** Temporary pause and resume mechanisms with date shifting.
-*   **Constraint:** Complete one module entirely before moving to the next.
+    1.  **User Management & Auth:** Setup `Users` table and local/remote JWT authentication logic.
+    2.  **Member Management:** Setup `Members` table, registration, profile views, and deactivation.
+    3.  **Membership Plans:** Setup `MembershipPlans` table and management views.
+    4.  **Membership Subscriptions:** Setup `Subscriptions` table, plan assignment, and renewals.
+    5.  **Membership Pause:** Setup `MembershipPause` table and suspend/resume actions.
 
 ### 💳 Phase 3 – Daily Operations
 Implement front-desk and check-in workflows.
 *   **Build Order:**
-    1.  **Payments:** Fee payments, balance updates, receipt generation.
-    2.  **Attendance:** Simple manual check-in/check-out logs.
-    3.  **QR Attendance:** Scanner integration, unique QR code verification.
-    4.  **Walk-In Visitors:** Track walk-in visits and collect one-day fees.
-    5.  **Notifications:** Internal reminders (expirations, sync failures).
+    1.  **Payments:** Setup `Payments` table, payment records, and receipt histories.
+    2.  **Attendance:** Setup `Attendance` table and check-in/check-out logs.
+    3.  **QR Attendance:** Validate QR scanners and link them to attendance check-ins.
+    4.  **Walk-In Visitors:** Setup `WalkInVisitors` table for day passes.
+    5.  **Notifications:** Setup `Notifications` table. Integrate Firebase Cloud Messaging (FCM).
 
 ### 📊 Phase 4 – Management Features
 Implement operational insights, audit compliance, and general preferences.
 *   **Build Order:**
-    1.  **Reports:** Financial summaries, attendance records, member counts, and exports.
-    2.  **Settings:** Gym information, status color coding, discount thresholds, and theme toggling.
-    3.  **Audit Logs:** Automatic tracking of critical user activities.
+    1.  **Reports:** Financial summaries, attendance records, and exports.
+    2.  **Settings:** Global configurations (colors, discounts, themes).
+    3.  **Audit Logs:** Setup `AuditLogs` table and trace background activities.
 
 ### 🔄 Phase 5 – Offline & Synchronization
 Enable offline reliability through SQLite and a custom synchronization layer.
 *   **Tasks:**
-    *   Implement SQLite local database and repositories in `Infrastructure`.
-    *   Develop the **Sync Queue** structure in SQLite.
-    *   Build automatic connectivity detection and Sync Coordinator.
-    *   Implement conflict resolution rules ("Newest Update Wins" using `LastModified` timestamps).
+    *   Configure local SQLite databases in the mobile project.
+    *   Implement the `SyncQueue` table locally.
+    *   Develop network connectivity monitors and the Sync Coordinator.
+    *   Implement "Newest Update Wins" conflict resolution.
     *   Integrate UI status indicators.
 
 ### 🧪 Phase 6 – Testing & Deployment
@@ -95,17 +95,9 @@ Stabilize the system for rollout.
     *   Write and execute Unit Tests for domain rules and use cases.
     *   Perform Integration Tests (mobile check-in syncing to Server).
     *   Conduct User Acceptance Testing (UAT).
-    *   Deploy databases and API host.
+    *   Deploy SQL Server on MonsterASP and publish the Web API.
 
 ---
 
 ## 🏁 Definition of Done (DoD)
-
-A module is declared **complete** only when it meets the following criteria:
-1.  **Database:** Relevant SQLite & Server DB tables are created with proper indexes.
-2.  **Logic:** Domain Models, DTOs, Use Cases, Repositories, Services, and Controllers are implemented.
-3.  **UI:** Appropriate Views and ViewModels are built, following MVVM.
-4.  **Validation:** Form inputs are validated on both Client and Server.
-5.  **Testing:** Local unit tests are written and pass.
-6.  **Offline Support:** Local read/write operations and sync queue integration are tested.
-7.  **Documentation:** The module details are updated in the project files and `Changelog.md`.
+Please refer to `docs/09_Definition_of_Done.md` for our detailed checklist for declaring any module completed.

@@ -1,8 +1,8 @@
 # Database Design
 
 GymTrackPro uses a dual-database model:
-*   **Server Database:** Central database representing the source of truth, hosted online (MySQL, PostgreSQL, or SQL Server - TBD in Phase 0).
-*   **Local Client Database:** Client-side database embedded in the mobile application for offline capabilities (SQLite or LiteDB - TBD in Phase 0).
+*   **Online Server Database:** Microsoft SQL Server hosted on MonsterASP. Represents the core source of truth.
+*   **Offline Client Database:** SQLite database compiled directly into the .NET MAUI application.
 
 ---
 
@@ -126,7 +126,7 @@ erDiagram
     }
     
     SyncQueue {
-        int QueueID PK "Client DB Only"
+        int QueueID PK "SQLite Only"
         string TableName
         int RecordID
         string ActionType "Create/Update/Delete"
@@ -134,6 +134,16 @@ erDiagram
         int RetryCount
     }
 ```
+
+---
+
+## 🏗️ Incremental Database Evolution Plan
+
+We will **not** scaffold all tables immediately. Doing so creates large migrations that are difficult to debug.
+*   **Step-by-step Migrations:** We will add tables only as required by the active module.
+*   **First Target (Authentication):**
+    *   Table: `Users`
+    *   We will initialize our server DB context and create the initial migration containing only the `Users` table and associated configuration metadata.
 
 ---
 
@@ -161,9 +171,9 @@ Stores complete profile information of gym members.
 *   `Email` (VARCHAR(100), Unique, Nullable)
 *   `Address` (VARCHAR(255), Nullable)
 *   `EmergencyContact` (VARCHAR(100), Not Null)
-*   `ProfilePicture` (VARCHAR(255), Nullable) -- File path or blob string
+*   `ProfilePicture` (VARCHAR(255), Nullable)
 *   `QRCode` (VARCHAR(100), Unique, Not Null)
-*   `Status` (VARCHAR(20), Not Null) -- 'Active', 'Paused', 'Expired', 'Inactive'
+*   `Status` (VARCHAR(20), Not Null)
 *   `DateRegistered` (DATETIME, Not Null)
 *   `LastModified` (DATETIME, Not Null)
 
@@ -172,9 +182,9 @@ Stores details of standard membership tiers offered.
 *   `PlanID` (INT, PK, AutoIncrement)
 *   `PlanName` (VARCHAR(50), Unique, Not Null)
 *   `DurationDays` (INT, Not Null)
-*   `Price` (DECIMAL(10,2), Not Null)
+*   `Price` (DECIMAL(18,2), Not Null) -- Mapped to SQL Server decimal
 *   `Description` (VARCHAR(255), Nullable)
-*   `Status` (VARCHAR(20), Default 'Active') -- 'Active' or 'Inactive'
+*   `Status` (VARCHAR(20), Default 'Active')
 *   `LastModified` (DATETIME, Not Null)
 
 ### 4. `Subscriptions` Table
@@ -184,7 +194,7 @@ Tracks plan assignments to members.
 *   `PlanID` (INT, FK -> MembershipPlans.PlanID, Not Null)
 *   `StartDate` (DATE, Not Null)
 *   `EndDate` (DATE, Not Null)
-*   `Status` (VARCHAR(20), Not Null) -- 'Active', 'Expired', 'Paused'
+*   `Status` (VARCHAR(20), Not Null)
 *   `LastModified` (DATETIME, Not Null)
 
 ### 5. `MembershipPause` Table
@@ -201,13 +211,13 @@ Stores records of financial transactions.
 *   `PaymentID` (INT, PK, AutoIncrement)
 *   `MemberID` (INT, FK -> Members.MemberID, Not Null)
 *   `SubscriptionID` (INT, FK -> Subscriptions.SubscriptionID, Not Null)
-*   `Amount` (DECIMAL(10,2), Not Null)
-*   `Discount` (DECIMAL(10,2), Default 0.00)
-*   `FinalAmount` (DECIMAL(10,2), Not Null)
-*   `PaymentMethod` (VARCHAR(20), Not Null) -- 'Cash', 'GCash', 'Card', 'Bank Transfer'
-*   `PaymentStatus` (VARCHAR(20), Not Null) -- 'Paid', 'Partial', 'Pending'
+*   `Amount` (DECIMAL(18,2), Not Null)
+*   `Discount` (DECIMAL(18,2), Default 0.00)
+*   `FinalAmount` (DECIMAL(18,2), Not Null)
+*   `PaymentMethod` (VARCHAR(20), Not Null)
+*   `PaymentStatus` (VARCHAR(20), Not Null)
 *   `ReceiptNumber` (VARCHAR(50), Unique, Not Null)
-*   `ReferenceNumber` (VARCHAR(100), Nullable) -- For Gcash/Bank Transfer
+*   `ReferenceNumber` (VARCHAR(100), Nullable)
 *   `DatePaid` (DATETIME, Not Null)
 *   `LastModified` (DATETIME, Not Null)
 
@@ -225,7 +235,7 @@ Tracks non-member visits and day-pass records.
 *   `VisitorID` (INT, PK, AutoIncrement)
 *   `VisitorName` (VARCHAR(100), Not Null)
 *   `VisitDate` (DATETIME, Not Null)
-*   `FeePaid` (DECIMAL(10,2), Not Null)
+*   `FeePaid` (DECIMAL(18,2), Not Null)
 *   `Purpose` (VARCHAR(255), Nullable)
 *   `LastModified` (DATETIME, Not Null)
 
@@ -234,13 +244,13 @@ Tracks system-generated messages and alerts.
 *   `NotificationID` (INT, PK, AutoIncrement)
 *   `Title` (VARCHAR(100), Not Null)
 *   `Message` (TEXT, Not Null)
-*   `Status` (VARCHAR(20), Default 'Unread') -- 'Unread', 'Read', 'Archived'
+*   `Status` (VARCHAR(20), Default 'Unread')
 *   `CreatedAt` (DATETIME, Not Null)
 
-### 10. `AuditLogs` Table (Server DB Only)
+### 10. `AuditLogs` Table (SQL Server Only)
 Tamper-proof compliance recording.
 *   `LogID` (INT, PK, AutoIncrement)
-*   `UserID` (INT, FK -> Users.UserID, Nullable) -- Null if system-generated
+*   `UserID` (INT, FK -> Users.UserID, Nullable)
 *   `Action` (VARCHAR(100), Not Null)
 *   `Module` (VARCHAR(50), Not Null)
 *   `Description` (TEXT, Not Null)
@@ -250,7 +260,7 @@ Tamper-proof compliance recording.
 
 ## ⚡ Indexing Strategy
 
-To keep lookups fast, indexes will be placed on:
+To keep SQL Server and SQLite lookups fast, indexes will be placed on:
 *   **Members:** `PhoneNumber`, `QRCode`, `LastName`
 *   **Subscriptions:** `MemberID`, `Status`
 *   **Attendance:** `MemberID`, `AttendanceDate`

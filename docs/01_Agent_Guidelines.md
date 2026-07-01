@@ -17,27 +17,52 @@ From this point onward, the agent acts as the project's **Technical Lead**. Befo
 
 ## 🚫 The "Never Assume, Always Verify" Rule
 
-The agent must **never** make architectural or technology assumptions. If a decision has not been formally approved in the ADRs (`docs/05_Decisions.md`), the agent must **stop and ask** for a decision.
+The agent must **never** make architectural or technology assumptions. All core technology selections are now frozen in our ADRs (`docs/05_Decisions.md`). If a new technology or dependency is introduced, the agent must **stop and ask** for a decision.
 
-This includes, but is not limited to:
-*   **Database & ORM:** SQL Dialects, SQLite configurations, EF Core, Dapper, or ADO.NET usage.
-*   **Authentication:** JWT implementation details, OAuth, identity providers, or session duration.
-*   **Hosting & Deployment:** Server hosts, cloud providers (Azure, AWS, local server), and IIS/Docker setups.
-*   **Caching:** MemoryCache, Redis, or local client caches.
-*   **Third-Party Libraries:** NuGet packages, UI toolkits, or utility libraries.
-*   **External Integration:** Payment gateways (GCash, Stripe, Maya), notification providers (SMS, Email, Push).
+Core Technology Stack:
+*   **Mobile Application:** .NET MAUI (C#) using the MVVM pattern.
+*   **Backend API:** ASP.NET Core Web API.
+*   **ORM:** Entity Framework Core.
+*   **Online Database:** Microsoft SQL Server hosted on MonsterASP.
+*   **Offline Database:** SQLite.
+*   **Authentication:** Custom JWT authentication + BCrypt password hashing.
+*   **Firebase Services:** Push notifications (FCM), email verification, and password resets only (no Firebase login or user databases).
 
 ---
 
-## 🎯 General Operational Rules
+## 🏗️ Simplified Solution Architecture
 
-1.  **Follow the Specification Exactly:** Do not invent features, pages, or modules that are not detailed in the official project specification.
-2.  **No Code Deletion or Rewriting:** Never rewrite completed modules or delete functioning code without explicit human approval.
-3.  **Complete Modules in Order:** Complete the implementation of one module fully (Database, Repository, Service, ViewModels, UI, Tests, and Documentation) before moving to the next.
-4.  **No Ad-Hoc Database Changes:** Do not rename database tables, change columns, or alter constraints without approval.
-5.  **Offline-First Paradigm:** Ensure every daily operational feature works offline with SQLite first, queuing modifications to sync with MySQL (or the chosen remote DB) when internet becomes available.
-6.  **Clean MVVM Architecture:** Ensure MVVM, the Repository Pattern, and Dependency Injection are used throughout. No direct database queries from ViewModels.
-7.  **Maintainability & Simplicity:** Favor simple, clean, readable solutions over over-engineered or complex enterprise abstractions.
+To keep the codebase easy to maintain and debug for a three-person student team, we will avoid excessive project separation. The solution is simplified into exactly three projects under `src/`:
+
+```
+GymTrackPro/
+└── src/
+    ├── GymTrackPro.Shared/   # Shared DTOs, Enums, Constants, Interfaces, and Validators
+    ├── GymTrackPro.API/      # Backend Web API (Controllers, DbContext, Services, Repositories)
+    └── GymTrackPro.Mobile/   # Mobile Client App (Views, ViewModels, SQLite Repositories)
+```
+
+---
+
+## 🔄 Evolving Database Migrations Rule
+
+*   **Do not scaffold the entire database on day one.**
+*   Database tables and Entity Framework Core migrations must be created **module-by-module** as development progresses.
+*   *Migration sequence:*
+    1.  Authentication / Users Module -> Generate `Users` table migration -> Verify.
+    2.  Member Management Module -> Generate `Members` table migration -> Verify.
+    3.  Membership Plans Module -> Generate `Plans` table migration -> Verify.
+    *   (Follow this pattern for all subsequent modules).
+
+---
+
+## 🌳 Git Branching & Integration Flow
+
+We enforce a strict branch-and-integrate model:
+*   **`main` (Production):** Always represents production-ready, stable code. No direct development happens here.
+*   **`develop` (Integration):** The target branch for completed features.
+*   **`feature/*`:** Branch for individual features.
+*   *Workflow:* Branch off `develop` -> Implement -> PR targeting `develop` -> Code review & verification -> Merge to `develop` -> Periodically merge `develop` to `main` for stable milestones.
 
 ---
 
@@ -50,19 +75,11 @@ graph TD
     A[Plan & Define Scope] --> B[Perform Tech Check & Risk Analysis]
     B --> C[Explain Design & Recommend Improvements]
     C --> D{Wait for Approval}
-    D -- Approved --> E[Generate Backend & DB Tables]
-    E --> F[Generate Repositories & Services]
-    F --> G[Generate ViewModels & Views]
+    D -- Approved --> E[Generate DB Migration & Shared Contracts]
+    E --> F[Generate Backend Controllers, Services, & Repositories]
+    F --> G[Generate Mobile Views & ViewModels]
     G --> H[Run Verification & Local Tests]
-    H --> I[Update Documentation]
-    I --> J[Commit Changes to Branch]
+    H --> I[Update Documentation & Changelog]
+    I --> J[Commit Changes to Feature Branch]
     J --> K[Proceed to Next Module]
 ```
-
-1.  **Plan:** Scope out the exact changes based on the specification.
-2.  **Explain & Risk Check:** Explain the database design, API endpoints, and view structure, identifying risks.
-3.  **Approval:** Wait for developer approval.
-4.  **Generate:** Write clean, modular code.
-5.  **Test:** Validate inputs and verify correct offline/online behavior.
-6.  **Document:** Update the changelog and module documentation in `/docs`.
-7.  **Commit:** Create a descriptive Git commit on the appropriate feature branch.

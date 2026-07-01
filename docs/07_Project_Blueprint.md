@@ -4,22 +4,56 @@ This blueprint outlines the technical specifications, file organization, module 
 
 ---
 
-## 📂 Folder Structure (Clean Architecture)
+## 📂 Folder Structure (Simplified Layering)
 
-The repository is organized into distinct Clean Architecture layers under `src/` to facilitate code sharing and maintainability:
+The repository is organized into exactly three projects under `src/` to facilitate code sharing and minimize referencing overhead:
 
 ```directory
 GymTrackPro/
-├── docs/                      # Specification & developer logs
+├── docs/                      # Specification, guidelines & developer logs
 ├── .github/                   # CI workflows, PR & issue templates
 ├── LICENSE                    # Repository License (MIT)
 └── src/
-    ├── GymTrackPro.Domain/         # Domain Layer (Entities, Value Objects, Domain Rules)
-    ├── GymTrackPro.Application/    # Application Layer (Interfaces, DTOs, Use Cases, Validators)
-    ├── GymTrackPro.Infrastructure/ # Infrastructure Layer (Data Access, Sync engine, Device API)
-    ├── GymTrackPro.Shared/         # Shared Utilities (Enums, Constants, General helpers)
-    ├── GymTrackPro.Server/         # Server Host (Web Host, API Controllers, Middleware)
-    └── GymTrackPro.Client/         # Client Host (MAUI Presentation, Views, ViewModels)
+    ├── GymTrackPro.Shared/    # Class Library: DTOs, Enums, Constants, Interfaces, Validators
+    ├── GymTrackPro.API/       # Web API: Controllers, Services, EF Core Repositories, SQL Server DbContext
+    └── GymTrackPro.Mobile/    # .NET MAUI Client: Views, ViewModels, SQLite local repositories
+```
+
+### 1. `GymTrackPro.Shared` Project Layout
+```directory
+GymTrackPro.Shared/
+├── DTOs/                 # Data transfer contracts (AuthRequest, MemberResponse, etc.)
+├── Models/               # Client/Server shared entity models (with basic annotations)
+├── Interfaces/           # Shared service and repository contracts (IMemberRepository, etc.)
+├── Enums/                # Global enums (UserRole, MembershipStatus, PaymentMethod)
+├── Constants/            # Magic strings, configuration keys, error messages
+├── Validators/           # FluentValidation rules (or annotation attributes)
+└── Helpers/              # Shared helper classes (DateTime formatting, text cleaners)
+```
+
+### 2. `GymTrackPro.API` Project Layout
+```directory
+GymTrackPro.API/
+├── Controllers/          # REST endpoints (AuthController, MembersController)
+├── Services/             # Business Logic (AuthService, MemberService)
+├── Repositories/         # Database persistence using EF Core (SQL Server)
+├── Data/                 # EF DbContext (GymDbContext.cs)
+├── Authentication/       # JWT token generators and custom authorization handlers
+├── Middleware/           # Global error handler and logger
+└── Program.cs            # API bootstrap and Dependency Injection registrations
+```
+
+### 3. `GymTrackPro.Mobile` Project Layout
+```directory
+GymTrackPro.Mobile/
+├── Views/                # XAML Pages (LoginPage.xaml, MembersPage.xaml)
+├── ViewModels/           # CommunityToolkit.Mvvm ViewModels
+├── Services/             # Client-specific services (SyncService, ConnectivityMonitor)
+├── Repositories/         # SQLite read/write data access
+├── Controls/             # Custom UI widgets (QR Scanner View, status bars)
+├── Converters/           # XAML value converters
+├── Resources/            # Styles, Colors, and Fonts assets
+└── AppShell.xaml         # Application shell navigation
 ```
 
 ---
@@ -38,24 +72,20 @@ graph TD
 
     subgraph Server Application (Web API Host)
         API[Web API Controllers] <--> ServAPI[Backend Service]
-        ServAPI <--> RepoServer[Server DB Repo]
-        RepoServer <--> ServerDB[(Central Server DB)]
+        ServAPI <--> RepoServer[EF Core Repo]
+        RepoServer <--> SQLServer[(SQL Server MonsterASP)]
     end
 
     Sync -- HTTPS REST (JWT) --> API
+    GymTrackPro.Mobile -- References --> GymTrackPro.Shared
+    GymTrackPro.API -- References --> GymTrackPro.Shared
 ```
-
-*   **View to ViewModel Binding:** All controls bind properties to ViewModels. ViewModels utilize commands to interact with Services.
-*   **Service Isolation:** Services implement business validations and dispatch actions to repositories or syncer.
-*   **Database Isolation:** Business logic is database-agnostic. Repositories deal with ORM layers on both sides.
 
 ---
 
 ## 💾 Database Overview
 
-The system runs a **Central Server Database** as the core database and a **Local Client Database** locally.
-*   *Candidates for Server DB:* MySQL, PostgreSQL, SQL Server (TBD in Phase 0).
-*   *Candidates for Client DB:* SQLite, LiteDB (TBD in Phase 0).
+The system runs **SQL Server** hosted on MonsterASP as the central database and **SQLite** locally.
 
 ### Schema Integrity & Sync Flags
 To facilitate synchronization:
@@ -107,18 +137,10 @@ graph TD
 *   **Risk:** The conflict resolution engine relies on client `LastModified` timestamps. If a client device's system clock is manually changed, updates might be rejected or overwrite newer data erroneously.
 *   **Mitigation:** The synchronization engine will query the API's server time during connection and compute an offset. This offset is used to normalize all local database timestamps before syncing.
 
-### 2. Physical Database Drift
-*   **Risk:** Differences in supported data types across local and server DBs can cause rounding errors or serialization crashes.
-*   **Mitigation:** Repositories will map decimal columns to fixed-point integer fields (e.g., storing cents instead of decimals) to ensure compatibility across client and server.
+### 2. SQLite Date compatibility
+*   **Risk:** SQL Server stores dates natively with milliseconds precision. SQLite stores dates as strings or integers, which can lead to parsing errors during synchronization.
+*   **Mitigation:** Set explicit EF Core column formatting and ensure that SQLite repositories utilize UTC ISO-8601 strings (`yyyy-MM-dd HH:mm:ss.fff`) for storage and parsing.
 
 ### 3. Caching & Session Expiration Issues
 *   **Risk:** Users log in, go offline, and then have their JWT expire before they reconnect, causing syncing to fail.
-*   **Mitigation:** Provide sliding expiration tokens. Store a refresh token securely, and allow sync payloads to retry authentication once connectivity is restored.
-
----
-
-## 💡 Suggested Improvements
-
-1.  **NTP Synchronization:** Automatically synchronize the client application with an online NTP server (like `pool.ntp.org`) on launch to eliminate local time fraud.
-2.  **JWT Refresh Tokens:** Use a sliding expiration session strategy. Issue access tokens with a 15-minute lifetime and long-lived refresh tokens securely saved offline.
-3.  **Local SQLite Encryption:** Encrypt the local SQLite database using **SQLCipher** to prevent unauthorized users from viewing customer data directly from the device's storage.
+*   **Mitigation:** Store a refresh token securely in SecureStorage, and allow sync payloads to retry authentication once connectivity is restored.
