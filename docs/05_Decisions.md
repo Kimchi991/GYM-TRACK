@@ -4,54 +4,59 @@ This document captures the architectural decisions made during the design of Gym
 
 ---
 
-## 🏛️ ADR 1: Technology Stack Selection
+## ⏳ PENDING DECISION 1: Database Engine Selection (Phase 0)
 
-*   **Decision:** Use **.NET MAUI** for the Mobile application, **ASP.NET Core Web API** for the backend, **MySQL** for the central database, and **SQLite** for the local client database.
-*   **Context:** GymTrackPro is a cross-platform application that runs on front-desk computers (Windows/macOS) and mobile devices (Android/iOS).
-*   **Alternatives Considered:**
-    *   *Flutter + Node.js + MongoDB:* Higher learning curve for a team with C# knowledge.
-    *   *React Native + Express + PostgreSQL:* JavaScript ecosystems offer less compile-time safety compared to C#.
-*   **Justification:**
-    *   .NET MAUI allows writing a single C# codebase for Windows, Android, macOS, and iOS, integrating natively with desktop operating systems.
-    *   ASP.NET Core provides high-performance Web APIs, dependency injection, and native ORM integrations (Entity Framework Core).
-    *   SQLite is lightweight, requires no installation, and is standard for mobile device local storage.
-    *   C# throughout the entire stack (Mobile & API) simplifies team learning and enables code reuse (e.g., shared DTOs/Models).
+*   **Status:** Pending Evaluation (Phase 0)
+*   **Context:** GymTrackPro requires a central database engine (server-side) and a lightweight local database engine (client-side).
+*   **Candidates Under Evaluation:**
+    *   *Server Databases:* MySQL, PostgreSQL, Microsoft SQL Server.
+    *   *Client Databases:* SQLite, LiteDB.
+*   **Action Plan:** Compare memory footings, multi-user concurrency rules, hosting pricing (for server DBs), and compatibility with Xamarin/MAUI environments.
 
 ---
 
-## 🔄 ADR 2: Offline-First Synchronization Strategy
+## ⏳ PENDING DECISION 2: Data Access Layer & ORM (Phase 0)
 
-*   **Decision:** Build a custom sync-queue in SQLite and resolve database conflicts using a **"Newest Update Wins"** policy based on `LastModified` timestamps.
-*   **Context:** Gyms frequently experience flaky internet connections. Receptionists must be able to register members, check in attendees, and record payments offline.
-*   **Alternatives Considered:**
-    *   *Real-time Database Sync (e.g. Firebase):* Incompatible with custom relational databases (MySQL) and requires expensive cloud integrations.
-    *   *Bidirectional Syncing Engine (e.g. CouchDB):* Over-engineered for a student capstone project.
-*   **Justification:**
-    *   Writing to SQLite first ensures the UI is responsive and operations never block.
-    *   The sync queue keeps a clean list of changes to upload when network connectivity is detected.
-    *   "Newest Update Wins" is a simple, deterministic resolution strategy that keeps the synchronizer code easy to write, read, and test.
+*   **Status:** Pending Evaluation (Phase 0)
+*   **Context:** The API and client application require data access technologies to execute queries and manage database transactions.
+*   **Candidates Under Evaluation:**
+    *   *Entity Framework Core:* Heavy but feature-rich, handles migrations, easy relationships, but slower for bulk writes.
+    *   *Dapper:* Extremely fast micro-ORM, utilizes raw SQL, requires manual query mappings and migrations.
+    *   *ADO.NET (Raw SQL):* Highest performance, maximum control, but generates verbose, hard-to-maintain code.
+*   **Action Plan:** Build a simple performance benchmark and inspect readability for a student team.
 
 ---
 
-## 🗑️ ADR 3: Data Deletion Rules (Soft Deactivations)
+## ⏳ PENDING DECISION 3: Authentication Strategy (Phase 0)
 
-*   **Decision:** Enforce **Soft Delete** or **Deactivation** for core system entities (Members, Payments, Subscriptions, Users).
-*   **Context:** Accidental deletions could lead to loss of attendance history, auditing records, and payment receipts.
-*   **Alternatives Considered:**
-    *   *Hard Deletes:* Deleting records directly via `DELETE FROM ...`. High risk of database reference crashes (FK violations).
-*   **Justification:**
-    *   Setting `Status = 'Inactive'` or `IsActive = false` preserves relational integrity.
-    *   Ensures historical revenue and attendance reports remain accurate even if a member is no longer active in the gym.
+*   **Status:** Pending Evaluation (Phase 0)
+*   **Context:** Users need to log in securely, and sessions must support offline verification.
+*   **Candidates Under Evaluation:**
+    *   *Custom JWT:* Plain Web API generating stateless tokens, client stores tokens and roles securely.
+    *   *ASP.NET Core Identity:* Integrated user manager with email recovery, password hashing, and cookie/token support built-in.
+    *   *External Identity Providers:* Auth0, Firebase Auth (high dependency risk, online-only).
+*   **Action Plan:** Weigh custom implementation complexity against the security and features provided by ASP.NET Core Identity.
 
 ---
 
-## 🔑 ADR 4: Security and Session Management
+## 🏛️ APPROVED DECISION 4: Client Architecture
 
-*   **Decision:** Store passwords using **BCrypt** hashing on the server, issue **JSON Web Tokens (JWT)** for session validation, and store tokens securely on the device.
-*   **Context:** GymTrackPro stores sensitive member details and financial records.
-*   **Alternatives Considered:**
-    *   *Basic Auth:* Insecure as credentials must be sent with every single request.
-    *   *Session Cookies:* Harder to configure and manage securely across cross-platform native apps compared to JWT.
-*   **Justification:**
-    *   JWTs are standard, stateless, and contain role attributes (RBAC) to enforce permissions on both the client (UI rendering) and server (endpoint access).
-    *   Secure storage on the native device (via MAUI SecureStorage) prevents cross-site token theft.
+*   **Status:** **APPROVED**
+*   **Decision:** Build the Mobile application using the **MVVM (Model-View-ViewModel)** pattern via the `CommunityToolkit.Mvvm` package.
+*   **Justification:** Separates user interface (XAML) from business logic, supports native data-binding, and is the standard industry pattern for .NET MAUI development.
+
+---
+
+## 🏛️ APPROVED DECISION 5: Core Solution Separation (Clean Architecture)
+
+*   **Status:** **APPROVED**
+*   **Decision:** Scaffold the codebase into distinct layers: Domain, Application, Infrastructure, Shared, Client Host, and Server Host.
+*   **Justification:** Prevents business logic pollution, isolates persistence decisions, enables shared components (DTOs, contracts) across client and server, and maintains code quality for a multi-developer team.
+
+---
+
+## 🏛️ APPROVED DECISION 6: Soft Deletes for Transactional Data
+
+*   **Status:** **APPROVED**
+*   **Decision:** Enforce Soft Delete / Deactivation flags on Members, Plans, and Payments.
+*   **Justification:** Protects database reference integrity, prevents cascade failures, and ensures financial and attendance report logs remain accurate even when members are deactivated.

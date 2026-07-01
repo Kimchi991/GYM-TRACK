@@ -10,8 +10,10 @@ This document outlines the phase-by-phase development plan for GymTrackPro. Each
 gantt
     title GymTrackPro Implementation Roadmap
     dateFormat  YYYY-MM-DD
+    section Phase 0
+    Tech Decisions & Architecture Validation :active, p0, 2026-07-02, 3d
     section Phase 1
-    Foundation Setup          :active, p1, 2026-07-02, 7d
+    Scaffolding & Clean Architecture Setup  : p1, after p0, 7d
     section Phase 2
     Core System Modules       : p2, after p1, 14d
     section Phase 3
@@ -26,16 +28,31 @@ gantt
 
 ---
 
-## 🔍 Phase breakdown
+## 🔍 Phase Breakdown
 
-### 🛠️ Phase 1 – Foundation
-Set up the basic infrastructure, solution templates, and core configurations.
+### 🎯 Phase 0 – Technology Decisions & Architecture Validation
+Before creating project files, we must analyze the specification and formally decide our technology stack.
 *   **Tasks:**
-    *   Initialize solution structure (`GymTrackPro.sln`, `GymTrackPro.API.csproj`, `GymTrackPro.Mobile.csproj`).
-    *   Configure database connection and Entity Framework Core in the Web API.
-    *   Set up Dependency Injection containers.
-    *   Implement core Authentication logic (JWT generation, login/logout services, and Password Hashing).
-*   **Deliverables:** Compilation-ready base projects with functioning authentication endpoints.
+    *   Evaluate and approve the Server-side database (MySQL vs SQL Server vs PostgreSQL).
+    *   Evaluate and approve the Client-side local database (SQLite vs LiteDB).
+    *   Evaluate and approve the Server-side Data Access Layer (Entity Framework Core vs Dapper vs ADO.NET).
+    *   Evaluate and approve the Authentication provider/pattern (Custom JWT vs ASP.NET Identity vs external OAuth).
+    *   Define hosting, deployment strategies, and external integration providers (GCash, SMS gateways).
+*   **Deliverables:** Formally signed off Architectural Decision Records (ADRs) for each category.
+
+### 🛠️ Phase 1 – Scaffolding & Clean Architecture Setup
+Set up the base code infrastructure according to the approved tech choices.
+*   **Tasks:**
+    *   Initialize solution structure following Clean Architecture principles:
+        *   `GymTrackPro.Domain` (Entities, Value Objects, Domain Exceptions)
+        *   `GymTrackPro.Application` (Interfaces, DTOs, CQRS/Use Cases, Validators)
+        *   `GymTrackPro.Infrastructure` (Data Access, Sync Queue, External Services)
+        *   `GymTrackPro.Shared` (Enums, Constants, General Utilities)
+        *   `GymTrackPro.Server` / `GymTrackPro.API` (Web Host, Controllers, Middleware)
+        *   `GymTrackPro.Client` / `GymTrackPro.Mobile` (MAUI Views, ViewModels, Sync background workers)
+    *   Configure CI workflows and PR templates in GitHub.
+    *   Create base DB Context/Connections and run initial verification.
+*   **Deliverables:** Compilation-ready base solution with CI passing and base directories structured.
 
 ### 👥 Phase 2 – Core System Modules
 Build the primary administrative and membership records in the system.
@@ -59,36 +76,36 @@ Implement front-desk and check-in workflows.
 ### 📊 Phase 4 – Management Features
 Implement operational insights, audit compliance, and general preferences.
 *   **Build Order:**
-    1.  **Reports:** Financial summaries, attendance records, member counts, and exports (PDF/Excel).
+    1.  **Reports:** Financial summaries, attendance records, member counts, and exports.
     2.  **Settings:** Gym information, status color coding, discount thresholds, and theme toggling.
     3.  **Audit Logs:** Automatic tracking of critical user activities.
 
 ### 🔄 Phase 5 – Offline & Synchronization
 Enable offline reliability through SQLite and a custom synchronization layer.
 *   **Tasks:**
-    *   Implement SQLite local database.
+    *   Implement SQLite local database and repositories in `Infrastructure`.
     *   Develop the **Sync Queue** structure in SQLite.
-    *   Build automatic connectivity detection.
+    *   Build automatic connectivity detection and Sync Coordinator.
     *   Implement conflict resolution rules ("Newest Update Wins" using `LastModified` timestamps).
-    *   Integrate UI status indicators (Synced, Pending Sync, Syncing, Failed).
+    *   Integrate UI status indicators.
 
 ### 🧪 Phase 6 – Testing & Deployment
 Stabilize the system for rollout.
 *   **Tasks:**
-    *   Write and execute Unit Tests for core business rules (e.g. attendance constraints, payment ceilings).
-    *   Perform Integration Tests (mobile check-in syncing to Web API).
-    *   Conduct User Acceptance Testing (UAT) with dummy roles.
-    *   Fix bugs, optimize performance, and deploy databases.
+    *   Write and execute Unit Tests for domain rules and use cases.
+    *   Perform Integration Tests (mobile check-in syncing to Server).
+    *   Conduct User Acceptance Testing (UAT).
+    *   Deploy databases and API host.
 
 ---
 
 ## 🏁 Definition of Done (DoD)
 
 A module is declared **complete** only when it meets the following criteria:
-1.  **Database:** Relevant SQLite & MySQL tables are created with proper indexes.
-2.  **Logic:** Service, Repository, and Controller classes are implemented.
+1.  **Database:** Relevant SQLite & Server DB tables are created with proper indexes.
+2.  **Logic:** Domain Models, DTOs, Use Cases, Repositories, Services, and Controllers are implemented.
 3.  **UI:** Appropriate Views and ViewModels are built, following MVVM.
-4.  **Validation:** Form inputs are validated on both Client and API.
+4.  **Validation:** Form inputs are validated on both Client and Server.
 5.  **Testing:** Local unit tests are written and pass.
 6.  **Offline Support:** Local read/write operations and sync queue integration are tested.
 7.  **Documentation:** The module details are updated in the project files and `Changelog.md`.

@@ -1,0 +1,42 @@
+name: GymTrackPro Build Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    name: Build & Verify C# Solution
+    runs-on: windows-latest  # MAUI workloads build best on Windows/macOS runners
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: |
+          8.0.x
+          9.0.x
+
+    - name: Install MAUI Workload
+      run: dotnet workload install maui
+
+    - name: Restore Dependencies
+      run: |
+        if (Test-Path "src/GymTrackPro.sln") {
+          dotnet restore src/GymTrackPro.sln
+        } else {
+          Write-Host "No solution file found yet. Skipping restore."
+        }
+
+    - name: Build Projects
+      run: |
+        if (Test-Path "src/GymTrackPro.sln") {
+          dotnet build src/GymTrackPro.sln --configuration Release --no-restore
+        } else {
+          Write-Host "No solution file found yet. Skipping build."
+        }

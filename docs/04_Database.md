@@ -1,8 +1,8 @@
 # Database Design
 
 GymTrackPro uses a dual-database model:
-*   **MySQL:** Central database representing the source of truth, hosted online.
-*   **SQLite:** Client-side database embedded in the mobile application for offline capabilities.
+*   **Server Database:** Central database representing the source of truth, hosted online (MySQL, PostgreSQL, or SQL Server - TBD in Phase 0).
+*   **Local Client Database:** Client-side database embedded in the mobile application for offline capabilities (SQLite or LiteDB - TBD in Phase 0).
 
 ---
 
@@ -126,7 +126,7 @@ erDiagram
     }
     
     SyncQueue {
-        int QueueID PK "SQLite Only"
+        int QueueID PK "Client DB Only"
         string TableName
         int RecordID
         string ActionType "Create/Update/Delete"
@@ -237,7 +237,7 @@ Tracks system-generated messages and alerts.
 *   `Status` (VARCHAR(20), Default 'Unread') -- 'Unread', 'Read', 'Archived'
 *   `CreatedAt` (DATETIME, Not Null)
 
-### 10. `AuditLogs` Table (MySQL Only)
+### 10. `AuditLogs` Table (Server DB Only)
 Tamper-proof compliance recording.
 *   `LogID` (INT, PK, AutoIncrement)
 *   `UserID` (INT, FK -> Users.UserID, Nullable) -- Null if system-generated
@@ -255,4 +255,4 @@ To keep lookups fast, indexes will be placed on:
 *   **Subscriptions:** `MemberID`, `Status`
 *   **Attendance:** `MemberID`, `AttendanceDate`
 *   **Payments:** `MemberID`, `ReceiptNumber`
-*   **SyncQueue (SQLite):** `TableName`, `Timestamp`
+*   **SyncQueue:** `TableName`, `Timestamp`
