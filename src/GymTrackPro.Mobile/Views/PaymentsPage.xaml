@@ -14,7 +14,7 @@
             <Label Text="Payment History" TextColor="{StaticResource TextPrimary}" FontSize="20" FontAttributes="Bold" VerticalOptions="Center" />
 
             <Button Grid.Column="1"
-                    Text="💳 Process Billing"
+                    Text="Process Billing"
                     BackgroundColor="{StaticResource Secondary}"
                     TextColor="White"
                     CornerRadius="8"
@@ -36,7 +36,10 @@
                             BackgroundColor="{StaticResource CardBackground}" 
                             Padding="15" 
                             IsVisible="{Binding SuccessMessage, Converter={StaticResource NullableToBoolConverter}}">
-                        <Label Text="{Binding SuccessMessage}" TextColor="{StaticResource Success}" FontSize="13" FontAttributes="Bold" />
+                        <Grid ColumnDefinitions="Auto, *" ColumnSpacing="12" VerticalOptions="Center">
+                            <Path Data="{StaticResource IconCheckCircle}" Fill="{StaticResource Success}" Aspect="Uniform" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
+                            <Label Grid.Column="1" Text="{Binding SuccessMessage}" TextColor="{StaticResource Success}" FontSize="13" FontAttributes="Bold" VerticalOptions="Center" />
+                        </Grid>
                     </Border>
 
                     <CollectionView ItemsSource="{Binding Payments}" SelectionMode="None">

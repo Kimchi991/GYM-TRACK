@@ -13,7 +13,7 @@ public partial class ReportsViewModel : BaseViewModel
     private readonly IApiService _apiService;
 
     [ObservableProperty]
-    public partial string ReportType { get; set; } = "Daily Revenue"; // Daily Revenue, Attendance, Membership Sales, Refunds
+    public partial string ReportType { get; set; } = "Daily Revenue"; // Daily Revenue, Monthly Revenue, Attendance, Membership Sales, Expiring Memberships, Refunds
 
     [ObservableProperty]
     public partial DateTime StartDate { get; set; } = DateTime.Today.AddDays(-7);
@@ -27,12 +27,79 @@ public partial class ReportsViewModel : BaseViewModel
     [ObservableProperty]
     public partial string SuccessMessage { get; set; } = string.Empty;
 
+    [ObservableProperty]
+    public partial string Header1 { get; set; } = "Date";
+
+    [ObservableProperty]
+    public partial string Header2 { get; set; } = "Transactions";
+
+    [ObservableProperty]
+    public partial string Header3 { get; set; } = "Gross Amount";
+
+    [ObservableProperty]
+    public partial string Header4 { get; set; } = "Net Amount";
+
     public ObservableCollection<ReportItemDto> ReportRows { get; } = new();
 
     public ReportsViewModel(IApiService apiService)
     {
         _apiService = apiService;
         Title = "Reports";
+        UpdateHeaders();
+    }
+
+    partial void OnReportTypeChanged(string value)
+    {
+        UpdateHeaders();
+    }
+
+    private void UpdateHeaders()
+    {
+        switch (ReportType)
+        {
+            case "Daily Revenue":
+                Header1 = "Date";
+                Header2 = "Transactions";
+                Header3 = "Gross Amount";
+                Header4 = "Net Amount";
+                break;
+            case "Monthly Revenue":
+                Header1 = "Month";
+                Header2 = "Transactions";
+                Header3 = "Gross Amount";
+                Header4 = "Net Amount";
+                break;
+            case "Attendance":
+                Header1 = "Member";
+                Header2 = "Plan Package";
+                Header3 = "Checked-In";
+                Header4 = "Checked-Out";
+                break;
+            case "Membership Sales":
+                Header1 = "Member";
+                Header2 = "Plan Package";
+                Header3 = "Base Price";
+                Header4 = "Amount Paid";
+                break;
+            case "Expiring Memberships":
+                Header1 = "Member";
+                Header2 = "Plan Package";
+                Header3 = "Start Date";
+                Header4 = "Expiry Date";
+                break;
+            case "Refunds":
+                Header1 = "Member";
+                Header2 = "Receipt #";
+                Header3 = "Refund Amt";
+                Header4 = "Refund Date";
+                break;
+            default:
+                Header1 = "Col 1";
+                Header2 = "Col 2";
+                Header3 = "Col 3";
+                Header4 = "Col 4";
+                break;
+        }
     }
 
     [RelayCommand]
@@ -56,6 +123,23 @@ public partial class ReportsViewModel : BaseViewModel
                         ReportRows.Add(new ReportItemDto
                         {
                             Col1 = item.Date.ToString("yyyy-MM-dd"),
+                            Col2 = $"Count: {item.TransactionCount}",
+                            Col3 = $"Gross: ₱{item.GrossAmount:F2}",
+                            Col4 = $"Net: ₱{item.NetAmount:F2}"
+                        });
+                    }
+                }
+            }
+            else if (ReportType == "Monthly Revenue")
+            {
+                var res = await _apiService.GetMonthlyRevenueReportAsync(StartDate, EndDate);
+                if (res.Success && res.Data != null)
+                {
+                    foreach (var item in res.Data)
+                    {
+                        ReportRows.Add(new ReportItemDto
+                        {
+                            Col1 = item.Month,
                             Col2 = $"Count: {item.TransactionCount}",
                             Col3 = $"Gross: ₱{item.GrossAmount:F2}",
                             Col4 = $"Net: ₱{item.NetAmount:F2}"
@@ -93,6 +177,25 @@ public partial class ReportsViewModel : BaseViewModel
                             Col2 = item.PlanName,
                             Col3 = $"Amount: ₱{item.Amount:F2}",
                             Col4 = $"Paid: ₱{item.FinalAmount:F2}"
+                        });
+                    }
+                }
+            }
+            else if (ReportType == "Expiring Memberships")
+            {
+                int days = (int)(EndDate - StartDate).TotalDays;
+                if (days <= 0) days = 7;
+                var res = await _apiService.GetExpiringMembershipsReportAsync(days);
+                if (res.Success && res.Data != null)
+                {
+                    foreach (var item in res.Data)
+                    {
+                        ReportRows.Add(new ReportItemDto
+                        {
+                            Col1 = item.MemberName,
+                            Col2 = item.PlanName,
+                            Col3 = item.StartDate.ToString("yyyy-MM-dd"),
+                            Col4 = item.EndDate.ToString("yyyy-MM-dd")
                         });
                     }
                 }
@@ -141,6 +244,10 @@ public partial class ReportsViewModel : BaseViewModel
             {
                 csvBytes = await _apiService.ExportDailyRevenueCsvAsync(StartDate, EndDate);
             }
+            else if (ReportType == "Monthly Revenue")
+            {
+                csvBytes = await _apiService.ExportMonthlyRevenueCsvAsync(StartDate, EndDate);
+            }
             else if (ReportType == "Attendance")
             {
                 csvBytes = await _apiService.ExportAttendanceCsvAsync(StartDate, EndDate);
@@ -148,6 +255,12 @@ public partial class ReportsViewModel : BaseViewModel
             else if (ReportType == "Membership Sales")
             {
                 csvBytes = await _apiService.ExportMembershipSalesCsvAsync(StartDate, EndDate);
+            }
+            else if (ReportType == "Expiring Memberships")
+            {
+                int days = (int)(EndDate - StartDate).TotalDays;
+                if (days <= 0) days = 7;
+                csvBytes = await _apiService.ExportExpiringMembershipsCsvAsync(days);
             }
             else if (ReportType == "Refunds")
             {

@@ -12,18 +12,22 @@
         <!-- Header & Action Row -->
         <Grid ColumnDefinitions="*, Auto" Padding="20,15" ColumnSpacing="15">
             <!-- Search bar -->
-            <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="10,0">
-                <Entry Text="{Binding SearchQuery}" 
-                       TextColor="{StaticResource TextPrimary}"
-                       PlaceholderColor="{StaticResource TextMuted}"
-                       Placeholder="🔍 Search members by name or phone..."
-                       HeightRequest="42"
-                       ReturnType="Search"
-                       ReturnCommand="{Binding LoadMembersCommand}" />
+            <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="12,0">
+                <Grid ColumnDefinitions="Auto, *">
+                    <Path Data="{StaticResource IconSearch}" Fill="{StaticResource TextSecondary}" Aspect="Uniform" WidthRequest="16" HeightRequest="16" Margin="0,0,10,0" VerticalOptions="Center" />
+                    <Entry Grid.Column="1"
+                           Text="{Binding SearchQuery}" 
+                           TextColor="{StaticResource TextPrimary}"
+                           PlaceholderColor="{StaticResource TextMuted}"
+                           Placeholder="Search members by name or phone..."
+                           HeightRequest="42"
+                           ReturnType="Search"
+                           ReturnCommand="{Binding LoadMembersCommand}" />
+                </Grid>
             </Border>
 
             <Button Grid.Column="1"
-                    Text="➕ Register"
+                    Text="Add Member"
                     BackgroundColor="{StaticResource Secondary}"
                     TextColor="White"
                     CornerRadius="8"
@@ -54,8 +58,8 @@
                                     </Border.GestureRecognizers>
                                     <Grid ColumnDefinitions="50, *, Auto" ColumnSpacing="15">
                                         <!-- Photo placeholder -->
-                                        <Border StrokeShape="RoundRectangle 25" Stroke="{StaticResource BorderBrush}" HeightRequest="50" WidthRequest="50" HorizontalOptions="Center" VerticalOptions="Center">
-                                            <Label Text="👤" FontSize="24" HorizontalOptions="Center" VerticalOptions="Center" />
+                                        <Border StrokeShape="RoundRectangle 25" Stroke="{StaticResource BorderBrush}" BackgroundColor="#1E293B" HeightRequest="50" WidthRequest="50" HorizontalOptions="Center" VerticalOptions="Center">
+                                            <Path Data="{StaticResource IconUser}" Fill="{StaticResource PrimaryLight}" Aspect="Uniform" HeightRequest="22" WidthRequest="22" HorizontalOptions="Center" VerticalOptions="Center" />
                                         </Border>
 
                                         <!-- Details -->
@@ -69,23 +73,22 @@
                                         </VerticalStackLayout>
 
                                         <!-- Action & Status -->
-                                        <VerticalStackLayout Grid.Column="2" Spacing="8" HorizontalOptions="End" VerticalOptions="Center">
+                                        <HorizontalStackLayout Grid.Column="2" Spacing="10" VerticalOptions="Center">
                                             <Border StrokeShape="RoundRectangle 6" 
                                                     BackgroundColor="{StaticResource SuccessBrush}" 
                                                     Padding="8,3" 
-                                                    HorizontalOptions="End">
+                                                    VerticalOptions="Center">
                                                 <Label Text="{Binding Status}" TextColor="White" FontSize="11" FontAttributes="Bold" />
                                             </Border>
-                                            <Button Text="❌" 
-                                                    BackgroundColor="Transparent"
-                                                    TextColor="{StaticResource Danger}"
-                                                    FontSize="14"
-                                                    HeightRequest="30"
-                                                    WidthRequest="30"
-                                                    Padding="0"
-                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MembersViewModel}}, Path=DeleteMemberCommand}"
-                                                    CommandParameter="{Binding .}" />
-                                        </VerticalStackLayout>
+                                            
+                                            <!-- Delete Button -->
+                                            <Border StrokeShape="RoundRectangle 6" BackgroundColor="Transparent" HeightRequest="32" WidthRequest="32" Padding="6" VerticalOptions="Center">
+                                                <Border.GestureRecognizers>
+                                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MembersViewModel}}, Path=DeleteMemberCommand}" CommandParameter="{Binding .}" />
+                                                </Border.GestureRecognizers>
+                                                <Path Data="{StaticResource IconTrash}" Fill="{StaticResource Danger}" Aspect="Uniform" />
+                                            </Border>
+                                        </HorizontalStackLayout>
                                     </Grid>
                                 </Border>
                             </DataTemplate>

@@ -12,7 +12,7 @@
         <Grid ColumnDefinitions="*, Auto" Padding="20,15" ColumnSpacing="15">
             <Label Text="Active Membership Packages" TextColor="{StaticResource TextPrimary}" FontSize="18" FontAttributes="Bold" VerticalOptions="Center" />
             <Button Grid.Column="1"
-                    Text="➕ Add Plan"
+                    Text="Add Plan"
                     BackgroundColor="{StaticResource Secondary}"
                     TextColor="White"
                     CornerRadius="8"
@@ -28,11 +28,17 @@
                     
                     <!-- Alert Banners -->
                     <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource SuccessBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="15" IsVisible="{Binding SuccessMessage, Converter={StaticResource NullableToBoolConverter}}">
-                        <Label Text="{Binding SuccessMessage}" TextColor="{StaticResource Success}" FontAttributes="Bold" />
+                        <Grid ColumnDefinitions="Auto, *" ColumnSpacing="12" VerticalOptions="Center">
+                            <Path Data="{StaticResource IconCheckCircle}" Fill="{StaticResource Success}" Aspect="Uniform" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
+                            <Label Grid.Column="1" Text="{Binding SuccessMessage}" TextColor="{StaticResource Success}" FontAttributes="Bold" VerticalOptions="Center" />
+                        </Grid>
                     </Border>
 
                     <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource DangerBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="15" IsVisible="{Binding ErrorMessage, Converter={StaticResource NullableToBoolConverter}}">
-                        <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" FontAttributes="Bold" />
+                        <Grid ColumnDefinitions="Auto, *" ColumnSpacing="12" VerticalOptions="Center">
+                            <Path Data="{StaticResource IconErrorCircle}" Fill="{StaticResource Danger}" Aspect="Uniform" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
+                            <Label Grid.Column="1" Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" FontAttributes="Bold" VerticalOptions="Center" />
+                        </Grid>
                     </Border>
 
                     <!-- Collection View of Plans -->
@@ -62,24 +68,21 @@
 
                                         <!-- Actions -->
                                         <HorizontalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
-                                            <Button Text="✏️ Edit" 
+                                            <Button Text="Edit" 
                                                     BackgroundColor="{StaticResource Primary}" 
                                                     TextColor="White"
                                                     HeightRequest="36"
-                                                    Padding="12,0"
+                                                    Padding="14,0"
                                                     CornerRadius="6"
                                                     Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PlansViewModel}}, Path=OpenEditFormCommand}"
                                                     CommandParameter="{Binding .}" />
                                             
-                                            <Button Text="🗑️" 
-                                                    BackgroundColor="{StaticResource Danger}" 
-                                                    TextColor="White"
-                                                    HeightRequest="36"
-                                                    WidthRequest="36"
-                                                    Padding="0"
-                                                    CornerRadius="6"
-                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PlansViewModel}}, Path=DeletePlanCommand}"
-                                                    CommandParameter="{Binding .}" />
+                                            <Border StrokeShape="RoundRectangle 6" BackgroundColor="{StaticResource Danger}" HeightRequest="36" WidthRequest="36" Padding="10" VerticalOptions="Center">
+                                                <Border.GestureRecognizers>
+                                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PlansViewModel}}, Path=DeletePlanCommand}" CommandParameter="{Binding .}" />
+                                                </Border.GestureRecognizers>
+                                                <Path Data="{StaticResource IconTrash}" Fill="White" Aspect="Uniform" />
+                                            </Border>
                                         </HorizontalStackLayout>
                                     </Grid>
                                 </Border>

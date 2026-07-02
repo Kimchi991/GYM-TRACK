@@ -60,12 +60,15 @@ public interface IApiService
 
     // Reports
     Task<ApiResponse<IEnumerable<DailyRevenueReportDto>>> GetDailyRevenueReportAsync(DateTime startDate, DateTime endDate);
+    Task<ApiResponse<IEnumerable<MonthlyRevenueReportDto>>> GetMonthlyRevenueReportAsync(DateTime startDate, DateTime endDate);
     Task<ApiResponse<IEnumerable<AttendanceReportDto>>> GetAttendanceReportAsync(DateTime startDate, DateTime endDate);
     Task<ApiResponse<IEnumerable<MembershipSalesReportDto>>> GetMembershipSalesReportAsync(DateTime startDate, DateTime endDate);
     Task<ApiResponse<IEnumerable<RefundReportDto>>> GetRefundReportAsync(DateTime startDate, DateTime endDate);
     Task<ApiResponse<IEnumerable<ExpiringMembershipsReportDto>>> GetExpiringMembershipsReportAsync(int nextDays = 7);
     Task<byte[]> ExportDailyRevenueCsvAsync(DateTime startDate, DateTime endDate);
+    Task<byte[]> ExportMonthlyRevenueCsvAsync(DateTime startDate, DateTime endDate);
     Task<byte[]> ExportAttendanceCsvAsync(DateTime startDate, DateTime endDate);
     Task<byte[]> ExportMembershipSalesCsvAsync(DateTime startDate, DateTime endDate);
     Task<byte[]> ExportRefundsCsvAsync(DateTime startDate, DateTime endDate);
+    Task<byte[]> ExportExpiringMembershipsCsvAsync(int nextDays = 7);
 }

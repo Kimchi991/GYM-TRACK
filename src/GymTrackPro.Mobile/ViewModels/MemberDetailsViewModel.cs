@@ -58,6 +58,20 @@ public partial class MemberDetailsViewModel : BaseViewModel
     [ObservableProperty]
     public partial string EditStatus { get; set; } = "Active";
 
+    [ObservableProperty]
+    public partial bool ShowRenewForm { get; set; }
+
+    [ObservableProperty]
+    public partial MembershipPlanResponseDto? SelectedPlanForRenewal { get; set; }
+
+    [ObservableProperty]
+    public partial decimal RenewalDiscount { get; set; }
+
+    [ObservableProperty]
+    public partial string RenewalMethod { get; set; } = "Cash";
+
+    public ObservableCollection<MembershipPlanResponseDto> AvailablePlans { get; } = new();
+
     public ObservableCollection<SubscriptionResponseDto> Subscriptions { get; } = new();
     public ObservableCollection<AttendanceDto> AttendanceLogs { get; } = new();
     public ObservableCollection<PaymentResponseDto> PaymentLogs { get; } = new();
@@ -309,4 +323,107 @@ public partial class MemberDetailsViewModel : BaseViewModel
             IsBusy = false;
         }
     }
+
+    [RelayCommand]
+    private async Task ToggleRenewFormAsync()
+    {
+        ShowRenewForm = !ShowRenewForm;
+        if (ShowRenewForm)
+        {
+            SelectedPlanForRenewal = null;
+            RenewalDiscount = 0;
+            RenewalMethod = "Cash";
+            AvailablePlans.Clear();
+            
+            IsBusy = true;
+            ErrorMessage = string.Empty;
+            try
+            {
+                var result = await _apiService.GetPlansAsync();
+                if (result.Success && result.Data != null)
+                {
+                    foreach (var plan in result.Data)
+                    {
+                        AvailablePlans.Add(plan);
+                    }
+                }
+                else
+                {
+                    ErrorMessage = result.Message;
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Failed to load plans: {ex.Message}";
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+    }
+
+    [RelayCommand]
+    private async Task ProcessRenewalAsync()
+    {
+        if (Member == null || SelectedPlanForRenewal == null)
+        {
+            ErrorMessage = "Please select a membership plan.";
+            return;
+        }
+
+        IsBusy = true;
+        ErrorMessage = string.Empty;
+        SuccessMessage = string.Empty;
+
+        try
+        {
+            // 1. Create Subscription
+            var subDto = new CreateSubscriptionDto
+            {
+                MemberID = Member.MemberID,
+                PlanID = SelectedPlanForRenewal.PlanID,
+                StartDate = DateTime.Today
+            };
+
+            var subResult = await _apiService.CreateSubscriptionAsync(subDto);
+            if (!subResult.Success || subResult.Data == null)
+            {
+                ErrorMessage = subResult.Message;
+                return;
+            }
+
+            // 2. Process Payment
+            var payDto = new CreatePaymentDto
+            {
+                MemberID = Member.MemberID,
+                SubscriptionID = subResult.Data.SubscriptionID,
+                Amount = SelectedPlanForRenewal.Price,
+                Discount = RenewalDiscount,
+                PaymentMethod = RenewalMethod,
+                PaymentStatus = "Paid"
+            };
+
+            var payResult = await _apiService.ProcessPaymentAsync(payDto);
+            if (payResult.Success && payResult.Data != null)
+            {
+                SuccessMessage = $"Renewal Successful! Receipt {payResult.Data.ReceiptNumber} generated.";
+                ShowRenewForm = false;
+                await LoadMemberDetailsDataAsync();
+            }
+            else
+            {
+                ErrorMessage = payResult.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Renewal failed: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
 }
+

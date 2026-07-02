@@ -348,6 +348,12 @@ public class ApiService : IApiService
         return await HandleResponseAsync<IEnumerable<DailyRevenueReportDto>>(response);
     }
 
+    public async Task<ApiResponse<IEnumerable<MonthlyRevenueReportDto>>> GetMonthlyRevenueReportAsync(DateTime startDate, DateTime endDate)
+    {
+        var response = await _httpClient.GetAsync($"reports/monthly-revenue?startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}");
+        return await HandleResponseAsync<IEnumerable<MonthlyRevenueReportDto>>(response);
+    }
+
     public async Task<ApiResponse<IEnumerable<AttendanceReportDto>>> GetAttendanceReportAsync(DateTime startDate, DateTime endDate)
     {
         var response = await _httpClient.GetAsync($"reports/attendance?startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}");
@@ -378,6 +384,12 @@ public class ApiService : IApiService
         return response.IsSuccessStatusCode ? await response.Content.ReadAsByteArrayAsync() : Array.Empty<byte>();
     }
 
+    public async Task<byte[]> ExportMonthlyRevenueCsvAsync(DateTime startDate, DateTime endDate)
+    {
+        var response = await _httpClient.GetAsync($"reports/monthly-revenue/export?startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}");
+        return response.IsSuccessStatusCode ? await response.Content.ReadAsByteArrayAsync() : Array.Empty<byte>();
+    }
+
     public async Task<byte[]> ExportAttendanceCsvAsync(DateTime startDate, DateTime endDate)
     {
         var response = await _httpClient.GetAsync($"reports/attendance/export?startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}");
@@ -393,6 +405,12 @@ public class ApiService : IApiService
     public async Task<byte[]> ExportRefundsCsvAsync(DateTime startDate, DateTime endDate)
     {
         var response = await _httpClient.GetAsync($"reports/refunds/export?startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}");
+        return response.IsSuccessStatusCode ? await response.Content.ReadAsByteArrayAsync() : Array.Empty<byte>();
+    }
+
+    public async Task<byte[]> ExportExpiringMembershipsCsvAsync(int nextDays = 7)
+    {
+        var response = await _httpClient.GetAsync($"reports/expiring-memberships/export?nextDays={nextDays}");
         return response.IsSuccessStatusCode ? await response.Content.ReadAsByteArrayAsync() : Array.Empty<byte>();
     }
 }

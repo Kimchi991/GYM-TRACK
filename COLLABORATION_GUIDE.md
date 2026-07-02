@@ -101,3 +101,28 @@ Use Conventional Commits for clear history:
 2.  Submit a Pull Request from your feature branch to `develop`.
 3.  Fill out the [PR Template](.github/pull_request_template.md).
 4.  Ensure your code conforms to the [Coding Standards](docs/08_Coding_Standards.md) and passes the [Definition of Done](docs/09_Definition_of_Done.md).
+
+---
+
+## 🤖 AI Agent Collaborator Guidelines
+
+If you are an AI coding assistant collaborating on this repository, please adhere strictly to these engineering and styling standards:
+
+### 1. Visual Theme & Aesthetics
+*   **Color Palette**: The application uses a unified premium "Slate Dark" theme (Background: `#0F172A`, Card Background: `#1E293B`, Borders: `#334155`). Do not introduce generic system colors (e.g., standard red, blue, green).
+*   **Card Design**: Use `Border` with `StrokeShape="RoundRectangle 12"` and `Stroke="{StaticResource BorderBrush}"` for consistent card styling.
+*   **Gradients**: Use subtle gradients (e.g., `LinearGradientBrush` from slate-800 to slate-900) for key metrics and hero sections.
+
+### 2. Vector Iconography
+*   **Centralized Vector Library**: Emojis are deprecated/banned for UI buttons and icons.
+*   **PathGeometries**: Refer to `Resources/Styles/Colors.xaml` where centralized `<PathGeometry>` keys are defined (e.g., `IconUser`, `IconCard`, `IconSearch`, `IconRefresh`, `IconTrash`, `IconArrowBack`, `IconLock`, `IconSettings`, `IconCheckCircle`, `IconErrorCircle`).
+*   **Usage**: Render them in XAML using `Path` elements:
+    ```xml
+    <Path Data="{StaticResource IconSearch}" Fill="{StaticResource Primary}" Aspect="Uniform" WidthRequest="18" HeightRequest="18" />
+    ```
+
+### 3. Compilation & AOT Compliance
+*   **Concrete Geometries**: Always declare geometries as `<PathGeometry Figures="..." />` instead of abstract `<Geometry>` to prevent compiler instantiation errors.
+*   **Binding Contexts**: Specify `x:DataType` on all `DataTemplate` and page elements to ensure compile-time type-safety and AOT compatibility.
+*   **Navigation & Confirmed Actions**: Follow MVVM rules. Confine UI additions to XAML, using VM commands for screen transitions.
+

@@ -22,7 +22,10 @@
                     BackgroundColor="{StaticResource CardBackground}" 
                     Padding="15" 
                     IsVisible="{Binding SuccessMessage, Converter={StaticResource NullableToBoolConverter}}">
-                <Label Text="{Binding SuccessMessage}" TextColor="{StaticResource Success}" FontSize="13" FontAttributes="Bold" />
+                <Grid ColumnDefinitions="Auto, *" ColumnSpacing="12" VerticalOptions="Center">
+                    <Path Data="{StaticResource IconCheckCircle}" Fill="{StaticResource Success}" Aspect="Uniform" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
+                    <Label Grid.Column="1" Text="{Binding SuccessMessage}" TextColor="{StaticResource Success}" FontSize="13" FontAttributes="Bold" VerticalOptions="Center" />
+                </Grid>
             </Border>
 
             <!-- Settings Listing -->
@@ -36,8 +39,8 @@
                                 Margin="0,0,0,12">
                             <VerticalStackLayout Spacing="10">
                                 <!-- Title and Type -->
-                                <HorizontalStackLayout Spacing="10">
-                                    <Label Text="⚙" FontSize="18" VerticalOptions="Center" />
+                                <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                                    <Path Data="{StaticResource IconSettings}" Fill="{StaticResource PrimaryLight}" Aspect="Uniform" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
                                     <Label Text="{Binding SettingKey}" TextColor="{StaticResource TextPrimary}" FontSize="14" FontAttributes="Bold" VerticalOptions="Center" />
                                 </HorizontalStackLayout>
 

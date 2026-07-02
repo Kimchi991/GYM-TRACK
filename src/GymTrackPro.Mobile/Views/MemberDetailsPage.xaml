@@ -13,9 +13,9 @@
             <VerticalStackLayout Spacing="20">
 
                 <!-- Navigation Back Header -->
-                <HorizontalStackLayout Spacing="6" VerticalOptions="Center" Margin="0,0,0,5">
-                    <Label Text="←" TextColor="{StaticResource Primary}" FontSize="18" FontAttributes="Bold" VerticalOptions="Center" />
-                    <Label Text="Back to Members List" 
+                <HorizontalStackLayout Spacing="8" VerticalOptions="Center" Margin="0,0,0,5">
+                    <Path Data="{StaticResource IconArrowBack}" Fill="{StaticResource Primary}" Aspect="Uniform" WidthRequest="16" HeightRequest="16" VerticalOptions="Center" />
+                    <Label Text="Back to Members" 
                            TextColor="{StaticResource Primary}" 
                            FontSize="14" 
                            FontAttributes="Bold"
@@ -38,8 +38,8 @@
                 <!-- Profile Header Card -->
                 <Border StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="20">
                     <Grid ColumnDefinitions="60, *, Auto" ColumnSpacing="15">
-                        <Border StrokeShape="RoundRectangle 30" Stroke="{StaticResource BorderBrush}" HeightRequest="60" WidthRequest="60" VerticalOptions="Center">
-                            <Label Text="👤" FontSize="30" HorizontalOptions="Center" VerticalOptions="Center" />
+                        <Border StrokeShape="RoundRectangle 30" Stroke="{StaticResource BorderBrush}" BackgroundColor="#1E293B" HeightRequest="60" WidthRequest="60" VerticalOptions="Center">
+                            <Path Data="{StaticResource IconUser}" Fill="{StaticResource PrimaryLight}" Aspect="Uniform" HeightRequest="26" WidthRequest="26" HorizontalOptions="Center" VerticalOptions="Center" />
                         </Border>
                         
                         <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
@@ -53,8 +53,13 @@
 
                         <!-- Profile actions -->
                         <HorizontalStackLayout Grid.Column="2" Spacing="8" VerticalOptions="Center">
-                            <Button Text="✏️ Edit" BackgroundColor="{StaticResource Primary}" TextColor="White" Command="{Binding ToggleEditFormCommand}" HeightRequest="38" Padding="10,0" CornerRadius="6" />
-                            <Button Text="🗑️" BackgroundColor="{StaticResource Danger}" TextColor="White" Command="{Binding DeleteMemberCommand}" HeightRequest="38" WidthRequest="38" Padding="0" CornerRadius="6" />
+                            <Button Text="Edit Profile" BackgroundColor="{StaticResource Primary}" TextColor="White" Command="{Binding ToggleEditFormCommand}" HeightRequest="38" Padding="12,0" CornerRadius="6" />
+                            <Border StrokeShape="RoundRectangle 6" BackgroundColor="{StaticResource Danger}" HeightRequest="38" WidthRequest="38" Padding="11" VerticalOptions="Center">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding DeleteMemberCommand}" />
+                                </Border.GestureRecognizers>
+                                <Path Data="{StaticResource IconTrash}" Fill="White" Aspect="Uniform" />
+                            </Border>
                         </HorizontalStackLayout>
                     </Grid>
                 </Border>
@@ -116,7 +121,7 @@
                             <VerticalStackLayout Spacing="15">
                                 <Label Text="Membership Subscription" TextColor="{StaticResource TextPrimary}" FontSize="16" FontAttributes="Bold" />
 
-                                <Grid RowDefinitions="Auto, Auto, Auto" RowSpacing="15" IsVisible="{Binding ActiveSubscription, Converter={StaticResource NullableToBoolConverter}}">
+                                <Grid RowDefinitions="Auto, Auto, Auto, Auto" RowSpacing="15" IsVisible="{Binding ActiveSubscription, Converter={StaticResource NullableToBoolConverter}}">
                                     <!-- Status Info -->
                                     <VerticalStackLayout Spacing="4">
                                         <Label Text="CURRENT STATUS" TextColor="{StaticResource TextMuted}" FontSize="10" FontAttributes="Bold" />
@@ -148,12 +153,26 @@
                                                 IsVisible="{Binding ActiveSubscription.Status, StringFormat='{0}', Converter={StaticResource NullableToBoolConverter}, ConverterParameter=Paused}"
                                                 Command="{Binding ResumeSubscriptionCommand}" />
                                     </HorizontalStackLayout>
+
+                                    <!-- Renew button -->
+                                    <Button Grid.Row="3"
+                                            Text="🔄 Renew / Change Plan"
+                                            BackgroundColor="{StaticResource Secondary}"
+                                            TextColor="White"
+                                            HeightRequest="40"
+                                            Command="{Binding ToggleRenewFormCommand}" />
                                 </Grid>
 
                                 <!-- No Subscription View -->
                                 <VerticalStackLayout Spacing="10" HorizontalOptions="Center" IsVisible="{Binding ActiveSubscription, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}">
                                     <Label Text="🚫 No Active Subscription" TextColor="{StaticResource TextMuted}" FontSize="14" HorizontalOptions="Center" />
                                     <Label Text="This member has no active packages." TextColor="{StaticResource TextMuted}" FontSize="12" HorizontalOptions="Center" />
+                                    <Button Text="➕ Enroll in a Plan"
+                                            BackgroundColor="{StaticResource Secondary}"
+                                            TextColor="White"
+                                            HeightRequest="40"
+                                            Margin="0,10,0,0"
+                                            Command="{Binding ToggleRenewFormCommand}" />
                                 </VerticalStackLayout>
                             </VerticalStackLayout>
                         </Border>
@@ -312,6 +331,61 @@
                         <Grid ColumnDefinitions="*, *" ColumnSpacing="15" Margin="0,10,0,0">
                             <Button Text="Cancel" BackgroundColor="{StaticResource Background}" TextColor="{StaticResource TextPrimary}" BorderColor="{StaticResource BorderColor}" BorderWidth="1" CornerRadius="6" Command="{Binding ToggleEditFormCommand}" />
                             <Button Grid.Column="1" Text="Save" BackgroundColor="{StaticResource Success}" TextColor="White" CornerRadius="6" Command="{Binding SaveMemberCommand}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </ScrollView>
+            </Border>
+        </Grid>
+
+        <!-- Renew / Enroll Modal Overlay -->
+        <Grid BackgroundColor="#AA000000" IsVisible="{Binding ShowRenewForm}" VerticalOptions="Fill" HorizontalOptions="Fill">
+            <Border StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="20" Margin="30" VerticalOptions="Center" HorizontalOptions="Center" WidthRequest="450">
+                <ScrollView>
+                    <VerticalStackLayout Spacing="18">
+                        <Label Text="Enroll / Renew Membership Plan" TextColor="{StaticResource TextPrimary}" FontSize="18" FontAttributes="Bold" />
+
+                        <!-- Plan Selection -->
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Select Membership Plan *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                            <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Picker ItemDisplayBinding="{Binding PlanName}" SelectedItem="{Binding SelectedPlanForRenewal}" ItemsSource="{Binding AvailablePlans}" TextColor="{StaticResource TextPrimary}" TitleColor="{StaticResource TextMuted}" HeightRequest="40" Title="Select Plan..." />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Price Info -->
+                        <VerticalStackLayout Spacing="6" IsVisible="{Binding SelectedPlanForRenewal, Converter={StaticResource NullableToBoolConverter}}">
+                            <Label Text="Plan Price" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                            <Label Text="{Binding SelectedPlanForRenewal.Price, StringFormat='₱{0:F2}'}" TextColor="{StaticResource Success}" FontSize="18" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+
+                        <!-- Discount -->
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Discount Amount (₱)" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                            <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Entry Text="{Binding RenewalDiscount}" TextColor="{StaticResource TextPrimary}" Keyboard="Numeric" HeightRequest="40" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Payment Method -->
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Payment Method *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                            <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Picker SelectedItem="{Binding RenewalMethod}" TextColor="{StaticResource TextPrimary}" TitleColor="{StaticResource TextMuted}" HeightRequest="40">
+                                    <Picker.ItemsSource>
+                                        <x:Array Type="{x:Type x:String}">
+                                            <x:String>Cash</x:String>
+                                            <x:String>GCash</x:String>
+                                            <x:String>Maya</x:String>
+                                            <x:String>Card</x:String>
+                                        </x:Array>
+                                    </Picker.ItemsSource>
+                                </Picker>
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="15" Margin="0,10,0,0">
+                            <Button Text="Cancel" BackgroundColor="{StaticResource Background}" TextColor="{StaticResource TextPrimary}" BorderColor="{StaticResource BorderColor}" BorderWidth="1" CornerRadius="6" Command="{Binding ToggleRenewFormCommand}" />
+                            <Button Grid.Column="1" Text="Process Payment" BackgroundColor="{StaticResource Success}" TextColor="White" CornerRadius="6" Command="{Binding ProcessRenewalCommand}" />
                         </Grid>
                     </VerticalStackLayout>
                 </ScrollView>

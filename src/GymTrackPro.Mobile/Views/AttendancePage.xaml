@@ -48,10 +48,10 @@
                     BackgroundColor="{StaticResource CardBackground}" 
                     Padding="15" 
                     IsVisible="{Binding StatusMessage, Converter={StaticResource NullableToBoolConverter}}">
-                <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
-                    <Label Text="✅" FontSize="20" VerticalOptions="Center" />
-                    <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Success}" FontSize="14" FontAttributes="Bold" VerticalOptions="Center" />
-                </HorizontalStackLayout>
+                <Grid ColumnDefinitions="Auto, *" ColumnSpacing="12" VerticalOptions="Center">
+                    <Path Data="{StaticResource IconCheckCircle}" Fill="{StaticResource Success}" Aspect="Uniform" WidthRequest="20" HeightRequest="20" VerticalOptions="Center" />
+                    <Label Grid.Column="1" Text="{Binding StatusMessage}" TextColor="{StaticResource Success}" FontSize="14" FontAttributes="Bold" VerticalOptions="Center" />
+                </Grid>
             </Border>
 
             <!-- Error Alerts Banner -->
@@ -60,10 +60,10 @@
                     BackgroundColor="{StaticResource CardBackground}" 
                     Padding="15" 
                     IsVisible="{Binding ErrorMessage, Converter={StaticResource NullableToBoolConverter}}">
-                <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
-                    <Label Text="⚠️" FontSize="20" VerticalOptions="Center" />
-                    <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" FontSize="14" FontAttributes="Bold" VerticalOptions="Center" />
-                </HorizontalStackLayout>
+                <Grid ColumnDefinitions="Auto, *" ColumnSpacing="12" VerticalOptions="Center">
+                    <Path Data="{StaticResource IconErrorCircle}" Fill="{StaticResource Danger}" Aspect="Uniform" WidthRequest="20" HeightRequest="20" VerticalOptions="Center" />
+                    <Label Grid.Column="1" Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" FontSize="14" FontAttributes="Bold" VerticalOptions="Center" />
+                </Grid>
             </Border>
 
             <!-- Today's Checked-In Logs -->

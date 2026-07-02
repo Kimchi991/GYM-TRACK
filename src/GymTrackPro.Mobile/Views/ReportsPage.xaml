@@ -22,8 +22,10 @@
                                 <Picker.ItemsSource>
                                     <x:Array Type="{x:Type x:String}">
                                         <x:String>Daily Revenue</x:String>
+                                        <x:String>Monthly Revenue</x:String>
                                         <x:String>Attendance</x:String>
                                         <x:String>Membership Sales</x:String>
+                                        <x:String>Expiring Memberships</x:String>
                                         <x:String>Refunds</x:String>
                                     </x:Array>
                                 </Picker.ItemsSource>
@@ -50,7 +52,7 @@
 
                     <!-- Action buttons -->
                     <Grid ColumnDefinitions="*, *" ColumnSpacing="15" Margin="0,5,0,0">
-                        <Button Text="📊 Run Report"
+                        <Button Text="Run Report"
                                 BackgroundColor="{StaticResource Primary}"
                                 TextColor="White"
                                 CornerRadius="8"
@@ -59,7 +61,7 @@
                                 Command="{Binding GenerateReportCommand}" />
 
                         <Button Grid.Column="1"
-                                Text="📥 Export CSV"
+                                Text="Export CSV"
                                 BackgroundColor="{StaticResource Secondary}"
                                 TextColor="White"
                                 CornerRadius="8"
@@ -84,10 +86,10 @@
                 <!-- Table Header -->
                 <Border StrokeShape="RoundRectangle 8" BackgroundColor="{StaticResource CardBackground}" Padding="15,10" StrokeThickness="0">
                     <Grid ColumnDefinitions="2*, 2*, 2*, 2*">
-                        <Label Text="Field 1" TextColor="{StaticResource TextSecondary}" FontAttributes="Bold" FontSize="12" />
-                        <Label Grid.Column="1" Text="Field 2" TextColor="{StaticResource TextSecondary}" FontAttributes="Bold" FontSize="12" />
-                        <Label Grid.Column="2" Text="Field 3" TextColor="{StaticResource TextSecondary}" FontAttributes="Bold" FontSize="12" />
-                        <Label Grid.Column="3" Text="Field 4" TextColor="{StaticResource TextSecondary}" FontAttributes="Bold" FontSize="12" HorizontalOptions="End" />
+                        <Label Text="{Binding Header1}" TextColor="{StaticResource TextSecondary}" FontAttributes="Bold" FontSize="12" />
+                        <Label Grid.Column="1" Text="{Binding Header2}" TextColor="{StaticResource TextSecondary}" FontAttributes="Bold" FontSize="12" />
+                        <Label Grid.Column="2" Text="{Binding Header3}" TextColor="{StaticResource TextSecondary}" FontAttributes="Bold" FontSize="12" />
+                        <Label Grid.Column="3" Text="{Binding Header4}" TextColor="{StaticResource TextSecondary}" FontAttributes="Bold" FontSize="12" HorizontalOptions="End" />
                     </Grid>
                 </Border>
 

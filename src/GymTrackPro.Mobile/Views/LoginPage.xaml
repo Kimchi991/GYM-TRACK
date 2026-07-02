@@ -19,19 +19,22 @@
                     
                     <!-- Branding Header -->
                     <VerticalStackLayout Spacing="8" HorizontalOptions="Center">
-                        <Label Text="💪 GymTrackPro"
-                               TextColor="{StaticResource Primary}"
-                               FontSize="32"
-                               FontAttributes="Bold"
-                               HorizontalOptions="Center" />
+                        <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
+                            <Path Data="{StaticResource IconLock}" Fill="{StaticResource Primary}" Aspect="Uniform" WidthRequest="26" HeightRequest="26" VerticalOptions="Center" />
+                            <Label Text="GymTrackPro"
+                                   TextColor="{StaticResource TextPrimary}"
+                                   FontSize="28"
+                                   FontAttributes="Bold"
+                                   VerticalOptions="Center" />
+                        </HorizontalStackLayout>
                         <Label Text="Welcome Back"
-                               TextColor="{StaticResource TextPrimary}"
-                               FontSize="20"
+                               TextColor="{StaticResource TextSecondary}"
+                               FontSize="16"
                                FontAttributes="Bold"
                                HorizontalOptions="Center" />
                         <Label Text="Sign in to manage your facility"
-                               TextColor="{StaticResource TextSecondary}"
-                               FontSize="14"
+                               TextColor="{StaticResource TextMuted}"
+                               FontSize="13"
                                HorizontalOptions="Center" />
                     </VerticalStackLayout>
 
