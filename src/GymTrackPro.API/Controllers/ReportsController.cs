@@ -15,7 +15,7 @@ namespace GymTrackPro.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
-[Authorize]
+[Authorize(Roles = "Administrator")]
 public class ReportsController : ControllerBase
 {
     private readonly IReportsService _reportsService;
