@@ -307,7 +307,8 @@ public class ApiService : IApiService
 
     public async Task<ApiResponse> UpdateSettingAsync(string key, string value)
     {
-        var response = await _httpClient.PutAsJsonAsync($"settings/{key}", value);
+        var dto = new UpdateSettingDto { SettingValue = value };
+        var response = await _httpClient.PutAsJsonAsync($"settings/{key}", dto);
         return await HandleResponseAsync(response);
     }
 
