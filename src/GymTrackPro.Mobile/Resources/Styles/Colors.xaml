@@ -21,6 +21,16 @@
     <Color x:Key="Background">#0F172A</Color> <!-- Slate 900 -->
     <Color x:Key="CardBackground">#1E293B</Color> <!-- Slate 800 -->
     <Color x:Key="BorderColor">#334155</Color> <!-- Slate 700 -->
+    
+    <!-- Standard Gray Palette (mapped to Premium Slate shades) -->
+    <Color x:Key="Gray100">#F1F5F9</Color>
+    <Color x:Key="Gray200">#E2E8F0</Color>
+    <Color x:Key="Gray300">#CBD5E1</Color>
+    <Color x:Key="Gray400">#94A3B8</Color>
+    <Color x:Key="Gray500">#64748B</Color>
+    <Color x:Key="Gray600">#475569</Color>
+    <Color x:Key="Gray900">#0F172A</Color>
+    <Color x:Key="Gray950">#020617</Color>
 
     <Color x:Key="TextPrimary">#F8FAFC</Color>
     <Color x:Key="TextSecondary">#94A3B8</Color> <!-- Slate 400 -->
