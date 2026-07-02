@@ -17,6 +17,7 @@ public interface IApiService
     void SetAuthToken(string token);
     string? GetAuthToken();
     void ClearAuthToken();
+    Task InitializeTokenAsync();
 
     // Dashboard
     Task<ApiResponse<DashboardMetricsDto>> GetDashboardMetricsAsync();

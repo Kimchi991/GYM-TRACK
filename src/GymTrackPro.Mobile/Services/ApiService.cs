@@ -34,18 +34,13 @@ public class ApiService : IApiService
         // Configure HttpClient
         _httpClient = new HttpClient { BaseAddress = new Uri(baseUri) };
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-        // Load token on initialization
-        InitializeToken();
     }
 
-    private void InitializeToken()
+    public async Task InitializeTokenAsync()
     {
         try
         {
-            var tokenTask = SecureStorage.Default.GetAsync("auth_token");
-            tokenTask.Wait();
-            var token = tokenTask.Result;
+            var token = await SecureStorage.Default.GetAsync("auth_token");
             if (!string.IsNullOrEmpty(token))
             {
                 SetAuthToken(token);
