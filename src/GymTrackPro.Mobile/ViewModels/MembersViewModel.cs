@@ -164,7 +164,7 @@ public partial class MembersViewModel : BaseViewModel
     {
         if (member == null) return;
 
-        bool confirm = await Shell.Current.DisplayAlert("Confirm Delete", $"Are you sure you want to delete member {member.FirstName} {member.LastName}?", "Yes", "No");
+        bool confirm = await Shell.Current.DisplayAlertAsync("Confirm Delete", $"Are you sure you want to delete member {member.FirstName} {member.LastName}?", "Yes", "No");
         if (!confirm) return;
 
         IsBusy = true;

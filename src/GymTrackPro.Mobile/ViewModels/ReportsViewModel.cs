@@ -166,7 +166,7 @@ public partial class ReportsViewModel : BaseViewModel
             await File.WriteAllBytesAsync(targetPath, csvBytes);
 
             SuccessMessage = $"Exported successfully to: {targetPath}";
-            await Shell.Current.DisplayAlert("Export Success", $"Report exported to {filename} in cache folder.\nPath: {targetPath}", "OK");
+            await Shell.Current.DisplayAlertAsync("Export Success", $"Report exported to {filename} in cache folder.\nPath: {targetPath}", "OK");
         }
         catch (Exception ex)
         {

@@ -188,7 +188,7 @@ public partial class PaymentsViewModel : BaseViewModel
     {
         if (payment == null) return;
 
-        bool confirm = await Shell.Current.DisplayAlert("Confirm Refund", $"Process refund for receipt {payment.ReceiptNumber}?", "Yes", "No");
+        bool confirm = await Shell.Current.DisplayAlertAsync("Confirm Refund", $"Process refund for receipt {payment.ReceiptNumber}?", "Yes", "No");
         if (!confirm) return;
 
         IsBusy = true;
