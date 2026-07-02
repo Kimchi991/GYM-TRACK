@@ -291,6 +291,12 @@ public class ApiService : IApiService
         return await HandleResponseAsync(response);
     }
 
+    public async Task<ApiResponse<IEnumerable<SubscriptionResponseDto>>> GetSubscriptionsByMemberIdAsync(int memberId)
+    {
+        var response = await _httpClient.GetAsync($"subscriptions/member/{memberId}");
+        return await HandleResponseAsync<IEnumerable<SubscriptionResponseDto>>(response);
+    }
+
     // --- Settings ---
 
     public async Task<ApiResponse<IEnumerable<SystemSettingDto>>> GetSettingsAsync()

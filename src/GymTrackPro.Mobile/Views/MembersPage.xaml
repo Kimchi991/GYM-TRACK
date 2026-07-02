@@ -49,6 +49,9 @@
                                         BackgroundColor="{StaticResource CardBackground}" 
                                         Padding="15" 
                                         Margin="0,0,0,12">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MembersViewModel}}, Path=GoToDetailsCommand}" CommandParameter="{Binding .}" />
+                                    </Border.GestureRecognizers>
                                     <Grid ColumnDefinitions="50, *, Auto" ColumnSpacing="15">
                                         <!-- Photo placeholder -->
                                         <Border StrokeShape="RoundRectangle 25" Stroke="{StaticResource BorderBrush}" HeightRequest="50" WidthRequest="50" HorizontalOptions="Center" VerticalOptions="Center">

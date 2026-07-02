@@ -51,12 +51,33 @@
                         <VerticalStackLayout Spacing="6">
                             <Label Text="Password" TextColor="{StaticResource TextSecondary}" FontSize="13" FontAttributes="Bold" />
                             <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
-                                <Entry Text="{Binding Password}" 
-                                       TextColor="{StaticResource TextPrimary}"
-                                       PlaceholderColor="{StaticResource TextMuted}"
-                                       HeightRequest="45"
-                                       IsPassword="True" 
-                                       Placeholder="Enter password" />
+                                <Grid ColumnDefinitions="*, Auto">
+                                    <Entry Grid.Column="0"
+                                           Text="{Binding Password}" 
+                                           TextColor="{StaticResource TextPrimary}"
+                                           PlaceholderColor="{StaticResource TextMuted}"
+                                           HeightRequest="45"
+                                           IsPassword="{Binding IsPasswordHidden}" 
+                                           Placeholder="Enter password" />
+                                    <Label Grid.Column="1"
+                                           Text="Show"
+                                           VerticalOptions="Center"
+                                           HorizontalOptions="Center"
+                                           Margin="5,0"
+                                           FontSize="13"
+                                           FontAttributes="Bold"
+                                           TextColor="{StaticResource Primary}">
+                                        <Label.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding TogglePasswordVisibilityCommand}" />
+                                        </Label.GestureRecognizers>
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label" Binding="{Binding IsPasswordHidden}" Value="False">
+                                                <Setter Property="Text" Value="Hide" />
+                                                <Setter Property="TextColor" Value="{StaticResource TextSecondary}" />
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                </Grid>
                             </Border>
                         </VerticalStackLayout>
                     </VerticalStackLayout>

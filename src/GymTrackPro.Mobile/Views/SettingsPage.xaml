@@ -73,6 +73,25 @@
                    HorizontalOptions="Center"
                    IsVisible="{Binding ErrorMessage, Converter={StaticResource NullableToBoolConverter}}" />
 
+            <!-- Account Actions Card -->
+            <Border StrokeShape="RoundRectangle 12" 
+                    Stroke="{StaticResource DangerBrush}" 
+                    BackgroundColor="{StaticResource CardBackground}" 
+                    Padding="15" 
+                    Margin="0,15,0,0">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Account Actions" TextColor="{StaticResource TextPrimary}" FontSize="14" FontAttributes="Bold" />
+                    <Label Text="Sign out from your session. You will need to log in again to access the facility database." TextColor="{StaticResource TextMuted}" FontSize="12" />
+                    <Button Text="Logout / Sign Out"
+                            BackgroundColor="{StaticResource Danger}"
+                            TextColor="White"
+                            CornerRadius="8"
+                            HeightRequest="42"
+                            Margin="0,5,0,0"
+                            Command="{Binding LogoutCommand}" />
+                </VerticalStackLayout>
+            </Border>
+
             <!-- Loading Indicator -->
             <ActivityIndicator IsRunning="{Binding IsBusy}" Color="{StaticResource Primary}" HorizontalOptions="Center" />
         </VerticalStackLayout>

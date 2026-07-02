@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:GymTrackPro.Mobile.ViewModels"
+             xmlns:dtos="clr-namespace:GymTrackPro.Shared.DTOs;assembly=GymTrackPro.Shared"
+             x:Class="GymTrackPro.Mobile.Views.PlansPage"
+             Title="Membership Plans"
+             BackgroundColor="{StaticResource Background}">
+
+    <Grid RowDefinitions="Auto, *">
+        <!-- Header & Add Row -->
+        <Grid ColumnDefinitions="*, Auto" Padding="20,15" ColumnSpacing="15">
+            <Label Text="Active Membership Packages" TextColor="{StaticResource TextPrimary}" FontSize="18" FontAttributes="Bold" VerticalOptions="Center" />
+            <Button Grid.Column="1"
+                    Text="➕ Add Plan"
+                    BackgroundColor="{StaticResource Secondary}"
+                    TextColor="White"
+                    CornerRadius="8"
+                    HeightRequest="42"
+                    FontAttributes="Bold"
+                    Command="{Binding TogglePlanFormCommand}" />
+        </Grid>
+
+        <!-- Main Body -->
+        <Grid Grid.Row="1">
+            <ScrollView Padding="20,0,20,20" IsVisible="{Binding ShowPlanForm, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}">
+                <VerticalStackLayout Spacing="15">
+                    
+                    <!-- Alert Banners -->
+                    <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource SuccessBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="15" IsVisible="{Binding SuccessMessage, Converter={StaticResource NullableToBoolConverter}}">
+                        <Label Text="{Binding SuccessMessage}" TextColor="{StaticResource Success}" FontAttributes="Bold" />
+                    </Border>
+
+                    <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource DangerBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="15" IsVisible="{Binding ErrorMessage, Converter={StaticResource NullableToBoolConverter}}">
+                        <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" FontAttributes="Bold" />
+                    </Border>
+
+                    <!-- Collection View of Plans -->
+                    <CollectionView ItemsSource="{Binding Plans}" SelectionMode="None">
+                        <CollectionView.EmptyView>
+                            <Label Text="No membership plans registered." TextColor="{StaticResource TextMuted}" FontSize="13" HorizontalOptions="Center" Margin="0,20" />
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="dtos:MembershipPlanResponseDto">
+                                <Border StrokeShape="RoundRectangle 12" 
+                                        Stroke="{StaticResource BorderBrush}" 
+                                        BackgroundColor="{StaticResource CardBackground}" 
+                                        Padding="20" 
+                                        Margin="0,0,0,12">
+                                    <Grid ColumnDefinitions="*, Auto" ColumnSpacing="15">
+                                        <!-- Plan Details -->
+                                        <VerticalStackLayout Spacing="6" VerticalOptions="Center">
+                                            <Label Text="{Binding PlanName}" TextColor="{StaticResource TextPrimary}" FontSize="16" FontAttributes="Bold" />
+                                            <Label Text="{Binding Description, FallbackValue='No description provided.'}" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                                            
+                                            <HorizontalStackLayout Spacing="12" Margin="0,4,0,0">
+                                                <Label Text="{Binding Price, StringFormat='₱{0:F2}'}" TextColor="{StaticResource Success}" FontSize="15" FontAttributes="Bold" />
+                                                <Label Text="•" TextColor="{StaticResource TextMuted}" VerticalOptions="Center" />
+                                                <Label Text="{Binding DurationDays, StringFormat='{0} Days validity'}" TextColor="{StaticResource TextSecondary}" FontSize="13" VerticalOptions="Center" />
+                                            </HorizontalStackLayout>
+                                        </VerticalStackLayout>
+
+                                        <!-- Actions -->
+                                        <HorizontalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
+                                            <Button Text="✏️ Edit" 
+                                                    BackgroundColor="{StaticResource Primary}" 
+                                                    TextColor="White"
+                                                    HeightRequest="36"
+                                                    Padding="12,0"
+                                                    CornerRadius="6"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PlansViewModel}}, Path=OpenEditFormCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                            
+                                            <Button Text="🗑️" 
+                                                    BackgroundColor="{StaticResource Danger}" 
+                                                    TextColor="White"
+                                                    HeightRequest="36"
+                                                    WidthRequest="36"
+                                                    Padding="0"
+                                                    CornerRadius="6"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PlansViewModel}}, Path=DeletePlanCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                        </HorizontalStackLayout>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <!-- Loading Indicator -->
+                    <ActivityIndicator IsRunning="{Binding IsBusy}" Color="{StaticResource Primary}" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </ScrollView>
+
+            <!-- Plan Creation/Editing Form Overlay -->
+            <ScrollView Padding="20" IsVisible="{Binding ShowPlanForm}" BackgroundColor="{StaticResource Background}">
+                <Border StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="20">
+                    <VerticalStackLayout Spacing="18">
+                        <Label Text="Membership Package Information" TextColor="{StaticResource TextPrimary}" FontSize="18" FontAttributes="Bold" />
+
+                        <!-- Plan name -->
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Plan Name *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                            <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Entry Text="{Binding PlanName}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Price and Duration -->
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="15">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Price (₱) *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                                <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                    <Entry Text="{Binding Price}" TextColor="{StaticResource TextPrimary}" Keyboard="Numeric" HeightRequest="40" />
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="6">
+                                <Label Text="Duration (Days) *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                                <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                    <Entry Text="{Binding DurationDays}" TextColor="{StaticResource TextPrimary}" Keyboard="Numeric" HeightRequest="40" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <!-- Description -->
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Description / Notes" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                            <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Entry Text="{Binding Description}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Form Actions -->
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="15" Margin="0,10,0,0">
+                            <Button Text="Cancel"
+                                    BackgroundColor="{StaticResource Background}"
+                                    TextColor="{StaticResource TextPrimary}"
+                                    BorderColor="{StaticResource BorderColor}"
+                                    BorderWidth="1"
+                                    CornerRadius="6"
+                                    Command="{Binding TogglePlanFormCommand}" />
+                            
+                            <Button Grid.Column="1"
+                                    Text="Save Package"
+                                    BackgroundColor="{StaticResource Success}"
+                                    TextColor="White"
+                                    CornerRadius="6"
+                                    Command="{Binding SavePlanCommand}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+            </ScrollView>
+
+        </Grid>
+    </Grid>
+</ContentPage>

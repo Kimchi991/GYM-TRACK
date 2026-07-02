@@ -19,6 +19,15 @@ public partial class LoginViewModel : BaseViewModel
     [ObservableProperty]
     public partial string ErrorMessage { get; set; } = string.Empty;
 
+    [ObservableProperty]
+    public partial bool IsPasswordHidden { get; set; } = true;
+
+    [RelayCommand]
+    private void TogglePasswordVisibility()
+    {
+        IsPasswordHidden = !IsPasswordHidden;
+    }
+
     public LoginViewModel(IApiService apiService)
     {
         _apiService = apiService;

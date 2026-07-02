@@ -48,6 +48,7 @@ public interface IApiService
     Task<ApiResponse<SubscriptionResponseDto>> CreateSubscriptionAsync(CreateSubscriptionDto subDto);
     Task<ApiResponse> PauseSubscriptionAsync(int id, PauseSubscriptionDto pauseDto);
     Task<ApiResponse> ResumeSubscriptionAsync(int id);
+    Task<ApiResponse<IEnumerable<SubscriptionResponseDto>>> GetSubscriptionsByMemberIdAsync(int memberId);
 
     // Settings
     Task<ApiResponse<IEnumerable<SystemSettingDto>>> GetSettingsAsync();

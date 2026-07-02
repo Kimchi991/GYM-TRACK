@@ -29,6 +29,10 @@
         <ShellContent ContentTemplate="{DataTemplate views:PaymentsPage}" />
     </FlyoutItem>
 
+    <FlyoutItem Title="Membership Plans" Route="plans">
+        <ShellContent ContentTemplate="{DataTemplate views:PlansPage}" />
+    </FlyoutItem>
+
     <FlyoutItem Title="Reports" Route="reports">
         <ShellContent ContentTemplate="{DataTemplate views:ReportsPage}" />
     </FlyoutItem>

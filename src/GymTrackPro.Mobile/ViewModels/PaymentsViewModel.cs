@@ -13,10 +13,10 @@ public partial class PaymentsViewModel : BaseViewModel
     private readonly IApiService _apiService;
 
     [ObservableProperty]
-    private string errorMessage = string.Empty;
+    public partial string ErrorMessage { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string successMessage = string.Empty;
+    public partial string SuccessMessage { get; set; } = string.Empty;
 
     public ObservableCollection<PaymentResponseDto> Payments { get; } = new();
     public ObservableCollection<MemberResponseDto> Members { get; } = new();
@@ -24,22 +24,22 @@ public partial class PaymentsViewModel : BaseViewModel
 
     // New Payment Billing Form Fields
     [ObservableProperty]
-    private MemberResponseDto? selectedMemberForPayment;
+    public partial MemberResponseDto? SelectedMemberForPayment { get; set; }
 
     [ObservableProperty]
-    private MembershipPlanResponseDto? selectedPlanForPayment;
+    public partial MembershipPlanResponseDto? SelectedPlanForPayment { get; set; }
 
     [ObservableProperty]
-    private decimal paymentAmount;
+    public partial decimal PaymentAmount { get; set; }
 
     [ObservableProperty]
-    private decimal paymentDiscount;
+    public partial decimal PaymentDiscount { get; set; }
 
     [ObservableProperty]
-    private string paymentMethod = "Cash";
+    public partial string PaymentMethod { get; set; } = "Cash";
 
     [ObservableProperty]
-    private bool showBillingForm;
+    public partial bool ShowBillingForm { get; set; }
 
     public PaymentsViewModel(IApiService apiService)
     {

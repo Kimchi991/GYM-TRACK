@@ -13,19 +13,19 @@ public partial class ReportsViewModel : BaseViewModel
     private readonly IApiService _apiService;
 
     [ObservableProperty]
-    private string reportType = "Daily Revenue"; // Daily Revenue, Attendance, Membership Sales, Refunds
+    public partial string ReportType { get; set; } = "Daily Revenue"; // Daily Revenue, Attendance, Membership Sales, Refunds
 
     [ObservableProperty]
-    private DateTime startDate = DateTime.Today.AddDays(-7);
+    public partial DateTime StartDate { get; set; } = DateTime.Today.AddDays(-7);
 
     [ObservableProperty]
-    private DateTime endDate = DateTime.Today;
+    public partial DateTime EndDate { get; set; } = DateTime.Today;
 
     [ObservableProperty]
-    private string errorMessage = string.Empty;
+    public partial string ErrorMessage { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string successMessage = string.Empty;
+    public partial string SuccessMessage { get; set; } = string.Empty;
 
     public ObservableCollection<ReportItemDto> ReportRows { get; } = new();
 

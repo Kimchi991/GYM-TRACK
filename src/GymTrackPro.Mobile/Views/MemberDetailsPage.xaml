@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:GymTrackPro.Mobile.ViewModels"
+             xmlns:dtos="clr-namespace:GymTrackPro.Shared.DTOs;assembly=GymTrackPro.Shared"
+             x:Class="GymTrackPro.Mobile.Views.MemberDetailsPage"
+             Title="Member Profile Details"
+             BackgroundColor="{StaticResource Background}">
+
+    <Grid RowDefinitions="*">
+        <!-- Main Scrollable Details -->
+        <ScrollView Padding="20">
+            <VerticalStackLayout Spacing="20">
+
+                <!-- Navigation Back Header -->
+                <HorizontalStackLayout Spacing="6" VerticalOptions="Center" Margin="0,0,0,5">
+                    <Label Text="←" TextColor="{StaticResource Primary}" FontSize="18" FontAttributes="Bold" VerticalOptions="Center" />
+                    <Label Text="Back to Members List" 
+                           TextColor="{StaticResource Primary}" 
+                           FontSize="14" 
+                           FontAttributes="Bold"
+                           VerticalOptions="Center">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding GoBackCommand}" />
+                        </Label.GestureRecognizers>
+                    </Label>
+                </HorizontalStackLayout>
+
+                <!-- Success / Error Banners -->
+                <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource SuccessBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="15" IsVisible="{Binding SuccessMessage, Converter={StaticResource NullableToBoolConverter}}">
+                    <Label Text="{Binding SuccessMessage}" TextColor="{StaticResource Success}" FontAttributes="Bold" />
+                </Border>
+
+                <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource DangerBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="15" IsVisible="{Binding ErrorMessage, Converter={StaticResource NullableToBoolConverter}}">
+                    <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" FontAttributes="Bold" />
+                </Border>
+
+                <!-- Profile Header Card -->
+                <Border StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="20">
+                    <Grid ColumnDefinitions="60, *, Auto" ColumnSpacing="15">
+                        <Border StrokeShape="RoundRectangle 30" Stroke="{StaticResource BorderBrush}" HeightRequest="60" WidthRequest="60" VerticalOptions="Center">
+                            <Label Text="👤" FontSize="30" HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        
+                        <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
+                            <HorizontalStackLayout Spacing="6">
+                                <Label Text="{Binding Member.FirstName}" TextColor="{StaticResource TextPrimary}" FontSize="20" FontAttributes="Bold" />
+                                <Label Text="{Binding Member.LastName}" TextColor="{StaticResource TextPrimary}" FontSize="20" FontAttributes="Bold" />
+                            </HorizontalStackLayout>
+                            <Label Text="{Binding Member.PhoneNumber}" TextColor="{StaticResource TextSecondary}" FontSize="14" />
+                            <Label Text="{Binding Member.Status, StringFormat='Status: {0}'}" TextColor="{StaticResource Secondary}" FontAttributes="Bold" FontSize="12" />
+                        </VerticalStackLayout>
+
+                        <!-- Profile actions -->
+                        <HorizontalStackLayout Grid.Column="2" Spacing="8" VerticalOptions="Center">
+                            <Button Text="✏️ Edit" BackgroundColor="{StaticResource Primary}" TextColor="White" Command="{Binding ToggleEditFormCommand}" HeightRequest="38" Padding="10,0" CornerRadius="6" />
+                            <Button Text="🗑️" BackgroundColor="{StaticResource Danger}" TextColor="White" Command="{Binding DeleteMemberCommand}" HeightRequest="38" WidthRequest="38" Padding="0" CornerRadius="6" />
+                        </HorizontalStackLayout>
+                    </Grid>
+                </Border>
+
+                <!-- Grid Details Section -->
+                <Grid ColumnDefinitions="*, *" ColumnSpacing="20">
+                    <!-- Column 1: Info & QR Code -->
+                    <VerticalStackLayout Spacing="20">
+                        <Border StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="20">
+                            <VerticalStackLayout Spacing="15">
+                                <Label Text="Personal Details" TextColor="{StaticResource TextPrimary}" FontSize="16" FontAttributes="Bold" />
+                                
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="GENDER" TextColor="{StaticResource TextMuted}" FontSize="10" FontAttributes="Bold" />
+                                    <Label Text="{Binding Member.Gender}" TextColor="{StaticResource TextPrimary}" FontSize="14" />
+                                </VerticalStackLayout>
+
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="BIRTHDATE" TextColor="{StaticResource TextMuted}" FontSize="10" FontAttributes="Bold" />
+                                    <Label Text="{Binding Member.BirthDate, StringFormat='{0:MMMM dd, yyyy}'}" TextColor="{StaticResource TextPrimary}" FontSize="14" />
+                                </VerticalStackLayout>
+
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="EMAIL" TextColor="{StaticResource TextMuted}" FontSize="10" FontAttributes="Bold" />
+                                    <Label Text="{Binding Member.Email, FallbackValue='N/A'}" TextColor="{StaticResource TextPrimary}" FontSize="14" />
+                                </VerticalStackLayout>
+
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="ADDRESS" TextColor="{StaticResource TextMuted}" FontSize="10" FontAttributes="Bold" />
+                                    <Label Text="{Binding Member.Address, FallbackValue='N/A'}" TextColor="{StaticResource TextPrimary}" FontSize="14" />
+                                </VerticalStackLayout>
+
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="EMERGENCY CONTACT" TextColor="{StaticResource TextMuted}" FontSize="10" FontAttributes="Bold" />
+                                    <Label Text="{Binding Member.EmergencyContact}" TextColor="{StaticResource TextPrimary}" FontSize="14" />
+                                </VerticalStackLayout>
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <!-- QR Code Card -->
+                        <Border StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="20">
+                            <VerticalStackLayout Spacing="12" HorizontalOptions="Center">
+                                <Label Text="Member Access Barcode" TextColor="{StaticResource TextPrimary}" FontSize="14" FontAttributes="Bold" HorizontalOptions="Center" />
+                                <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="White" Padding="15" HeightRequest="120" WidthRequest="120" HorizontalOptions="Center">
+                                    <!-- Simulated Barcode Design -->
+                                    <VerticalStackLayout Spacing="3" VerticalOptions="Center">
+                                        <BoxView HeightRequest="60" WidthRequest="90" BackgroundColor="Black" />
+                                        <Label Text="{Binding Member.QRCode}" TextColor="Black" FontSize="9" FontAttributes="Bold" HorizontalOptions="Center" />
+                                    </VerticalStackLayout>
+                                </Border>
+                                <Label Text="{Binding Member.QRCode, StringFormat='Access Key: {0}'}" TextColor="{StaticResource TextSecondary}" FontSize="12" HorizontalOptions="Center" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <!-- Column 2: Subscription -->
+                    <VerticalStackLayout Spacing="20">
+                        <Border StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="20">
+                            <VerticalStackLayout Spacing="15">
+                                <Label Text="Membership Subscription" TextColor="{StaticResource TextPrimary}" FontSize="16" FontAttributes="Bold" />
+
+                                <Grid RowDefinitions="Auto, Auto, Auto" RowSpacing="15" IsVisible="{Binding ActiveSubscription, Converter={StaticResource NullableToBoolConverter}}">
+                                    <!-- Status Info -->
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="CURRENT STATUS" TextColor="{StaticResource TextMuted}" FontSize="10" FontAttributes="Bold" />
+                                        <Border StrokeShape="RoundRectangle 6" BackgroundColor="{StaticResource SuccessBrush}" Padding="8,3" HorizontalOptions="Start">
+                                            <Label Text="{Binding ActiveSubscription.Status}" TextColor="White" FontSize="12" FontAttributes="Bold" />
+                                        </Border>
+                                    </VerticalStackLayout>
+
+                                    <!-- Plan Info -->
+                                    <VerticalStackLayout Grid.Row="1" Spacing="4">
+                                        <Label Text="SUBSCRIBED PLAN" TextColor="{StaticResource TextMuted}" FontSize="10" FontAttributes="Bold" />
+                                        <Label Text="{Binding ActiveSubscription.PlanName}" TextColor="{StaticResource TextPrimary}" FontSize="16" FontAttributes="Bold" />
+                                        <Label Text="{Binding ActiveSubscription.EndDate, StringFormat='Expires: {0:yyyy-MM-dd}'}" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                                    </VerticalStackLayout>
+
+                                    <!-- Actions (Pause/Resume) -->
+                                    <HorizontalStackLayout Grid.Row="2" Spacing="10">
+                                        <Button Text="⏸️ Pause Membership" 
+                                                BackgroundColor="{StaticResource Tertiary}" 
+                                                TextColor="White"
+                                                HeightRequest="40"
+                                                IsVisible="{Binding ActiveSubscription.Status, StringFormat='{0}', Converter={StaticResource NullableToBoolConverter}, ConverterParameter=Active}"
+                                                Command="{Binding PauseSubscriptionCommand}" />
+                                        
+                                        <Button Text="▶️ Resume Membership" 
+                                                BackgroundColor="{StaticResource Secondary}" 
+                                                TextColor="White"
+                                                HeightRequest="40"
+                                                IsVisible="{Binding ActiveSubscription.Status, StringFormat='{0}', Converter={StaticResource NullableToBoolConverter}, ConverterParameter=Paused}"
+                                                Command="{Binding ResumeSubscriptionCommand}" />
+                                    </HorizontalStackLayout>
+                                </Grid>
+
+                                <!-- No Subscription View -->
+                                <VerticalStackLayout Spacing="10" HorizontalOptions="Center" IsVisible="{Binding ActiveSubscription, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}">
+                                    <Label Text="🚫 No Active Subscription" TextColor="{StaticResource TextMuted}" FontSize="14" HorizontalOptions="Center" />
+                                    <Label Text="This member has no active packages." TextColor="{StaticResource TextMuted}" FontSize="12" HorizontalOptions="Center" />
+                                </VerticalStackLayout>
+                            </VerticalStackLayout>
+                        </Border>
+                    </VerticalStackLayout>
+                </Grid>
+
+                <!-- History Sections -->
+                <Grid ColumnDefinitions="*, *" ColumnSpacing="20">
+                    <!-- Attendance Logs -->
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Attendance Logs" TextColor="{StaticResource TextPrimary}" FontSize="16" FontAttributes="Bold" />
+                        <CollectionView ItemsSource="{Binding AttendanceLogs}" HeightRequest="200">
+                            <CollectionView.EmptyView>
+                                <Label Text="No attendance sessions recorded." TextColor="{StaticResource TextMuted}" FontSize="13" Margin="0,15" />
+                            </CollectionView.EmptyView>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="dtos:AttendanceDto">
+                                    <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="10" Margin="0,0,0,8">
+                                        <Grid ColumnDefinitions="*, Auto">
+                                            <VerticalStackLayout Spacing="2">
+                                                <Label Text="{Binding CheckInTime, StringFormat='Date: {0:yyyy-MM-dd}'}" TextColor="{StaticResource TextPrimary}" FontSize="13" FontAttributes="Bold" />
+                                                <Label Text="{Binding CheckInTime, StringFormat='Check-in: {0:hh:mm tt}'}" TextColor="{StaticResource TextSecondary}" FontSize="11" />
+                                            </VerticalStackLayout>
+                                            <Label Grid.Column="1" Text="Checked Out" TextColor="{StaticResource TextMuted}" FontSize="11" VerticalOptions="Center" IsVisible="{Binding CheckOutTime, Converter={StaticResource NullableToBoolConverter}}" />
+                                            <Label Grid.Column="1" Text="Active Session" TextColor="{StaticResource Success}" FontSize="11" FontAttributes="Bold" VerticalOptions="Center" IsVisible="{Binding CheckOutTime, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+
+                    <!-- Payment Logs -->
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Payment History" TextColor="{StaticResource TextPrimary}" FontSize="16" FontAttributes="Bold" />
+                        <CollectionView ItemsSource="{Binding PaymentLogs}" HeightRequest="200">
+                            <CollectionView.EmptyView>
+                                <Label Text="No payments recorded." TextColor="{StaticResource TextMuted}" FontSize="13" Margin="0,15" />
+                            </CollectionView.EmptyView>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="dtos:PaymentResponseDto">
+                                    <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="10" Margin="0,0,0,8">
+                                        <Grid ColumnDefinitions="*, Auto">
+                                            <VerticalStackLayout Spacing="2">
+                                                <Label Text="{Binding ReceiptNumber, StringFormat='Receipt: {0}'}" TextColor="{StaticResource TextPrimary}" FontSize="13" FontAttributes="Bold" />
+                                                <Label Text="{Binding DatePaid, StringFormat='{0:yyyy-MM-dd HH:mm}'}" TextColor="{StaticResource TextSecondary}" FontSize="11" />
+                                                <Label Text="{Binding PaymentMethod, StringFormat='Paid via: {0}'}" TextColor="{StaticResource TextMuted}" FontSize="11" />
+                                            </VerticalStackLayout>
+                                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" HorizontalOptions="End" Spacing="4">
+                                                <Label Text="{Binding FinalAmount, StringFormat='₱{0:F2}'}" TextColor="{StaticResource Success}" FontSize="13" FontAttributes="Bold" HorizontalOptions="End" />
+                                                <Border StrokeShape="RoundRectangle 4" BackgroundColor="{StaticResource DangerBrush}" Padding="5,2" IsVisible="{Binding PaymentStatus, StringFormat='{0}', Converter={StaticResource NullableToBoolConverter}, ConverterParameter=Refunded}">
+                                                    <Label Text="Refunded" TextColor="White" FontSize="9" FontAttributes="Bold" />
+                                                </Border>
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+                </Grid>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- Edit Profile Modal Overlay -->
+        <Grid BackgroundColor="#AA000000" IsVisible="{Binding ShowEditForm}" VerticalOptions="Fill" HorizontalOptions="Fill">
+            <Border StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="20" Margin="30" VerticalOptions="Center" HorizontalOptions="Center" WidthRequest="450">
+                <ScrollView>
+                    <VerticalStackLayout Spacing="18">
+                        <Label Text="Edit Member Profile" TextColor="{StaticResource TextPrimary}" FontSize="18" FontAttributes="Bold" />
+
+                        <!-- Form Fields -->
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="15">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="First Name *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                                <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                    <Entry Text="{Binding EditFirstName}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="6">
+                                <Label Text="Last Name *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                                <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                    <Entry Text="{Binding EditLastName}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="15">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Gender *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                                <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                    <Picker SelectedItem="{Binding EditGender}" TextColor="{StaticResource TextPrimary}" TitleColor="{StaticResource TextMuted}" HeightRequest="40">
+                                        <Picker.ItemsSource>
+                                            <x:Array Type="{x:Type x:String}">
+                                                <x:String>Male</x:String>
+                                                <x:String>Female</x:String>
+                                                <x:String>Other</x:String>
+                                            </x:Array>
+                                        </Picker.ItemsSource>
+                                    </Picker>
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="6">
+                                <Label Text="Birth Date *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                                <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                    <DatePicker Date="{Binding EditBirthDate}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Phone Number *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                            <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Entry Text="{Binding EditPhoneNumber}" TextColor="{StaticResource TextPrimary}" Keyboard="Telephone" HeightRequest="40" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Email Address" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                            <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Entry Text="{Binding EditEmail}" TextColor="{StaticResource TextPrimary}" Keyboard="Email" HeightRequest="40" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Address" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                            <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Entry Text="{Binding EditAddress}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Emergency Contact *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                            <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Entry Text="{Binding EditEmergencyContact}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Profile Status *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                            <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Picker SelectedItem="{Binding EditStatus}" TextColor="{StaticResource TextPrimary}" TitleColor="{StaticResource TextMuted}" HeightRequest="40">
+                                    <Picker.ItemsSource>
+                                        <x:Array Type="{x:Type x:String}">
+                                            <x:String>Active</x:String>
+                                            <x:String>Inactive</x:String>
+                                        </x:Array>
+                                    </Picker.ItemsSource>
+                                </Picker>
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="15" Margin="0,10,0,0">
+                            <Button Text="Cancel" BackgroundColor="{StaticResource Background}" TextColor="{StaticResource TextPrimary}" BorderColor="{StaticResource BorderColor}" BorderWidth="1" CornerRadius="6" Command="{Binding ToggleEditFormCommand}" />
+                            <Button Grid.Column="1" Text="Save" BackgroundColor="{StaticResource Success}" TextColor="White" CornerRadius="6" Command="{Binding SaveMemberCommand}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </ScrollView>
+            </Border>
+        </Grid>
+
+        <!-- Loading Spinner -->
+        <ActivityIndicator IsRunning="{Binding IsBusy}" Color="{StaticResource Primary}" HorizontalOptions="Center" VerticalOptions="Center" HeightRequest="50" WidthRequest="50" />
+    </Grid>
+</ContentPage>

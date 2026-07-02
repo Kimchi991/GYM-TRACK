@@ -13,16 +13,16 @@ public partial class AttendanceViewModel : BaseViewModel
     private readonly IApiService _apiService;
 
     [ObservableProperty]
-    private string qrCodeInput = string.Empty;
+    public partial string QrCodeInput { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string statusMessage = string.Empty;
+    public partial string StatusMessage { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string errorMessage = string.Empty;
+    public partial string ErrorMessage { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private bool isSuccessMessage;
+    public partial bool IsSuccessMessage { get; set; }
 
     public ObservableCollection<AttendanceDto> TodayCheckIns { get; } = new();
 

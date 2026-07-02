@@ -15,10 +15,10 @@ public partial class NotificationsViewModel : BaseViewModel
     private readonly IApiService _apiService;
 
     [ObservableProperty]
-    private string errorMessage = string.Empty;
+    public partial string ErrorMessage { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private int unreadCount;
+    public partial int UnreadCount { get; set; }
 
     public ObservableCollection<Notification> Notifications { get; } = new();
 

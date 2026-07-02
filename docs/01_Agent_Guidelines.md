@@ -83,3 +83,24 @@ graph TD
     I --> J[Commit Changes to Feature Branch]
     J --> K[Proceed to Next Module]
 ```
+
+---
+
+## 👥 Collaborative Development Guidelines & Current Status
+
+### Current Implementation State (As of July 2, 2026)
+1. **AOT Compliance**: Systematically refactored all ViewModels (e.g., `SettingsViewModel.cs`, `PlansViewModel.cs`, `MemberDetailsViewModel.cs`, etc.) to use `public partial` properties for `[ObservableProperty]` instead of private fields to support Ahead-Of-Time (AOT) compiler/linker requirements for WinUI3.
+2. **Connectivity**: Resolved process locking issues between backend API and Mobile build steps. Local development credentials established for `admin_user` / `SecurePassword@123`.
+3. **UX/UI Enhancements**: 
+   - Implemented password visibility toggle ("Show/Hide" label) on `LoginPage.xaml`.
+   - Added `← Back to Members List` navigation link on `MemberDetailsPage.xaml`.
+   - Added secure sign-out / logout card in `SettingsPage.xaml` that clears auth tokens and redirects to login.
+
+### Instructions for Collaborator Agents
+If you are an AI assistant acting on behalf of a collaborator, please follow these guidelines:
+1. **Always Check the Database Port**: The backend runs on `localhost:5221` (HTTPS) and connects to a Dockerized SQL Server container named `mssql_container_gym` on port `14333`.
+2. **Build Safety**: Ensure that when executing a build of `GymTrackPro.Mobile`, the API process is not actively locking `GymTrackPro.Shared.dll`. Run `Stop-Process -Name GymTrackPro.API` or build from the root folder carefully.
+3. **Keep Code clean of AOT Warnings**: Always declare properties annotated with `[ObservableProperty]` as `public partial` properties (e.g. `public partial string MyProperty { get; set; }`) instead of private fields to prevent `MVVMTK0045` compiler warnings.
+4. **Local Credentials**: Use `admin_user` / `SecurePassword@123` to log in for integration testing. Do not delete or overwrite the seed data unless migrating.
+5. **No Features Without Review**: Refer to the specifications in `docs/` and always check with the user before committing code changes or adding third-party dependencies.
+

@@ -13,46 +13,46 @@ public partial class MembersViewModel : BaseViewModel
     private readonly IApiService _apiService;
 
     [ObservableProperty]
-    private string searchQuery = string.Empty;
+    public partial string SearchQuery { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string errorMessage = string.Empty;
+    public partial string ErrorMessage { get; set; } = string.Empty;
 
     public ObservableCollection<MemberResponseDto> Members { get; } = new();
 
     // Fields for Registration Form
     [ObservableProperty]
-    private string regFirstName = string.Empty;
+    public partial string RegFirstName { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string regLastName = string.Empty;
+    public partial string RegLastName { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string regGender = "Male";
+    public partial string RegGender { get; set; } = "Male";
 
     [ObservableProperty]
-    private DateTime regBirthDate = DateTime.Now.AddYears(-20);
+    public partial DateTime RegBirthDate { get; set; } = DateTime.Now.AddYears(-20);
 
     [ObservableProperty]
-    private string regPhone = string.Empty;
+    public partial string RegPhone { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string regEmail = string.Empty;
+    public partial string RegEmail { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string regAddress = string.Empty;
+    public partial string RegAddress { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string regEmergencyContact = string.Empty;
+    public partial string RegEmergencyContact { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string regPhotoBase64 = string.Empty;
+    public partial string RegPhotoBase64 { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private bool showAddForm;
+    public partial bool ShowAddForm { get; set; }
 
     [ObservableProperty]
-    private MemberResponseDto? selectedMember;
+    public partial MemberResponseDto? SelectedMember { get; set; }
 
     public MembersViewModel(IApiService apiService)
     {

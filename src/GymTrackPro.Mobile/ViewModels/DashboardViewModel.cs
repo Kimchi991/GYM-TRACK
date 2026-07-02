@@ -12,25 +12,25 @@ public partial class DashboardViewModel : BaseViewModel
     private readonly IApiService _apiService;
 
     [ObservableProperty]
-    private int checkedInCount;
+    public partial int CheckedInCount { get; set; }
 
     [ObservableProperty]
-    private int activeMembersCount;
+    public partial int ActiveMembersCount { get; set; }
 
     [ObservableProperty]
-    private decimal revenueToday;
+    public partial decimal RevenueToday { get; set; }
 
     [ObservableProperty]
-    private decimal revenueThisMonth;
+    public partial decimal RevenueThisMonth { get; set; }
 
     [ObservableProperty]
-    private int expiringSoonCount;
+    public partial int ExpiringSoonCount { get; set; }
 
     [ObservableProperty]
-    private int newRegistrationsCount;
+    public partial int NewRegistrationsCount { get; set; }
 
     [ObservableProperty]
-    private string errorMessage = string.Empty;
+    public partial string ErrorMessage { get; set; } = string.Empty;
 
     public DashboardViewModel(IApiService apiService)
     {

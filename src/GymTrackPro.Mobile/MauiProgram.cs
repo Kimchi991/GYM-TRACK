@@ -34,6 +34,8 @@ public static class MauiProgram
 		builder.Services.AddTransient<ReportsViewModel>();
 		builder.Services.AddTransient<SettingsViewModel>();
 		builder.Services.AddTransient<NotificationsViewModel>();
+		builder.Services.AddTransient<PlansViewModel>();
+		builder.Services.AddTransient<MemberDetailsViewModel>();
 
 		// Register Views (Pages)
 		builder.Services.AddTransient<LoginPage>();
@@ -47,6 +49,8 @@ public static class MauiProgram
 		builder.Services.AddTransient<ReportsPage>();
 		builder.Services.AddTransient<SettingsPage>();
 		builder.Services.AddTransient<NotificationsPage>();
+		builder.Services.AddTransient<PlansPage>();
+		builder.Services.AddTransient<MemberDetailsPage>();
 
 		// Register SQLite local database connection & SyncQueue services
 		builder.Services.AddSingleton<ILocalDatabaseService, LocalDatabaseService>();

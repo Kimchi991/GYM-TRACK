@@ -13,10 +13,10 @@ public partial class SettingsViewModel : BaseViewModel
     private readonly IApiService _apiService;
 
     [ObservableProperty]
-    private string errorMessage = string.Empty;
+    public partial string ErrorMessage { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string successMessage = string.Empty;
+    public partial string SuccessMessage { get; set; } = string.Empty;
 
     public ObservableCollection<SystemSettingDto> Settings { get; } = new();
 
@@ -89,6 +89,17 @@ public partial class SettingsViewModel : BaseViewModel
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task LogoutAsync()
+    {
+        bool confirm = await Shell.Current.DisplayAlertAsync("Logout", "Are you sure you want to log out?", "Yes", "No");
+        if (confirm)
+        {
+            _apiService.ClearAuthToken();
+            await Shell.Current.GoToAsync("///login");
         }
     }
 }
