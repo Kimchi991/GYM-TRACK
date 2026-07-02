@@ -11,4 +11,5 @@ public interface ISubscriptionService
     Task<SubscriptionResponseDto> SubscribeMemberAsync(CreateSubscriptionDto subscribeDto);
     Task PauseSubscriptionAsync(int subscriptionID, string reason);
     Task ResumeSubscriptionAsync(int subscriptionID);
+    Task<SubscriptionResponseDto> RenewSubscriptionAsync(RenewSubscriptionDto renewDto);
 }

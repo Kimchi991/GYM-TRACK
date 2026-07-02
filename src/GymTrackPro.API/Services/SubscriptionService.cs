@@ -11,6 +11,8 @@ using GymTrackPro.Shared.Entities;
 using GymTrackPro.Shared.Interfaces;
 
 using GymTrackPro.Shared.Events.Membership;
+using GymTrackPro.Shared.Enums;
+using GymTrackPro.Shared.Events.Payments;
 
 namespace GymTrackPro.API.Services;
 
@@ -23,6 +25,8 @@ public class SubscriptionService : ISubscriptionService
     private readonly IAuditService _auditService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IDomainEventPublisher _eventPublisher;
+    private readonly IPaymentRepository _paymentRepository;
+    private readonly ISystemSettingService _settingsService;
 
     public SubscriptionService(
         ISubscriptionRepository subscriptionRepository,
@@ -31,7 +35,9 @@ public class SubscriptionService : ISubscriptionService
         GymDbContext context,
         IAuditService auditService,
         IHttpContextAccessor httpContextAccessor,
-        IDomainEventPublisher eventPublisher)
+        IDomainEventPublisher eventPublisher,
+        IPaymentRepository paymentRepository,
+        ISystemSettingService settingsService)
     {
         _subscriptionRepository = subscriptionRepository;
         _memberRepository = memberRepository;
@@ -40,6 +46,8 @@ public class SubscriptionService : ISubscriptionService
         _auditService = auditService;
         _httpContextAccessor = httpContextAccessor;
         _eventPublisher = eventPublisher;
+        _paymentRepository = paymentRepository;
+        _settingsService = settingsService;
     }
 
     private int? GetCurrentUserId()
@@ -206,6 +214,117 @@ public class SubscriptionService : ISubscriptionService
             MemberEmail = member?.Email ?? string.Empty,
             PlanName = plan?.PlanName ?? "Unknown"
         });
+    }
+
+    public async Task<SubscriptionResponseDto> RenewSubscriptionAsync(RenewSubscriptionDto renewDto)
+    {
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            var member = await _memberRepository.GetByIdAsync(renewDto.MemberID);
+            if (member == null)
+            {
+                throw new KeyNotFoundException("Member not found.");
+            }
+
+            var plan = await _planRepository.GetByIdAsync(renewDto.PlanID);
+            if (plan == null)
+            {
+                throw new KeyNotFoundException("Membership plan not found.");
+            }
+
+            // Create Subscription - set status directly to Active as payment is processed atomically
+            var sub = new Subscription
+            {
+                MemberID = renewDto.MemberID,
+                PlanID = renewDto.PlanID,
+                StartDate = renewDto.StartDate,
+                EndDate = renewDto.StartDate.AddDays(plan.DurationDays),
+                Status = "Active",
+                LastModified = DateTime.UtcNow
+            };
+
+            await _subscriptionRepository.AddAsync(sub);
+
+            if (!Enum.TryParse<PaymentMethod>(renewDto.PaymentMethod, true, out var method))
+            {
+                throw new ArgumentException($"Invalid payment method: {renewDto.PaymentMethod}");
+            }
+
+            if (method != PaymentMethod.Cash)
+            {
+                if (string.IsNullOrWhiteSpace(renewDto.ReferenceNumber))
+                {
+                    throw new ArgumentException("Reference number is required for online payments.");
+                }
+
+                var duplicateRef = await _context.Payments
+                    .AnyAsync(p => p.ReferenceNumber == renewDto.ReferenceNumber && !p.IsDeleted);
+
+                if (duplicateRef)
+                {
+                    throw new ArgumentException("A payment transaction with this reference number already exists.");
+                }
+            }
+
+            var receiptPrefix = await _settingsService.GetValueAsync("ReceiptPrefix", "REC-");
+            string receiptNumber = string.Empty;
+            bool uniqueReceipt = false;
+            var rand = new Random();
+            while (!uniqueReceipt)
+            {
+                receiptNumber = $"{receiptPrefix}{DateTime.UtcNow:yyMMddHHmmss}-{rand.Next(1000, 9999)}";
+                var exists = await _context.Payments.AnyAsync(p => p.ReceiptNumber == receiptNumber);
+                if (!exists) uniqueReceipt = true;
+            }
+
+            var finalAmount = renewDto.Amount - renewDto.Discount;
+
+            var payment = new Payment
+            {
+                MemberID = renewDto.MemberID,
+                SubscriptionID = sub.SubscriptionID,
+                Amount = renewDto.Amount,
+                Discount = renewDto.Discount,
+                FinalAmount = finalAmount,
+                PaymentMethod = method,
+                PaymentStatus = PaymentStatus.Paid,
+                ReceiptNumber = receiptNumber,
+                ReferenceNumber = renewDto.ReferenceNumber,
+                DatePaid = DateTime.UtcNow,
+                LastModified = DateTime.UtcNow
+            };
+
+            await _paymentRepository.AddAsync(payment);
+
+            await _auditService.LogActivityAsync(
+                GetCurrentUserId(),
+                "Subscription Renewed",
+                $"Subscription ID {sub.SubscriptionID} for member {member.FirstName} {member.LastName} (ID: {member.MemberID}) renewed via payment {receiptNumber}.",
+                GetClientIpAddress()
+            );
+
+            await transaction.CommitAsync();
+
+            await _eventPublisher.PublishAsync(new PaymentReceivedEvent
+            {
+                PaymentId = payment.PaymentID,
+                MemberId = payment.MemberID,
+                MemberEmail = member.Email ?? string.Empty,
+                Amount = payment.FinalAmount,
+                ReceiptNumber = payment.ReceiptNumber
+            });
+
+            sub.Member = member;
+            sub.Plan = plan;
+
+            return MapToDto(sub);
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     private static SubscriptionResponseDto MapToDto(Subscription sub)

@@ -97,4 +97,18 @@ public class SubscriptionsController : ControllerBase
         await _subscriptionService.ResumeSubscriptionAsync(id);
         return Ok(ApiResponse.SuccessResponse("Subscription resumed successfully."));
     }
+
+    /// <summary>
+    /// Renews an active or expired subscription with a payment atomically inside a transaction.
+    /// </summary>
+    /// <param name="renewDto">The subscription details and payment inputs.</param>
+    /// <returns>A standardized API response containing the new subscription details.</returns>
+    /// <response code="200">If the renewal was successful.</response>
+    [HttpPost("renew")]
+    [ProducesResponseType(typeof(ApiResponse<SubscriptionResponseDto>), 200)]
+    public async Task<IActionResult> Renew([FromBody] RenewSubscriptionDto renewDto)
+    {
+        var subscription = await _subscriptionService.RenewSubscriptionAsync(renewDto);
+        return Ok(ApiResponse<SubscriptionResponseDto>.SuccessResponse(subscription, "Subscription renewed successfully with payment."));
+    }
 }
