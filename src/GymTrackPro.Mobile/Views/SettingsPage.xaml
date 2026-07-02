@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:GymTrackPro.Mobile.ViewModels"
+             xmlns:dtos="clr-namespace:GymTrackPro.Shared.DTOs;assembly=GymTrackPro.Shared"
+             x:Class="GymTrackPro.Mobile.Views.SettingsPage"
+             Title="GymTrackPro Settings"
+             BackgroundColor="{StaticResource Background}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="25">
+            
+            <!-- Header -->
+            <VerticalStackLayout Spacing="4">
+                <Label Text="System Settings Configuration" TextColor="{StaticResource TextPrimary}" FontSize="20" FontAttributes="Bold" />
+                <Label Text="Configure global facility rules and business settings." TextColor="{StaticResource TextSecondary}" FontSize="12" />
+            </VerticalStackLayout>
+
+            <!-- Success message -->
+            <Border StrokeShape="RoundRectangle 8" 
+                    Stroke="{StaticResource SuccessBrush}" 
+                    BackgroundColor="{StaticResource CardBackground}" 
+                    Padding="15" 
+                    IsVisible="{Binding SuccessMessage, Converter={StaticResource NullableToBoolConverter}}">
+                <Label Text="{Binding SuccessMessage}" TextColor="{StaticResource Success}" FontSize="13" FontAttributes="Bold" />
+            </Border>
+
+            <!-- Settings Listing -->
+            <CollectionView ItemsSource="{Binding Settings}" SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="dtos:SystemSettingDto">
+                        <Border StrokeShape="RoundRectangle 12" 
+                                Stroke="{StaticResource BorderBrush}" 
+                                BackgroundColor="{StaticResource CardBackground}" 
+                                Padding="15" 
+                                Margin="0,0,0,12">
+                            <VerticalStackLayout Spacing="10">
+                                <!-- Title and Type -->
+                                <HorizontalStackLayout Spacing="10">
+                                    <Label Text="⚙" FontSize="18" VerticalOptions="Center" />
+                                    <Label Text="{Binding SettingKey}" TextColor="{StaticResource TextPrimary}" FontSize="14" FontAttributes="Bold" VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+
+                                <!-- Description -->
+                                <Label Text="{Binding Description}" TextColor="{StaticResource TextMuted}" FontSize="12" />
+
+                                <!-- Inline Input Form -->
+                                <Grid ColumnDefinitions="*, Auto" ColumnSpacing="15" Margin="0,5,0,0">
+                                    <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                        <Entry Text="{Binding SettingValue}" TextColor="{StaticResource TextPrimary}" HeightRequest="38" />
+                                    </Border>
+
+                                    <Button Grid.Column="1"
+                                            Text="Save"
+                                            BackgroundColor="{StaticResource Primary}"
+                                            TextColor="White"
+                                            CornerRadius="6"
+                                            HeightRequest="38"
+                                            Padding="15,0"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SettingsViewModel}}, Path=SaveSettingCommand}"
+                                            CommandParameter="{Binding .}" />
+                                </Grid>
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <!-- Error Alert -->
+            <Label Text="{Binding ErrorMessage}"
+                   TextColor="{StaticResource Danger}"
+                   FontSize="13"
+                   HorizontalOptions="Center"
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource NullableToBoolConverter}}" />
+
+            <!-- Loading Indicator -->
+            <ActivityIndicator IsRunning="{Binding IsBusy}" Color="{StaticResource Primary}" HorizontalOptions="Center" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

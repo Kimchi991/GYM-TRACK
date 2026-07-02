@@ -3,12 +3,42 @@
     x:Class="GymTrackPro.Mobile.AppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:local="clr-namespace:GymTrackPro.Mobile"
-    Title="GymTrackPro.Mobile">
+    xmlns:views="clr-namespace:GymTrackPro.Mobile.Views"
+    Title="GymTrackPro"
+    FlyoutBehavior="Flyout">
 
-    <ShellContent
-        Title="Home"
-        ContentTemplate="{DataTemplate local:MainPage}"
-        Route="MainPage" />
+    <!-- Login Route (Flyout menu hidden) -->
+    <ShellItem Route="login" FlyoutItemIsVisible="False">
+        <ShellContent ContentTemplate="{DataTemplate views:LoginPage}" />
+    </ShellItem>
+
+    <!-- Main Navigation Flyout -->
+    <FlyoutItem Title="Dashboard" Route="dashboard">
+        <ShellContent ContentTemplate="{DataTemplate views:DashboardPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Members" Route="members">
+        <ShellContent ContentTemplate="{DataTemplate views:MembersPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Attendance" Route="attendance">
+        <ShellContent ContentTemplate="{DataTemplate views:AttendancePage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Payments" Route="payments">
+        <ShellContent ContentTemplate="{DataTemplate views:PaymentsPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Reports" Route="reports">
+        <ShellContent ContentTemplate="{DataTemplate views:ReportsPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Notifications" Route="notifications">
+        <ShellContent ContentTemplate="{DataTemplate views:NotificationsPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Settings" Route="settings">
+        <ShellContent ContentTemplate="{DataTemplate views:SettingsPage}" />
+    </FlyoutItem>
 
 </Shell>

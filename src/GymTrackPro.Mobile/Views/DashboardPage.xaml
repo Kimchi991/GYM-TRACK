@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:GymTrackPro.Mobile.ViewModels"
+             x:Class="GymTrackPro.Mobile.Views.DashboardPage"
+             Title="GymTrackPro Dashboard"
+             BackgroundColor="{StaticResource Background}">
+
+
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="25">
+
+            <!-- Welcome Header -->
+            <Grid ColumnDefinitions="*, Auto">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="Good Morning, Admin 👋"
+                           TextColor="{StaticResource TextPrimary}"
+                           FontSize="24"
+                           FontAttributes="Bold" />
+                    <Label Text="Here is what's happening at your gym today."
+                           TextColor="{StaticResource TextSecondary}"
+                           FontSize="14" />
+                </VerticalStackLayout>
+                <Button Grid.Column="1"
+                        Text="🔄 Refresh"
+                        BackgroundColor="{StaticResource CardBackground}"
+                        TextColor="{StaticResource TextPrimary}"
+                        CornerRadius="8"
+                        Command="{Binding LoadDashboardDataCommand}" />
+            </Grid>
+
+            <!-- Metrics Grid -->
+            <Grid RowDefinitions="Auto, Auto" ColumnDefinitions="*, *" ColumnSpacing="15" RowSpacing="15">
+                <!-- Today's Revenue -->
+                <Border StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="15">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="💳 Today's Revenue" TextColor="{StaticResource TextSecondary}" FontSize="13" FontAttributes="Bold" />
+                        <Label Text="{Binding RevenueToday, StringFormat='₱{0:N2}'}" TextColor="{StaticResource Secondary}" FontSize="24" FontAttributes="Bold" />
+                        <Label Text="Cash/Digital payments" TextColor="{StaticResource TextMuted}" FontSize="11" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Monthly Revenue -->
+                <Border Grid.Column="1" StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="15">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="📈 Month's Revenue" TextColor="{StaticResource TextSecondary}" FontSize="13" FontAttributes="Bold" />
+                        <Label Text="{Binding RevenueThisMonth, StringFormat='₱{0:N2}'}" TextColor="{StaticResource Primary}" FontSize="24" FontAttributes="Bold" />
+                        <Label Text="Current billing period" TextColor="{StaticResource TextMuted}" FontSize="11" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Members Checked In -->
+                <Border Grid.Row="1" StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="15">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="👤 Checked In Today" TextColor="{StaticResource TextSecondary}" FontSize="13" FontAttributes="Bold" />
+                        <Label Text="{Binding CheckedInCount}" TextColor="{StaticResource Success}" FontSize="28" FontAttributes="Bold" />
+                        <Label Text="Active check-in sessions" TextColor="{StaticResource TextMuted}" FontSize="11" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Active Memberships -->
+                <Border Grid.Row="1" Grid.Column="1" StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="15">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="🔥 Active Members" TextColor="{StaticResource TextSecondary}" FontSize="13" FontAttributes="Bold" />
+                        <Label Text="{Binding ActiveMembersCount}" TextColor="{StaticResource PrimaryLight}" FontSize="28" FontAttributes="Bold" />
+                        <Label Text="Valid billing subscriptions" TextColor="{StaticResource TextMuted}" FontSize="11" />
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+
+            <!-- Alerts Banner -->
+            <Border StrokeShape="RoundRectangle 12" 
+                    Stroke="{StaticResource BorderBrush}" 
+                    BackgroundColor="{StaticResource CardBackground}" 
+                    Padding="15"
+                    IsVisible="{Binding ExpiringSoonCount, Converter={StaticResource NullableToBoolConverter}}">
+                <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="15" VerticalOptions="Center">
+                    <Label Text="⚠️" FontSize="24" VerticalOptions="Center" />
+                    <VerticalStackLayout Grid.Column="1" Spacing="2">
+                        <Label Text="Attention Required" TextColor="{StaticResource Warning}" FontSize="14" FontAttributes="Bold" />
+                        <Label Text="{Binding ExpiringSoonCount, StringFormat='{0} memberships expiring within 3 days.'}" TextColor="{StaticResource TextPrimary}" FontSize="12" />
+                    </VerticalStackLayout>
+                    <Button Grid.Column="2" 
+                            Text="View" 
+                            BackgroundColor="{StaticResource Warning}" 
+                            TextColor="Black" 
+                            CornerRadius="6" 
+                            HeightRequest="32" 
+                            Padding="10,0" 
+                            Command="{Binding NavigateToCommand}" 
+                            CommandParameter="reports" />
+                </Grid>
+            </Border>
+
+            <!-- Quick Actions -->
+            <VerticalStackLayout Spacing="10">
+                <Label Text="Quick Actions" TextColor="{StaticResource TextPrimary}" FontSize="16" FontAttributes="Bold" />
+                <Grid ColumnDefinitions="*, *, *, *" ColumnSpacing="10">
+                    <Button Text="Check-In" BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="8" HeightRequest="65" FontAttributes="Bold" FontSize="12" Command="{Binding NavigateToCommand}" CommandParameter="attendance" />
+                    <Button Grid.Column="1" Text="Add Member" BackgroundColor="{StaticResource Secondary}" TextColor="White" CornerRadius="8" HeightRequest="65" FontAttributes="Bold" FontSize="11" Command="{Binding NavigateToCommand}" CommandParameter="members" />
+                    <Button Grid.Column="2" Text="Billing" BackgroundColor="{StaticResource CardBackground}" BorderColor="{StaticResource BorderColor}" BorderWidth="1" TextColor="{StaticResource TextPrimary}" CornerRadius="8" HeightRequest="65" FontAttributes="Bold" FontSize="12" Command="{Binding NavigateToCommand}" CommandParameter="payments" />
+                    <Button Grid.Column="3" Text="Reports" BackgroundColor="{StaticResource CardBackground}" BorderColor="{StaticResource BorderColor}" BorderWidth="1" TextColor="{StaticResource TextPrimary}" CornerRadius="8" HeightRequest="65" FontAttributes="Bold" FontSize="12" Command="{Binding NavigateToCommand}" CommandParameter="reports" />
+                </Grid>
+            </VerticalStackLayout>
+
+            <!-- Loading Indicator -->
+            <ActivityIndicator IsRunning="{Binding IsBusy}" Color="{StaticResource Primary}" HorizontalOptions="Center" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

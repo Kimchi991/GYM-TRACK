@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:GymTrackPro.Mobile.ViewModels"
+             xmlns:dtos="clr-namespace:GymTrackPro.Shared.DTOs;assembly=GymTrackPro.Shared"
+             x:Class="GymTrackPro.Mobile.Views.MembersPage"
+             Title="GymTrackPro Members"
+             BackgroundColor="{StaticResource Background}">
+
+    <Grid RowDefinitions="Auto, *">
+        
+        <!-- Header & Action Row -->
+        <Grid ColumnDefinitions="*, Auto" Padding="20,15" ColumnSpacing="15">
+            <!-- Search bar -->
+            <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="10,0">
+                <Entry Text="{Binding SearchQuery}" 
+                       TextColor="{StaticResource TextPrimary}"
+                       PlaceholderColor="{StaticResource TextMuted}"
+                       Placeholder="🔍 Search members by name or phone..."
+                       HeightRequest="42"
+                       ReturnType="Search"
+                       ReturnCommand="{Binding LoadMembersCommand}" />
+            </Border>
+
+            <Button Grid.Column="1"
+                    Text="➕ Register"
+                    BackgroundColor="{StaticResource Secondary}"
+                    TextColor="White"
+                    CornerRadius="8"
+                    HeightRequest="42"
+                    FontAttributes="Bold"
+                    Command="{Binding ToggleAddFormCommand}" />
+        </Grid>
+
+        <!-- Main Body -->
+        <Grid Grid.Row="1">
+            
+            <!-- Members List View -->
+            <ScrollView Padding="20,0,20,20" IsVisible="{Binding ShowAddForm, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}">
+                <VerticalStackLayout Spacing="15">
+                    
+                    <Label Text="Active Members" TextColor="{StaticResource TextSecondary}" FontSize="14" FontAttributes="Bold" />
+                    
+                    <CollectionView ItemsSource="{Binding Members}" SelectionMode="None">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="dtos:MemberResponseDto">
+                                <Border StrokeShape="RoundRectangle 12" 
+                                        Stroke="{StaticResource BorderBrush}" 
+                                        BackgroundColor="{StaticResource CardBackground}" 
+                                        Padding="15" 
+                                        Margin="0,0,0,12">
+                                    <Grid ColumnDefinitions="50, *, Auto" ColumnSpacing="15">
+                                        <!-- Photo placeholder -->
+                                        <Border StrokeShape="RoundRectangle 25" Stroke="{StaticResource BorderBrush}" HeightRequest="50" WidthRequest="50" HorizontalOptions="Center" VerticalOptions="Center">
+                                            <Label Text="👤" FontSize="24" HorizontalOptions="Center" VerticalOptions="Center" />
+                                        </Border>
+
+                                        <!-- Details -->
+                                        <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
+                                            <HorizontalStackLayout Spacing="8">
+                                                <Label Text="{Binding FirstName}" TextColor="{StaticResource TextPrimary}" FontSize="16" FontAttributes="Bold" />
+                                                <Label Text="{Binding LastName}" TextColor="{StaticResource TextPrimary}" FontSize="16" FontAttributes="Bold" />
+                                            </HorizontalStackLayout>
+                                            <Label Text="{Binding PhoneNumber}" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                                            <Label Text="{Binding QRCheckInCode, StringFormat='ID: {0}'}" TextColor="{StaticResource TextMuted}" FontSize="11" />
+                                        </VerticalStackLayout>
+
+                                        <!-- Action & Status -->
+                                        <VerticalStackLayout Grid.Column="2" Spacing="8" HorizontalOptions="End" VerticalOptions="Center">
+                                            <Border StrokeShape="RoundRectangle 6" 
+                                                    BackgroundColor="{StaticResource SuccessBrush}" 
+                                                    Padding="8,3" 
+                                                    HorizontalOptions="End">
+                                                <Label Text="{Binding Status}" TextColor="White" FontSize="11" FontAttributes="Bold" />
+                                            </Border>
+                                            <Button Text="❌" 
+                                                    BackgroundColor="Transparent"
+                                                    TextColor="{StaticResource Danger}"
+                                                    FontSize="14"
+                                                    HeightRequest="30"
+                                                    WidthRequest="30"
+                                                    Padding="0"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MembersViewModel}}, Path=DeleteMemberCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <!-- Error Alert -->
+                    <Label Text="{Binding ErrorMessage}"
+                           TextColor="{StaticResource Danger}"
+                           FontSize="13"
+                           HorizontalOptions="Center"
+                           HorizontalTextAlignment="Center"
+                           IsVisible="{Binding ErrorMessage, Converter={StaticResource NullableToBoolConverter}}" />
+
+                    <!-- Loading Indicator -->
+                    <ActivityIndicator IsRunning="{Binding IsBusy}" Color="{StaticResource Primary}" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </ScrollView>
+
+            <!-- Registration Form Overlay -->
+            <ScrollView Padding="20" IsVisible="{Binding ShowAddForm}" BackgroundColor="{StaticResource Background}">
+                <Border StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="20">
+                    <VerticalStackLayout Spacing="18">
+                        <Label Text="Register New Member" TextColor="{StaticResource TextPrimary}" FontSize="18" FontAttributes="Bold" />
+
+                        <!-- Name inputs -->
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="15">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="First Name *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                                <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                    <Entry Text="{Binding RegFirstName}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="6">
+                                <Label Text="Last Name *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                                <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                    <Entry Text="{Binding RegLastName}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <!-- Gender & Birth Date -->
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="15">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Gender *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                                <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                    <Picker SelectedItem="{Binding RegGender}" TextColor="{StaticResource TextPrimary}" TitleColor="{StaticResource TextMuted}" HeightRequest="40">
+                                        <Picker.ItemsSource>
+                                            <x:Array Type="{x:Type x:String}">
+                                                <x:String>Male</x:String>
+                                                <x:String>Female</x:String>
+                                                <x:String>Other</x:String>
+                                            </x:Array>
+                                        </Picker.ItemsSource>
+                                    </Picker>
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="6">
+                                <Label Text="Birth Date *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                                <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                    <DatePicker Date="{Binding RegBirthDate}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <!-- Contact -->
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Phone Number *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                            <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Entry Text="{Binding RegPhone}" TextColor="{StaticResource TextPrimary}" Keyboard="Telephone" HeightRequest="40" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Email Address" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                            <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Entry Text="{Binding RegEmail}" TextColor="{StaticResource TextPrimary}" Keyboard="Email" HeightRequest="40" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Address & Emergency -->
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Address" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                            <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Entry Text="{Binding RegAddress}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Emergency Contact (Name/Phone) *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                            <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Entry Text="{Binding RegEmergencyContact}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Form Actions -->
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="15" Margin="0,10,0,0">
+                            <Button Text="Cancel"
+                                    BackgroundColor="{StaticResource Background}"
+                                    TextColor="{StaticResource TextPrimary}"
+                                    BorderColor="{StaticResource BorderColor}"
+                                    BorderWidth="1"
+                                    CornerRadius="6"
+                                    Command="{Binding ToggleAddFormCommand}" />
+                            
+                            <Button Grid.Column="1"
+                                    Text="Submit"
+                                    BackgroundColor="{StaticResource Primary}"
+                                    TextColor="White"
+                                    CornerRadius="6"
+                                    Command="{Binding RegisterMemberCommand}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+            </ScrollView>
+
+        </Grid>
+    </Grid>
+</ContentPage>

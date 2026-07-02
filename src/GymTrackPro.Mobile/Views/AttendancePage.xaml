@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:GymTrackPro.Mobile.ViewModels"
+             xmlns:dtos="clr-namespace:GymTrackPro.Shared.DTOs;assembly=GymTrackPro.Shared"
+             x:Class="GymTrackPro.Mobile.Views.AttendancePage"
+             Title="GymTrackPro Attendance"
+             BackgroundColor="{StaticResource Background}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="25">
+            
+            <!-- Attendance Terminal Card -->
+            <Border StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="20">
+                <VerticalStackLayout Spacing="18">
+                    <Label Text="Attendance Terminal" TextColor="{StaticResource TextPrimary}" FontSize="18" FontAttributes="Bold" />
+                    
+                    <Label Text="Scan Member QR Code or Enter Member Code manually to record a check-in." 
+                           TextColor="{StaticResource TextSecondary}" 
+                           FontSize="13" />
+
+                    <!-- Input Grid -->
+                    <Grid ColumnDefinitions="*, Auto" ColumnSpacing="15">
+                        <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                            <Entry Text="{Binding QrCodeInput}" 
+                                   TextColor="{StaticResource TextPrimary}"
+                                   PlaceholderColor="{StaticResource TextMuted}"
+                                   Placeholder="Enter QR Code / Member ID..."
+                                   HeightRequest="42"
+                                   ReturnCommand="{Binding CheckInCommand}" />
+                        </Border>
+
+                        <Button Grid.Column="1"
+                                Text="Check-In"
+                                BackgroundColor="{StaticResource Primary}"
+                                TextColor="White"
+                                CornerRadius="8"
+                                HeightRequest="42"
+                                FontAttributes="Bold"
+                                Command="{Binding CheckInCommand}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Status Alerts Banner -->
+            <Border StrokeShape="RoundRectangle 8" 
+                    Stroke="{StaticResource SuccessBrush}" 
+                    BackgroundColor="{StaticResource CardBackground}" 
+                    Padding="15" 
+                    IsVisible="{Binding StatusMessage, Converter={StaticResource NullableToBoolConverter}}">
+                <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                    <Label Text="✅" FontSize="20" VerticalOptions="Center" />
+                    <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Success}" FontSize="14" FontAttributes="Bold" VerticalOptions="Center" />
+                </HorizontalStackLayout>
+            </Border>
+
+            <!-- Error Alerts Banner -->
+            <Border StrokeShape="RoundRectangle 8" 
+                    Stroke="{StaticResource DangerBrush}" 
+                    BackgroundColor="{StaticResource CardBackground}" 
+                    Padding="15" 
+                    IsVisible="{Binding ErrorMessage, Converter={StaticResource NullableToBoolConverter}}">
+                <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                    <Label Text="⚠️" FontSize="20" VerticalOptions="Center" />
+                    <Label Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" FontSize="14" FontAttributes="Bold" VerticalOptions="Center" />
+                </HorizontalStackLayout>
+            </Border>
+
+            <!-- Today's Checked-In Logs -->
+            <VerticalStackLayout Spacing="12">
+                <Label Text="Today's Check-in Log" TextColor="{StaticResource TextPrimary}" FontSize="16" FontAttributes="Bold" />
+
+                <CollectionView ItemsSource="{Binding TodayCheckIns}" SelectionMode="None">
+                    <CollectionView.EmptyView>
+                        <Label Text="No check-ins recorded for today." TextColor="{StaticResource TextMuted}" FontSize="13" HorizontalOptions="Center" Margin="0,20" />
+                    </CollectionView.EmptyView>
+                    
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="dtos:AttendanceDto">
+                            <Border StrokeShape="RoundRectangle 10" 
+                                    Stroke="{StaticResource BorderBrush}" 
+                                    BackgroundColor="{StaticResource CardBackground}" 
+                                    Padding="15" 
+                                    Margin="0,0,0,10">
+                                <Grid ColumnDefinitions="*, Auto" ColumnSpacing="15">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="{Binding MemberName}" TextColor="{StaticResource TextPrimary}" FontSize="15" FontAttributes="Bold" />
+                                        <Label Text="{Binding CheckInTime, StringFormat='In: {0:hh:mm tt}'}" TextColor="{StaticResource TextSecondary}" FontSize="12" />
+                                        <Label Text="{Binding CheckOutTime, StringFormat='Out: {0:hh:mm tt}'}" 
+                                               TextColor="{StaticResource TextMuted}" 
+                                               FontSize="12" 
+                                               IsVisible="{Binding CheckOutTime, Converter={StaticResource NullableToBoolConverter}}" />
+                                        <Label Text="Status: Active Session" 
+                                               TextColor="{StaticResource Success}" 
+                                               FontSize="11" 
+                                               FontAttributes="Bold"
+                                               IsVisible="{Binding CheckOutTime, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}" />
+                                    </VerticalStackLayout>
+
+                                    <!-- Action Button -->
+                                    <Button Grid.Column="1"
+                                            Text="Check-Out"
+                                            BackgroundColor="{StaticResource CardBackground}"
+                                            BorderColor="{StaticResource BorderColor}"
+                                            BorderWidth="1"
+                                            TextColor="{StaticResource TextPrimary}"
+                                            CornerRadius="6"
+                                            HeightRequest="36"
+                                            Padding="10,0"
+                                            IsVisible="{Binding CheckOutTime, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AttendanceViewModel}}, Path=CheckOutCommand}"
+                                            CommandParameter="{Binding .}" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+
+            <!-- Loading Indicator -->
+            <ActivityIndicator IsRunning="{Binding IsBusy}" Color="{StaticResource Primary}" HorizontalOptions="Center" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

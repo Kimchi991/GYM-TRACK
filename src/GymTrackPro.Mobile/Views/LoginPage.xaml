@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:GymTrackPro.Mobile.ViewModels"
+             x:Class="GymTrackPro.Mobile.Views.LoginPage"
+             Title="GymTrackPro Login"
+             BackgroundColor="{StaticResource Background}">
+
+    <ScrollView>
+        <Grid RowDefinitions="*" Padding="20">
+            <Border StrokeShape="RoundRectangle 18" 
+                    Stroke="{StaticResource BorderBrush}"
+                    BackgroundColor="{StaticResource CardBackground}"
+                    VerticalOptions="Center" 
+                    MaximumWidthRequest="450" 
+                    Padding="30"
+                    Margin="0,40">
+                <VerticalStackLayout Spacing="25">
+                    
+                    <!-- Branding Header -->
+                    <VerticalStackLayout Spacing="8" HorizontalOptions="Center">
+                        <Label Text="💪 GymTrackPro"
+                               TextColor="{StaticResource Primary}"
+                               FontSize="32"
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center" />
+                        <Label Text="Welcome Back"
+                               TextColor="{StaticResource TextPrimary}"
+                               FontSize="20"
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center" />
+                        <Label Text="Sign in to manage your facility"
+                               TextColor="{StaticResource TextSecondary}"
+                               FontSize="14"
+                               HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+
+                    <!-- Input Fields -->
+                    <VerticalStackLayout Spacing="15">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Username" TextColor="{StaticResource TextSecondary}" FontSize="13" FontAttributes="Bold" />
+                            <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Entry Text="{Binding Username}" 
+                                       TextColor="{StaticResource TextPrimary}"
+                                       PlaceholderColor="{StaticResource TextMuted}"
+                                       HeightRequest="45"
+                                       Placeholder="Enter username" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Password" TextColor="{StaticResource TextSecondary}" FontSize="13" FontAttributes="Bold" />
+                            <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Entry Text="{Binding Password}" 
+                                       TextColor="{StaticResource TextPrimary}"
+                                       PlaceholderColor="{StaticResource TextMuted}"
+                                       HeightRequest="45"
+                                       IsPassword="True" 
+                                       Placeholder="Enter password" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+
+                    <!-- Error Alert -->
+                    <Label Text="{Binding ErrorMessage}"
+                           TextColor="{StaticResource Danger}"
+                           FontSize="13"
+                           HorizontalOptions="Center"
+                           HorizontalTextAlignment="Center"
+                           IsVisible="{Binding ErrorMessage, Converter={StaticResource NullableToBoolConverter}}" />
+
+                    <!-- Login Button -->
+                    <Button Text="Login"
+                            TextColor="White"
+                            BackgroundColor="{StaticResource Primary}"
+                            CornerRadius="8"
+                            HeightRequest="48"
+                            FontAttributes="Bold"
+                            Command="{Binding LoginCommand}" />
+
+                    <!-- Navigation Links -->
+                    <HorizontalStackLayout HorizontalOptions="Center" Spacing="15">
+                        <Label Text="Forgot Password?" 
+                               TextColor="{StaticResource Primary}"
+                               FontSize="13"
+                               FontAttributes="Bold">
+                            <Label.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding GoToForgotPasswordCommand}" />
+                            </Label.GestureRecognizers>
+                        </Label>
+                        <Label Text="|" TextColor="{StaticResource BorderColor}" />
+                        <Label Text="Register Account" 
+                               TextColor="{StaticResource Secondary}"
+                               FontSize="13"
+                               FontAttributes="Bold">
+                            <Label.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding GoToRegisterCommand}" />
+                            </Label.GestureRecognizers>
+                        </Label>
+                    </HorizontalStackLayout>
+
+                    <!-- Loading Indicator -->
+                    <ActivityIndicator IsRunning="{Binding IsBusy}"
+                                       Color="{StaticResource Primary}"
+                                       HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+    </ScrollView>
+</ContentPage>

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:GymTrackPro.Mobile.ViewModels"
+             xmlns:entities="clr-namespace:GymTrackPro.Shared.Entities;assembly=GymTrackPro.Shared"
+             xmlns:enums="clr-namespace:GymTrackPro.Shared.Enums;assembly=GymTrackPro.Shared"
+             x:Class="GymTrackPro.Mobile.Views.NotificationsPage"
+             Title="GymTrackPro Notifications"
+             BackgroundColor="{StaticResource Background}">
+
+    <Grid RowDefinitions="Auto, *">
+        
+        <!-- Header -->
+        <Grid ColumnDefinitions="*, Auto" Padding="20,15" ColumnSpacing="15">
+            <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                <Label Text="Notifications Inbox" TextColor="{StaticResource TextPrimary}" FontSize="20" FontAttributes="Bold" />
+                <Label Text="Important system updates and welcome messages" TextColor="{StaticResource TextSecondary}" FontSize="12" />
+            </VerticalStackLayout>
+
+            <Border Grid.Column="1" 
+                    StrokeShape="RoundRectangle 12" 
+                    BackgroundColor="{StaticResource Primary}" 
+                    Padding="10,4" 
+                    VerticalOptions="Center"
+                    IsVisible="{Binding UnreadCount, Converter={StaticResource NullableToBoolConverter}}">
+                <Label Text="{Binding UnreadCount, StringFormat='{0} New'}" TextColor="White" FontSize="11" FontAttributes="Bold" />
+            </Border>
+        </Grid>
+
+        <!-- List -->
+        <ScrollView Grid.Row="1" Padding="20,0,20,20">
+            <VerticalStackLayout Spacing="15">
+                
+                <CollectionView ItemsSource="{Binding Notifications}" SelectionMode="None">
+                    <CollectionView.EmptyView>
+                        <Label Text="Your notifications inbox is empty." TextColor="{StaticResource TextMuted}" FontSize="13" HorizontalOptions="Center" Margin="0,45" />
+                    </CollectionView.EmptyView>
+
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="entities:Notification">
+                            <Border StrokeShape="RoundRectangle 12" 
+                                    Stroke="{StaticResource BorderBrush}" 
+                                    BackgroundColor="{StaticResource CardBackground}" 
+                                    Padding="15" 
+                                    Margin="0,0,0,12">
+                                <Grid ColumnDefinitions="*, Auto" ColumnSpacing="15">
+                                    <VerticalStackLayout Spacing="6">
+                                        <!-- Header line -->
+                                        <HorizontalStackLayout Spacing="10">
+                                            <!-- Blue Dot for Unread -->
+                                            <Ellipse WidthRequest="8" 
+                                                     HeightRequest="8" 
+                                                     Fill="{StaticResource PrimaryBrush}" 
+                                                     VerticalOptions="Center"
+                                                     IsVisible="True" /> <!-- Quick fallback visibility logic -->
+                                            
+                                            <Label Text="{Binding Title}" TextColor="{StaticResource TextPrimary}" FontSize="15" FontAttributes="Bold" />
+                                        </HorizontalStackLayout>
+
+                                        <!-- Message -->
+                                        <Label Text="{Binding Message}" TextColor="{StaticResource TextSecondary}" FontSize="13" LineBreakMode="WordWrap" />
+
+                                        <!-- Footer line -->
+                                        <Label Text="{Binding ScheduledTime, StringFormat='Sent: {0:yyyy-MM-dd hh:mm tt}'}" TextColor="{StaticResource TextMuted}" FontSize="11" />
+                                    </VerticalStackLayout>
+
+                                    <!-- Read Action -->
+                                    <Button Grid.Column="1"
+                                            Text="Read"
+                                            BackgroundColor="{StaticResource Background}"
+                                            BorderColor="{StaticResource BorderColor}"
+                                            BorderWidth="1"
+                                            TextColor="{StaticResource TextPrimary}"
+                                            CornerRadius="6"
+                                            HeightRequest="32"
+                                            WidthRequest="60"
+                                            Padding="0"
+                                            VerticalOptions="Center"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:NotificationsViewModel}}, Path=MarkAsReadCommand}"
+                                            CommandParameter="{Binding .}" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <!-- Error Alert -->
+                <Label Text="{Binding ErrorMessage}"
+                       TextColor="{StaticResource Danger}"
+                       FontSize="13"
+                       HorizontalOptions="Center"
+                       IsVisible="{Binding ErrorMessage, Converter={StaticResource NullableToBoolConverter}}" />
+
+                <!-- Loading Indicator -->
+                <ActivityIndicator IsRunning="{Binding IsBusy}" Color="{StaticResource Primary}" HorizontalOptions="Center" />
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:GymTrackPro.Mobile.ViewModels"
+             xmlns:dtos="clr-namespace:GymTrackPro.Shared.DTOs;assembly=GymTrackPro.Shared"
+             x:Class="GymTrackPro.Mobile.Views.PaymentsPage"
+             Title="GymTrackPro Payments"
+             BackgroundColor="{StaticResource Background}">
+
+    <Grid RowDefinitions="Auto, *">
+        
+        <!-- Header & Action Row -->
+        <Grid ColumnDefinitions="*, Auto" Padding="20,15" ColumnSpacing="15">
+            <Label Text="Payment History" TextColor="{StaticResource TextPrimary}" FontSize="20" FontAttributes="Bold" VerticalOptions="Center" />
+
+            <Button Grid.Column="1"
+                    Text="💳 Process Billing"
+                    BackgroundColor="{StaticResource Secondary}"
+                    TextColor="White"
+                    CornerRadius="8"
+                    HeightRequest="42"
+                    FontAttributes="Bold"
+                    Command="{Binding ToggleBillingFormCommand}" />
+        </Grid>
+
+        <!-- Main Body -->
+        <Grid Grid.Row="1">
+            
+            <!-- Payments List View -->
+            <ScrollView Padding="20,0,20,20" IsVisible="{Binding ShowBillingForm, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}">
+                <VerticalStackLayout Spacing="15">
+                    
+                    <!-- Success/Refund message -->
+                    <Border StrokeShape="RoundRectangle 8" 
+                            Stroke="{StaticResource SuccessBrush}" 
+                            BackgroundColor="{StaticResource CardBackground}" 
+                            Padding="15" 
+                            IsVisible="{Binding SuccessMessage, Converter={StaticResource NullableToBoolConverter}}">
+                        <Label Text="{Binding SuccessMessage}" TextColor="{StaticResource Success}" FontSize="13" FontAttributes="Bold" />
+                    </Border>
+
+                    <CollectionView ItemsSource="{Binding Payments}" SelectionMode="None">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="dtos:PaymentResponseDto">
+                                <Border StrokeShape="RoundRectangle 12" 
+                                        Stroke="{StaticResource BorderBrush}" 
+                                        BackgroundColor="{StaticResource CardBackground}" 
+                                        Padding="15" 
+                                        Margin="0,0,0,12">
+                                    <Grid RowDefinitions="Auto, Auto" ColumnDefinitions="*, Auto" RowSpacing="10">
+                                        <!-- Header: Receipt and Status -->
+                                        <VerticalStackLayout Spacing="2">
+                                            <Label Text="{Binding ReceiptNumber, StringFormat='Receipt: {0}'}" TextColor="{StaticResource TextPrimary}" FontSize="15" FontAttributes="Bold" />
+                                            <Label Text="{Binding DatePaid, StringFormat='Date: {0:yyyy-MM-dd HH:mm}'}" TextColor="{StaticResource TextMuted}" FontSize="11" />
+                                        </VerticalStackLayout>
+
+                                        <Border Grid.Column="1" 
+                                                StrokeShape="RoundRectangle 6" 
+                                                BackgroundColor="{StaticResource SuccessBrush}" 
+                                                Padding="8,3" 
+                                                HorizontalOptions="End">
+                                            <Label Text="{Binding Status}" TextColor="White" FontSize="11" FontAttributes="Bold" />
+                                        </Border>
+
+                                        <!-- Details -->
+                                        <Grid Grid.Row="1" ColumnDefinitions="*, *" ColumnSpacing="15" Margin="0,5,0,0">
+                                            <VerticalStackLayout Spacing="4">
+                                                <Label Text="Member Profile" TextColor="{StaticResource TextMuted}" FontSize="11" />
+                                                <Label Text="{Binding MemberName}" TextColor="{StaticResource TextPrimary}" FontSize="13" FontAttributes="Bold" />
+                                            </VerticalStackLayout>
+
+                                            <VerticalStackLayout Grid.Column="1" Spacing="4" HorizontalOptions="End">
+                                                <Label Text="Amount Paid" TextColor="{StaticResource TextMuted}" FontSize="11" HorizontalOptions="End" />
+                                                <Label Text="{Binding FinalAmount, StringFormat='₱{0:N2}'}" TextColor="{StaticResource Secondary}" FontSize="15" FontAttributes="Bold" HorizontalOptions="End" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+
+                                        <!-- Refund Button -->
+                                        <Button Grid.Row="1" Grid.Column="1"
+                                                Text="Refund"
+                                                BackgroundColor="Transparent"
+                                                TextColor="{StaticResource Danger}"
+                                                FontAttributes="Bold"
+                                                FontSize="12"
+                                                HeightRequest="30"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PaymentsViewModel}}, Path=RefundPaymentCommand}"
+                                                CommandParameter="{Binding .}"
+                                                IsVisible="{Binding Status, Converter={StaticResource NullableToBoolConverter}}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <!-- Error Alert -->
+                    <Label Text="{Binding ErrorMessage}"
+                           TextColor="{StaticResource Danger}"
+                           FontSize="13"
+                           HorizontalOptions="Center"
+                           HorizontalTextAlignment="Center"
+                           IsVisible="{Binding ErrorMessage, Converter={StaticResource NullableToBoolConverter}}" />
+
+                    <!-- Loading Indicator -->
+                    <ActivityIndicator IsRunning="{Binding IsBusy}" Color="{StaticResource Primary}" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </ScrollView>
+
+            <!-- Billing Process Form Overlay -->
+            <ScrollView Padding="20" IsVisible="{Binding ShowBillingForm}" BackgroundColor="{StaticResource Background}">
+                <Border StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="20">
+                    <VerticalStackLayout Spacing="18">
+                        <Label Text="Process New Gym Billing" TextColor="{StaticResource TextPrimary}" FontSize="18" FontAttributes="Bold" />
+
+                        <!-- Member selector -->
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Select Gym Member *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                            <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Picker SelectedItem="{Binding SelectedMemberForPayment}" 
+                                        TextColor="{StaticResource TextPrimary}" 
+                                        TitleColor="{StaticResource TextMuted}" 
+                                        ItemDisplayBinding="{Binding FirstName}"
+                                        ItemsSource="{Binding Members}"
+                                        HeightRequest="40" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Plan selector -->
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Select Membership Plan *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                            <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Picker SelectedItem="{Binding SelectedPlanForPayment}" 
+                                        TextColor="{StaticResource TextPrimary}" 
+                                        TitleColor="{StaticResource TextMuted}" 
+                                        ItemDisplayBinding="{Binding PlanName}"
+                                        ItemsSource="{Binding Plans}"
+                                        HeightRequest="40">
+                                    <!-- When plan is selected, auto fill price -->
+                                    <Picker.Behaviors>
+                                        <!-- No behavior needed, done via ViewModel setter trigger or we hook it up -->
+                                    </Picker.Behaviors>
+                                </Picker>
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Pricing and Discount -->
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="15">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Price (₱) *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                                <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                    <Entry Text="{Binding PaymentAmount}" Keyboard="Numeric" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="6">
+                                <Label Text="Discount (₱)" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                                <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                    <Entry Text="{Binding PaymentDiscount}" Keyboard="Numeric" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <!-- Payment Method -->
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Payment Method *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                            <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Picker SelectedItem="{Binding PaymentMethod}" TextColor="{StaticResource TextPrimary}" TitleColor="{StaticResource TextMuted}" HeightRequest="40">
+                                    <Picker.ItemsSource>
+                                        <x:Array Type="{x:Type x:String}">
+                                            <x:String>Cash</x:String>
+                                            <x:String>GCash</x:String>
+                                            <x:String>Maya</x:String>
+                                            <x:String>Card</x:String>
+                                            <x:String>BankTransfer</x:String>
+                                        </x:Array>
+                                    </Picker.ItemsSource>
+                                </Picker>
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Form Actions -->
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="15" Margin="0,10,0,0">
+                            <Button Text="Cancel"
+                                    BackgroundColor="{StaticResource Background}"
+                                    TextColor="{StaticResource TextPrimary}"
+                                    BorderColor="{StaticResource BorderColor}"
+                                    BorderWidth="1"
+                                    CornerRadius="6"
+                                    Command="{Binding ToggleBillingFormCommand}" />
+                            
+                            <Button Grid.Column="1"
+                                    Text="Activate &amp; Pay"
+                                    BackgroundColor="{StaticResource Primary}"
+                                    TextColor="White"
+                                    CornerRadius="6"
+                                    Command="{Binding ProcessBillingCommand}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+            </ScrollView>
+
+        </Grid>
+    </Grid>
+</ContentPage>
