@@ -160,6 +160,16 @@ public partial class MembersViewModel : BaseViewModel
     }
 
     [RelayCommand]
+    private async Task GoToDetailsAsync(MemberResponseDto member)
+    {
+        if (member == null) return;
+        await Shell.Current.GoToAsync("memberdetails", new Dictionary<string, object>
+        {
+            { "Member", member }
+        });
+    }
+
+    [RelayCommand]
     private async Task DeleteMemberAsync(MemberResponseDto member)
     {
         if (member == null) return;
