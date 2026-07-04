@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using GymTrackPro.Mobile.Helpers;
 using GymTrackPro.Mobile.Services;
 
 namespace GymTrackPro.Mobile.ViewModels;
@@ -9,9 +10,10 @@ namespace GymTrackPro.Mobile.ViewModels;
 public partial class LoginViewModel : BaseViewModel
 {
     private readonly IApiService _apiService;
+    private readonly IFirebaseAuthService _firebaseAuthService;
 
     [ObservableProperty]
-    public partial string Username { get; set; } = string.Empty;
+    public partial string Email { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string Password { get; set; } = string.Empty;
@@ -28,9 +30,10 @@ public partial class LoginViewModel : BaseViewModel
         IsPasswordHidden = !IsPasswordHidden;
     }
 
-    public LoginViewModel(IApiService apiService)
+    public LoginViewModel(IApiService apiService, IFirebaseAuthService firebaseAuthService)
     {
         _apiService = apiService;
+        _firebaseAuthService = firebaseAuthService;
         Title = "Login";
     }
 
@@ -39,9 +42,9 @@ public partial class LoginViewModel : BaseViewModel
     {
         if (IsBusy) return;
 
-        if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
+        if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password))
         {
-            ErrorMessage = "Username and password are required.";
+            ErrorMessage = "Email and password are required.";
             return;
         }
 
@@ -50,7 +53,8 @@ public partial class LoginViewModel : BaseViewModel
 
         try
         {
-            var result = await _apiService.LoginAsync(Username, Password);
+            var firebaseToken = await _firebaseAuthService.LoginAsync(Email, Password);
+            var result = await _apiService.SyncUserWithBackendAsync(firebaseToken);
             if (result.Success)
             {
                 await Shell.Current.GoToAsync("///dashboard");
@@ -62,13 +66,14 @@ public partial class LoginViewModel : BaseViewModel
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Login failed: {ex.Message}";
+            ErrorMessage = FirebaseAuthErrorHandler.GetErrorMessage(ex);
         }
         finally
         {
             IsBusy = false;
         }
     }
+
 
     [RelayCommand]
     private async Task GoToRegisterAsync()

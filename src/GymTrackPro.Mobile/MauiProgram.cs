@@ -57,6 +57,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<INetworkService, NetworkService>();
 		builder.Services.AddSingleton<ISyncService, SyncService>();
 		builder.Services.AddSingleton<IApiService, ApiService>();
+		builder.Services.AddSingleton<IFirebaseAuthService, FirebaseAuthService>();
 
 		// TODO: Register Firebase notification receiver services (Phase 10)
 

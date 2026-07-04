@@ -2,13 +2,14 @@ using System;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using GymTrackPro.Mobile.Helpers;
 using GymTrackPro.Mobile.Services;
 
 namespace GymTrackPro.Mobile.ViewModels;
 
 public partial class ForgotPasswordViewModel : BaseViewModel
 {
-    private readonly IApiService _apiService;
+    private readonly IFirebaseAuthService _firebaseAuthService;
 
     [ObservableProperty]
     public partial string Email { get; set; } = string.Empty;
@@ -19,9 +20,9 @@ public partial class ForgotPasswordViewModel : BaseViewModel
     [ObservableProperty]
     public partial string SuccessMessage { get; set; } = string.Empty;
 
-    public ForgotPasswordViewModel(IApiService apiService)
+    public ForgotPasswordViewModel(IFirebaseAuthService firebaseAuthService)
     {
-        _apiService = apiService;
+        _firebaseAuthService = firebaseAuthService;
         Title = "Forgot Password";
     }
 
@@ -42,19 +43,12 @@ public partial class ForgotPasswordViewModel : BaseViewModel
 
         try
         {
-            var result = await _apiService.ForgotPasswordAsync(Email);
-            if (result.Success)
-            {
-                SuccessMessage = "If the email is registered, a reset token has been dispatched.";
-            }
-            else
-            {
-                ErrorMessage = result.Message;
-            }
+            await _firebaseAuthService.ResetPasswordAsync(Email);
+            SuccessMessage = "If the email is registered, a reset token has been dispatched.";
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Request failed: {ex.Message}";
+            ErrorMessage = FirebaseAuthErrorHandler.GetErrorMessage(ex);
         }
         finally
         {

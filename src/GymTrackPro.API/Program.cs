@@ -1,5 +1,7 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using GymTrackPro.API.Data;
@@ -24,6 +26,28 @@ builder.Services.AddControllers()
 
 builder.Services.AddHttpContextAccessor();
 
+// Configure Rate Limiting
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddPolicy("Global", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 100,
+                Window = TimeSpan.FromMinutes(1)
+            }));
+
+    options.AddPolicy("Auth", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1)
+            }));
+});
+
 // Configure EF Core with SQL Server
 builder.Services.AddDbContext<GymDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -32,16 +56,14 @@ builder.Services.AddDbContext<GymDbContext>(options =>
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.Authority = "https://securetoken.google.com/fithub-cf45f";
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
+            ValidIssuer = "https://securetoken.google.com/fithub-cf45f",
             ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "GymTrackProAPI",
-            ValidAudience = builder.Configuration["Jwt:Audience"] ?? "GymTrackProClient",
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-                builder.Configuration["Jwt:Key"] ?? "GymTrackProSecretKeyPlaceholder123456"))
+            ValidAudience = "fithub-cf45f",
+            ValidateLifetime = true
         };
     });
 
@@ -64,9 +86,7 @@ builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 builder.Services.AddScoped<IFirebaseNotificationService, FirebaseNotificationService>();
-builder.Services.AddScoped<IFirebaseEmailService, FirebaseEmailService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
-builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IReportsService, ReportsService>();
@@ -97,6 +117,7 @@ builder.Services.AddOpenApi();
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseMiddleware<SecurityHeadersMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -105,6 +126,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

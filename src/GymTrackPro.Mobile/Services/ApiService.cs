@@ -114,42 +114,17 @@ public class ApiService : IApiService
 
     // --- Authentication ---
 
-    public async Task<ApiResponse<UserResponseDto>> LoginAsync(string username, string password)
+    public async Task<ApiResponse<UserResponseDto>> SyncUserWithBackendAsync(string firebaseToken)
     {
-        var loginDto = new LoginDto { Username = username, Password = password };
-        var response = await _httpClient.PostAsJsonAsync("auth/login", loginDto);
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", firebaseToken);
+        var response = await _httpClient.PostAsync("auth/sync-user", null);
         var result = await HandleResponseAsync<UserResponseDto>(response);
-        if (result.Success && result.Data != null)
+        if (result.Success)
         {
-            SetAuthToken(result.Data.Token);
-            await SecureStorage.Default.SetAsync("auth_token", result.Data.Token);
+            SetAuthToken(firebaseToken);
+            await SecureStorage.Default.SetAsync("auth_token", firebaseToken);
         }
         return result;
-    }
-
-    public async Task<ApiResponse<UserResponseDto>> RegisterAsync(RegisterUserDto registerDto)
-    {
-        var response = await _httpClient.PostAsJsonAsync("auth/register", registerDto);
-        return await HandleResponseAsync<UserResponseDto>(response);
-    }
-
-    public async Task<ApiResponse> ForgotPasswordAsync(string email)
-    {
-        var response = await _httpClient.PostAsJsonAsync("auth/forgot-password", email);
-        return await HandleResponseAsync(response);
-    }
-
-    public async Task<ApiResponse> ResetPasswordAsync(ResetPasswordDto resetDto)
-    {
-        var response = await _httpClient.PostAsJsonAsync("auth/reset-password", resetDto);
-        return await HandleResponseAsync(response);
-    }
-
-    public async Task<ApiResponse> VerifyEmailAsync(string email, string token)
-    {
-        var verifyDto = new VerifyEmailDto { Email = email, Token = token };
-        var response = await _httpClient.PostAsJsonAsync("auth/verify-email", verifyDto);
-        return await HandleResponseAsync(response);
     }
 
     // --- Dashboard ---

@@ -11,18 +11,15 @@ namespace GymTrackPro.API.Services;
 public class NotificationService : INotificationService
 {
     private readonly IFirebaseNotificationService _firebaseProvider;
-    private readonly IEmailService _emailService;
     private readonly GymDbContext _context;
     private readonly ILogger<NotificationService> _logger;
 
     public NotificationService(
         IFirebaseNotificationService firebaseProvider,
-        IEmailService emailService,
         GymDbContext context,
         ILogger<NotificationService> logger)
     {
         _firebaseProvider = firebaseProvider;
-        _emailService = emailService;
         _context = context;
         _logger = logger;
     }
@@ -46,14 +43,8 @@ public class NotificationService : INotificationService
         switch (channel)
         {
             case NotificationChannel.Email:
-                if (!string.IsNullOrEmpty(member.Email))
-                {
-                    await _emailService.SendEmailAsync(member.Email, title, body);
-                }
-                else
-                {
-                    _logger.LogWarning("Member {MemberID} has no registered email. Email notification skipped.", memberId);
-                }
+                // Email is now handled natively by Firebase on the frontend.
+                _logger.LogInformation("Email notification request for Member {MemberID} received. (Handled externally)", memberId);
                 break;
 
             case NotificationChannel.SMS:

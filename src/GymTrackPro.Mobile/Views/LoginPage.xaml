@@ -41,13 +41,14 @@
                     <!-- Input Fields -->
                     <VerticalStackLayout Spacing="15">
                         <VerticalStackLayout Spacing="6">
-                            <Label Text="Username" TextColor="{StaticResource TextSecondary}" FontSize="13" FontAttributes="Bold" />
+                            <Label Text="Email Address" TextColor="{StaticResource TextSecondary}" FontSize="13" FontAttributes="Bold" />
                             <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
-                                <Entry Text="{Binding Username}" 
+                                <Entry Text="{Binding Email}" 
                                        TextColor="{StaticResource TextPrimary}"
                                        PlaceholderColor="{StaticResource TextMuted}"
                                        HeightRequest="45"
-                                       Placeholder="Enter username" />
+                                       Keyboard="Email"
+                                       Placeholder="Enter email address" />
                             </Border>
                         </VerticalStackLayout>
 
@@ -101,6 +102,7 @@
                             HeightRequest="48"
                             FontAttributes="Bold"
                             Command="{Binding LoginCommand}" />
+
 
                     <!-- Navigation Links -->
                     <HorizontalStackLayout HorizontalOptions="Center" Spacing="15">

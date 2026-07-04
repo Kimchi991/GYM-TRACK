@@ -9,11 +9,7 @@ namespace GymTrackPro.Mobile.Services;
 public interface IApiService
 {
     // Authentication
-    Task<ApiResponse<UserResponseDto>> LoginAsync(string username, string password);
-    Task<ApiResponse<UserResponseDto>> RegisterAsync(RegisterUserDto registerDto);
-    Task<ApiResponse> ForgotPasswordAsync(string email);
-    Task<ApiResponse> ResetPasswordAsync(ResetPasswordDto resetDto);
-    Task<ApiResponse> VerifyEmailAsync(string email, string token);
+    Task<ApiResponse<UserResponseDto>> SyncUserWithBackendAsync(string firebaseToken);
     void SetAuthToken(string token);
     string? GetAuthToken();
     void ClearAuthToken();

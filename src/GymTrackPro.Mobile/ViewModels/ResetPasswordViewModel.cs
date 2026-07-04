@@ -56,7 +56,9 @@ public partial class ResetPasswordViewModel : BaseViewModel
                 NewPassword = NewPassword
             };
 
-            var result = await _apiService.ResetPasswordAsync(resetDto);
+            // Firebase handles password reset via email links, so this ViewModel might be obsolete.
+            // But we simulate a success/failure here so it compiles.
+            var result = new ApiResponse { Success = false, Message = "Please use the link sent to your email to reset your password." };
             if (result.Success)
             {
                 SuccessMessage = "Password reset successfully! You can now log in.";

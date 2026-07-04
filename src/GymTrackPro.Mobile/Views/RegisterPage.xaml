@@ -70,6 +70,14 @@
                         </Border>
                     </VerticalStackLayout>
 
+                    <!-- Repeat Password -->
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Repeat Password *" TextColor="{StaticResource TextSecondary}" FontSize="13" FontAttributes="Bold" />
+                        <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                            <Entry Text="{Binding RepeatPassword}" IsPassword="True" TextColor="{StaticResource TextPrimary}" PlaceholderColor="{StaticResource TextMuted}" HeightRequest="42" Placeholder="Repeat password" />
+                        </Border>
+                    </VerticalStackLayout>
+
                     <!-- Error Alert -->
                     <Label Text="{Binding ErrorMessage}"
                            TextColor="{StaticResource Danger}"
@@ -92,6 +100,7 @@
                             HeightRequest="48"
                             FontAttributes="Bold"
                             Command="{Binding RegisterCommand}" />
+
 
                     <!-- Navigation link -->
                     <Label Text="Already have an account? Sign In" 
