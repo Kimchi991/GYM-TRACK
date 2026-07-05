@@ -14,22 +14,22 @@
                     VerticalOptions="Center" 
                     MaximumWidthRequest="450" 
                     Padding="30"
-                    Margin="0,40">
+                    Margin="0,50">
                 <VerticalStackLayout Spacing="25">
                     
                     <!-- Branding Header -->
                     <VerticalStackLayout Spacing="8" HorizontalOptions="Center">
                         <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
-                            <Path Data="{StaticResource IconLock}" Fill="{StaticResource Primary}" Aspect="Uniform" WidthRequest="26" HeightRequest="26" VerticalOptions="Center" />
+                            <Path Data="{StaticResource IconLock}" Fill="{StaticResource Primary}" Aspect="Uniform" WidthRequest="32" HeightRequest="32" VerticalOptions="Center" />
                             <Label Text="GymTrackPro"
                                    TextColor="{StaticResource TextPrimary}"
-                                   FontSize="28"
+                                   FontSize="30"
                                    FontAttributes="Bold"
                                    VerticalOptions="Center" />
                         </HorizontalStackLayout>
                         <Label Text="Welcome Back"
                                TextColor="{StaticResource TextSecondary}"
-                               FontSize="16"
+                               FontSize="18"
                                FontAttributes="Bold"
                                HorizontalOptions="Center" />
                         <Label Text="Sign in to manage your facility"
@@ -46,7 +46,7 @@
                                 <Entry Text="{Binding Email}" 
                                        TextColor="{StaticResource TextPrimary}"
                                        PlaceholderColor="{StaticResource TextMuted}"
-                                       HeightRequest="45"
+                                       HeightRequest="52"
                                        Keyboard="Email"
                                        Placeholder="Enter email address" />
                             </Border>
@@ -60,7 +60,7 @@
                                            Text="{Binding Password}" 
                                            TextColor="{StaticResource TextPrimary}"
                                            PlaceholderColor="{StaticResource TextMuted}"
-                                           HeightRequest="45"
+                                           HeightRequest="52"
                                            IsPassword="{Binding IsPasswordHidden}" 
                                            Placeholder="Enter password" />
                                     <Label Grid.Column="1"
@@ -99,7 +99,8 @@
                             TextColor="White"
                             BackgroundColor="{StaticResource Primary}"
                             CornerRadius="8"
-                            HeightRequest="48"
+                            HeightRequest="54"
+                            FontSize="16"
                             FontAttributes="Bold"
                             Command="{Binding LoginCommand}" />
 
@@ -109,7 +110,8 @@
                         <Label Text="Forgot Password?" 
                                TextColor="{StaticResource Primary}"
                                FontSize="13"
-                               FontAttributes="Bold">
+                               FontAttributes="Bold"
+                               Padding="12,8">
                             <Label.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding GoToForgotPasswordCommand}" />
                             </Label.GestureRecognizers>
@@ -118,7 +120,8 @@
                         <Label Text="Register Account" 
                                TextColor="{StaticResource Secondary}"
                                FontSize="13"
-                               FontAttributes="Bold">
+                               FontAttributes="Bold"
+                               Padding="12,8">
                             <Label.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding GoToRegisterCommand}" />
                             </Label.GestureRecognizers>

@@ -7,7 +7,7 @@
              BackgroundColor="{StaticResource Background}">
 
     <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="25">
+        <VerticalStackLayout Padding="20,20,20,85" Spacing="25">
             
             <!-- Filters Card -->
             <Border StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="20">
@@ -18,7 +18,7 @@
                     <VerticalStackLayout Spacing="6">
                         <Label Text="Select Report Type *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
                         <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
-                            <Picker SelectedItem="{Binding ReportType}" TextColor="{StaticResource TextPrimary}" TitleColor="{StaticResource TextMuted}" HeightRequest="40">
+                            <Picker Title="Select Report Type" SelectedItem="{Binding SelectedReportType}" TextColor="{StaticResource TextPrimary}" HeightRequest="48">
                                 <Picker.ItemsSource>
                                     <x:Array Type="{x:Type x:String}">
                                         <x:String>Daily Revenue</x:String>
@@ -38,36 +38,35 @@
                         <VerticalStackLayout Spacing="6">
                             <Label Text="Start Date *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
                             <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
-                                <DatePicker Date="{Binding StartDate}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                                <DatePicker Date="{Binding StartDate}" TextColor="{StaticResource TextPrimary}" HeightRequest="48" />
                             </Border>
                         </VerticalStackLayout>
 
                         <VerticalStackLayout Grid.Column="1" Spacing="6">
                             <Label Text="End Date *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
                             <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
-                                <DatePicker Date="{Binding EndDate}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                                <DatePicker Date="{Binding EndDate}" TextColor="{StaticResource TextPrimary}" HeightRequest="48" />
                             </Border>
                         </VerticalStackLayout>
                     </Grid>
 
                     <!-- Action buttons -->
                     <Grid ColumnDefinitions="*, *" ColumnSpacing="15" Margin="0,5,0,0">
-                        <Button Text="Run Report"
+                        <Button Text="Generate Report"
                                 BackgroundColor="{StaticResource Primary}"
                                 TextColor="White"
                                 CornerRadius="8"
-                                HeightRequest="44"
+                                HeightRequest="48"
                                 FontAttributes="Bold"
                                 Command="{Binding GenerateReportCommand}" />
 
                         <Button Grid.Column="1"
-                                Text="Export CSV"
+                                Text="Export as PDF"
                                 BackgroundColor="{StaticResource Secondary}"
                                 TextColor="White"
                                 CornerRadius="8"
-                                HeightRequest="44"
-                                FontAttributes="Bold"
-                                Command="{Binding ExportCsvCommand}" />
+                                HeightRequest="48"
+                                Command="{Binding ExportReportCommand}" />
                     </Grid>
                 </VerticalStackLayout>
             </Border>

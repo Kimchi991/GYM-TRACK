@@ -9,10 +9,10 @@
 
     <Grid RowDefinitions="Auto, *">
         
-        <!-- Header & Action Row -->
-        <Grid ColumnDefinitions="*, Auto" Padding="20,15" ColumnSpacing="15">
+        <!-- Header Row -->
+        <Grid Padding="20,15" ColumnSpacing="15">
             <!-- Search bar -->
-            <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="12,0">
+            <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="16,0">
                 <Grid ColumnDefinitions="Auto, *">
                     <Path Data="{StaticResource IconSearch}" Fill="{StaticResource TextSecondary}" Aspect="Uniform" WidthRequest="16" HeightRequest="16" Margin="0,0,10,0" VerticalOptions="Center" />
                     <Entry Grid.Column="1"
@@ -20,28 +20,20 @@
                            TextColor="{StaticResource TextPrimary}"
                            PlaceholderColor="{StaticResource TextMuted}"
                            Placeholder="Search members by name or phone..."
-                           HeightRequest="42"
+                           HeightRequest="50"
                            ReturnType="Search"
                            ReturnCommand="{Binding LoadMembersCommand}" />
                 </Grid>
             </Border>
-
-            <Button Grid.Column="1"
-                    Text="Add Member"
-                    BackgroundColor="{StaticResource Secondary}"
-                    TextColor="White"
-                    CornerRadius="8"
-                    HeightRequest="42"
-                    FontAttributes="Bold"
-                    Command="{Binding ToggleAddFormCommand}" />
         </Grid>
 
-        <!-- Main Body -->
-        <Grid Grid.Row="1">
+        <!-- Main Body with FAB overlay -->
+        <AbsoluteLayout Grid.Row="1">
             
-            <!-- Members List View -->
-            <ScrollView Padding="20,0,20,20" IsVisible="{Binding ShowAddForm, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}">
-                <VerticalStackLayout Spacing="15">
+            <Grid AbsoluteLayout.LayoutBounds="0,0,1,1" AbsoluteLayout.LayoutFlags="All" RowDefinitions="*">
+                <!-- Members List View -->
+                <ScrollView Padding="20,0,20,85" IsVisible="{Binding ShowAddForm, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}">
+                    <VerticalStackLayout Spacing="15">
                     
                     <Label Text="Active Members" TextColor="{StaticResource TextSecondary}" FontSize="14" FontAttributes="Bold" />
                     
@@ -69,7 +61,7 @@
                                                 <Label Text="{Binding LastName}" TextColor="{StaticResource TextPrimary}" FontSize="16" FontAttributes="Bold" />
                                             </HorizontalStackLayout>
                                             <Label Text="{Binding PhoneNumber}" TextColor="{StaticResource TextSecondary}" FontSize="13" />
-                                            <Label Text="{Binding QRCheckInCode, StringFormat='ID: {0}'}" TextColor="{StaticResource TextMuted}" FontSize="11" />
+                                            <Label Text="{Binding QRCode, StringFormat='ID: {0}'}" TextColor="{StaticResource TextMuted}" FontSize="11" />
                                         </VerticalStackLayout>
 
                                         <!-- Action & Status -->
@@ -82,7 +74,7 @@
                                             </Border>
                                             
                                             <!-- Delete Button -->
-                                            <Border StrokeShape="RoundRectangle 6" BackgroundColor="Transparent" HeightRequest="32" WidthRequest="32" Padding="6" VerticalOptions="Center">
+                                            <Border StrokeShape="RoundRectangle 6" BackgroundColor="Transparent" HeightRequest="44" WidthRequest="44" Padding="10" VerticalOptions="Center">
                                                 <Border.GestureRecognizers>
                                                     <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MembersViewModel}}, Path=DeleteMemberCommand}" CommandParameter="{Binding .}" />
                                                 </Border.GestureRecognizers>
@@ -109,34 +101,34 @@
             </ScrollView>
 
             <!-- Registration Form Overlay -->
-            <ScrollView Padding="20" IsVisible="{Binding ShowAddForm}" BackgroundColor="{StaticResource Background}">
+            <ScrollView Padding="20,20,20,85" IsVisible="{Binding ShowAddForm}" BackgroundColor="{StaticResource Background}">
                 <Border StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="20">
                     <VerticalStackLayout Spacing="18">
                         <Label Text="Register New Member" TextColor="{StaticResource TextPrimary}" FontSize="18" FontAttributes="Bold" />
 
                         <!-- Name inputs -->
-                        <Grid ColumnDefinitions="*, *" ColumnSpacing="15">
+                        <VerticalStackLayout Spacing="15">
                             <VerticalStackLayout Spacing="6">
                                 <Label Text="First Name *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
                                 <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
-                                    <Entry Text="{Binding RegFirstName}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                                    <Entry Text="{Binding RegFirstName}" TextColor="{StaticResource TextPrimary}" HeightRequest="48" />
                                 </Border>
                             </VerticalStackLayout>
 
-                            <VerticalStackLayout Grid.Column="1" Spacing="6">
+                            <VerticalStackLayout Spacing="6">
                                 <Label Text="Last Name *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
                                 <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
-                                    <Entry Text="{Binding RegLastName}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                                    <Entry Text="{Binding RegLastName}" TextColor="{StaticResource TextPrimary}" HeightRequest="48" />
                                 </Border>
                             </VerticalStackLayout>
-                        </Grid>
+                        </VerticalStackLayout>
 
                         <!-- Gender & Birth Date -->
-                        <Grid ColumnDefinitions="*, *" ColumnSpacing="15">
+                        <VerticalStackLayout Spacing="15">
                             <VerticalStackLayout Spacing="6">
                                 <Label Text="Gender *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
                                 <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
-                                    <Picker SelectedItem="{Binding RegGender}" TextColor="{StaticResource TextPrimary}" TitleColor="{StaticResource TextMuted}" HeightRequest="40">
+                                    <Picker SelectedItem="{Binding RegGender}" TextColor="{StaticResource TextPrimary}" TitleColor="{StaticResource TextMuted}" HeightRequest="48">
                                         <Picker.ItemsSource>
                                             <x:Array Type="{x:Type x:String}">
                                                 <x:String>Male</x:String>
@@ -148,26 +140,26 @@
                                 </Border>
                             </VerticalStackLayout>
 
-                            <VerticalStackLayout Grid.Column="1" Spacing="6">
+                            <VerticalStackLayout Spacing="6">
                                 <Label Text="Birth Date *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
                                 <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
-                                    <DatePicker Date="{Binding RegBirthDate}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                                    <DatePicker Date="{Binding RegBirthDate}" TextColor="{StaticResource TextPrimary}" HeightRequest="48" />
                                 </Border>
                             </VerticalStackLayout>
-                        </Grid>
+                        </VerticalStackLayout>
 
                         <!-- Contact -->
                         <VerticalStackLayout Spacing="6">
                             <Label Text="Phone Number *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
                             <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
-                                <Entry Text="{Binding RegPhone}" TextColor="{StaticResource TextPrimary}" Keyboard="Telephone" HeightRequest="40" />
+                                <Entry Text="{Binding RegPhone}" TextColor="{StaticResource TextPrimary}" Keyboard="Telephone" HeightRequest="48" />
                             </Border>
                         </VerticalStackLayout>
 
                         <VerticalStackLayout Spacing="6">
                             <Label Text="Email Address" TextColor="{StaticResource TextSecondary}" FontSize="13" />
                             <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
-                                <Entry Text="{Binding RegEmail}" TextColor="{StaticResource TextPrimary}" Keyboard="Email" HeightRequest="40" />
+                                <Entry Text="{Binding RegEmail}" TextColor="{StaticResource TextPrimary}" Keyboard="Email" HeightRequest="48" />
                             </Border>
                         </VerticalStackLayout>
 
@@ -175,14 +167,14 @@
                         <VerticalStackLayout Spacing="6">
                             <Label Text="Address" TextColor="{StaticResource TextSecondary}" FontSize="13" />
                             <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
-                                <Entry Text="{Binding RegAddress}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                                <Entry Text="{Binding RegAddress}" TextColor="{StaticResource TextPrimary}" HeightRequest="48" />
                             </Border>
                         </VerticalStackLayout>
 
                         <VerticalStackLayout Spacing="6">
                             <Label Text="Emergency Contact (Name/Phone) *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
                             <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
-                                <Entry Text="{Binding RegEmergencyContact}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                                <Entry Text="{Binding RegEmergencyContact}" TextColor="{StaticResource TextPrimary}" HeightRequest="48" />
                             </Border>
                         </VerticalStackLayout>
 
@@ -194,6 +186,7 @@
                                     BorderColor="{StaticResource BorderColor}"
                                     BorderWidth="1"
                                     CornerRadius="6"
+                                    HeightRequest="48"
                                     Command="{Binding ToggleAddFormCommand}" />
                             
                             <Button Grid.Column="1"
@@ -201,12 +194,41 @@
                                     BackgroundColor="{StaticResource Primary}"
                                     TextColor="White"
                                     CornerRadius="6"
+                                    HeightRequest="48"
                                     Command="{Binding RegisterMemberCommand}" />
                         </Grid>
+
+                        <!-- Error Alert -->
+                        <Label Text="{Binding ErrorMessage}"
+                               TextColor="{StaticResource Danger}"
+                               FontSize="13"
+                               HorizontalOptions="Center"
+                               HorizontalTextAlignment="Center"
+                               IsVisible="{Binding ErrorMessage, Converter={StaticResource NullableToBoolConverter}}" />
+
+                        <!-- Loading Indicator -->
+                        <ActivityIndicator IsRunning="{Binding IsBusy}" Color="{StaticResource Primary}" HorizontalOptions="Center" />
                     </VerticalStackLayout>
                 </Border>
             </ScrollView>
-
-        </Grid>
+            </Grid>
+            <!-- FAB Add Member Button -->
+            <Border AbsoluteLayout.LayoutBounds="1,1,-1,-1"
+                    AbsoluteLayout.LayoutFlags="PositionProportional"
+                    WidthRequest="72"
+                    HeightRequest="72"
+                    StrokeShape="RoundRectangle 36"
+                    BackgroundColor="{StaticResource Secondary}"
+                    Stroke="Transparent"
+                    Margin="0,0,20,90"
+                    ZIndex="10"
+                    IsVisible="{Binding ShowAddForm, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}">
+                <!-- Shadow removed to prevent Android OutOfMemoryError -->
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding ToggleAddFormCommand}" />
+                </Border.GestureRecognizers>
+                <Path Data="{StaticResource IconPlus}" Fill="White" Aspect="Uniform" HeightRequest="24" WidthRequest="24" HorizontalOptions="Center" VerticalOptions="Center" />
+            </Border>
+        </AbsoluteLayout>
     </Grid>
 </ContentPage>

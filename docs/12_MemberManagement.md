@@ -132,3 +132,9 @@ The `members_integration_test.ps1` test suite validates the following scenarios:
 
 *   **Filesystem Binding**: Local file storage makes the API stateful. If scaled out horizontally across multiple instances (e.g. Docker swarm or Kubernetes), images would not be synchronized unless a shared volume or cloud blob storage (S3/Azure Blob) is configured.
 *   **Image Compression**: Profile pictures are saved as-is without resizing or format optimizations, which could consume significant disk space over time.
+
+---
+
+## 8. Mobile Client Integration
+
+*   **QR Code Generator**: The .NET MAUI mobile app uses `ZXing.Net.Maui.Controls` to visually generate and render the member's `QRCode` string as a scannable barcode on the Member Details Page. This allows members to present their digital ID directly from the app or a printed card.

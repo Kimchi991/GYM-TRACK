@@ -119,3 +119,9 @@ The `attendance_integration_test.ps1` test suite validates the following scenari
 
 *   **Timezone Dependency**: The daily check-in limit is computed using UTC timezone (`DateTime.UtcNow.Date`). If the local gym operates in a different timezone (e.g. UTC+8), calendar roll-over occurs at a different local time, which could temporarily affect late-night check-ins.
 *   **Manual Checkout Requirement**: If a member forgets to check out, the session remains open, preventing them from checking in the next day until staff manually checks them out.
+
+---
+
+## 8. Mobile Client Integration
+
+*   **Live QR Scanner**: The .NET MAUI mobile app utilizes `ZXing.Net.Maui` to provide a live camera feed on the Attendance Page. Staff can scan member QR codes directly, which automatically populates the input field and triggers the check-in command. Appropriate camera permissions (`android.permission.CAMERA` and `NSCameraUsageDescription`) are configured for Android and iOS.

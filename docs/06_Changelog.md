@@ -4,6 +4,14 @@ All notable changes to the GymTrackPro project will be documented in this file. 
 
 ---
 
+## [v2.0.0-rc2] - 2026-07-05
+
+### Added
+*   **Mobile App QR Scanner & Generator**: Integrated `ZXing.Net.Maui` to provide a live camera QR code scanner on the Attendance Page, and a QR code generator on the Member Details Page.
+*   **Permissions**: Added Camera permission requests to Android (`AndroidManifest.xml`) and iOS (`Info.plist`) for the QR scanner.
+
+---
+
 ## [v2.0.0-rc1.rev9] - 2026-07-02
 
 ### Added

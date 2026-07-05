@@ -2,6 +2,8 @@ using Microsoft.Extensions.Logging;
 using GymTrackPro.Mobile.Services;
 using GymTrackPro.Mobile.ViewModels;
 using GymTrackPro.Mobile.Views;
+using ZXing.Net.Maui;
+using ZXing.Net.Maui.Controls;
 
 namespace GymTrackPro.Mobile;
 
@@ -12,6 +14,7 @@ public static class MauiProgram
 		var builder = MauiApp.CreateBuilder();
 		builder
 			.UseMauiApp<App>()
+			.UseBarcodeReader()
 			.ConfigureFonts(fonts =>
 			{
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");

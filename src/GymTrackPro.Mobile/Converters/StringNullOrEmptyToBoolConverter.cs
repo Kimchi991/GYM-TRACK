@@ -19,6 +19,10 @@ public class StringNullOrEmptyToBoolConverter : IValueConverter
                 return str.Equals(paramVal, StringComparison.OrdinalIgnoreCase);
             }
         }
+        else if (value is bool b)
+        {
+            hasValue = b;
+        }
         else if (value != null)
         {
             hasValue = true;

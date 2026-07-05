@@ -16,14 +16,14 @@
                     BackgroundColor="{StaticResource Secondary}"
                     TextColor="White"
                     CornerRadius="8"
-                    HeightRequest="42"
+                    HeightRequest="48"
                     FontAttributes="Bold"
                     Command="{Binding TogglePlanFormCommand}" />
         </Grid>
 
         <!-- Main Body -->
         <Grid Grid.Row="1">
-            <ScrollView Padding="20,0,20,20" IsVisible="{Binding ShowPlanForm, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}">
+            <ScrollView Padding="20,0,20,85" IsVisible="{Binding ShowPlanForm, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}">
                 <VerticalStackLayout Spacing="15">
                     
                     <!-- Alert Banners -->
@@ -71,13 +71,13 @@
                                             <Button Text="Edit" 
                                                     BackgroundColor="{StaticResource Primary}" 
                                                     TextColor="White"
-                                                    HeightRequest="36"
+                                                    HeightRequest="48"
                                                     Padding="14,0"
                                                     CornerRadius="6"
                                                     Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PlansViewModel}}, Path=OpenEditFormCommand}"
                                                     CommandParameter="{Binding .}" />
                                             
-                                            <Border StrokeShape="RoundRectangle 6" BackgroundColor="{StaticResource Danger}" HeightRequest="36" WidthRequest="36" Padding="10" VerticalOptions="Center">
+                                            <Border StrokeShape="RoundRectangle 6" BackgroundColor="{StaticResource Danger}" HeightRequest="48" WidthRequest="48" Padding="10" VerticalOptions="Center">
                                                 <Border.GestureRecognizers>
                                                     <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PlansViewModel}}, Path=DeletePlanCommand}" CommandParameter="{Binding .}" />
                                                 </Border.GestureRecognizers>
@@ -96,7 +96,7 @@
             </ScrollView>
 
             <!-- Plan Creation/Editing Form Overlay -->
-            <ScrollView Padding="20" IsVisible="{Binding ShowPlanForm}" BackgroundColor="{StaticResource Background}">
+            <ScrollView Padding="20,20,20,85" IsVisible="{Binding ShowPlanForm}" BackgroundColor="{StaticResource Background}">
                 <Border StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="20">
                     <VerticalStackLayout Spacing="18">
                         <Label Text="Membership Package Information" TextColor="{StaticResource TextPrimary}" FontSize="18" FontAttributes="Bold" />
@@ -105,7 +105,7 @@
                         <VerticalStackLayout Spacing="6">
                             <Label Text="Plan Name *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
                             <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
-                                <Entry Text="{Binding PlanName}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                                <Entry Text="{Binding PlanName}" TextColor="{StaticResource TextPrimary}" HeightRequest="48" />
                             </Border>
                         </VerticalStackLayout>
 
@@ -114,14 +114,14 @@
                             <VerticalStackLayout Spacing="6">
                                 <Label Text="Price (₱) *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
                                 <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
-                                    <Entry Text="{Binding Price}" TextColor="{StaticResource TextPrimary}" Keyboard="Numeric" HeightRequest="40" />
+                                    <Entry Text="{Binding Price}" TextColor="{StaticResource TextPrimary}" Keyboard="Numeric" HeightRequest="48" />
                                 </Border>
                             </VerticalStackLayout>
 
                             <VerticalStackLayout Grid.Column="1" Spacing="6">
                                 <Label Text="Duration (Days) *" TextColor="{StaticResource TextSecondary}" FontSize="13" />
                                 <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
-                                    <Entry Text="{Binding DurationDays}" TextColor="{StaticResource TextPrimary}" Keyboard="Numeric" HeightRequest="40" />
+                                    <Entry Text="{Binding DurationDays}" TextColor="{StaticResource TextPrimary}" Keyboard="Numeric" HeightRequest="48" />
                                 </Border>
                             </VerticalStackLayout>
                         </Grid>
@@ -130,7 +130,7 @@
                         <VerticalStackLayout Spacing="6">
                             <Label Text="Description / Notes" TextColor="{StaticResource TextSecondary}" FontSize="13" />
                             <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
-                                <Entry Text="{Binding Description}" TextColor="{StaticResource TextPrimary}" HeightRequest="40" />
+                                <Entry Text="{Binding Description}" TextColor="{StaticResource TextPrimary}" HeightRequest="48" />
                             </Border>
                         </VerticalStackLayout>
 
@@ -142,6 +142,7 @@
                                     BorderColor="{StaticResource BorderColor}"
                                     BorderWidth="1"
                                     CornerRadius="6"
+                                    HeightRequest="48"
                                     Command="{Binding TogglePlanFormCommand}" />
                             
                             <Button Grid.Column="1"
@@ -149,6 +150,7 @@
                                     BackgroundColor="{StaticResource Success}"
                                     TextColor="White"
                                     CornerRadius="6"
+                                    HeightRequest="48"
                                     Command="{Binding SavePlanCommand}" />
                         </Grid>
                     </VerticalStackLayout>

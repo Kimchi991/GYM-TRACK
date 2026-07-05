@@ -5,44 +5,44 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:views="clr-namespace:GymTrackPro.Mobile.Views"
     Title="GymTrackPro"
-    FlyoutBehavior="Flyout">
+    Shell.NavBarHasShadow="False"
+    Shell.BackgroundColor="#0F172A"
+    Shell.TitleColor="#F8FAFC"
+    Shell.ForegroundColor="#F8FAFC"
+    Shell.TabBarBackgroundColor="#1E293B"
+    Shell.TabBarForegroundColor="#94A3B8"
+    Shell.TabBarTitleColor="#94A3B8"
+    Shell.TabBarUnselectedColor="#475569">
 
-    <!-- Login Route (Flyout menu hidden) -->
+    <!-- Login Route (Tabs hidden) -->
     <ShellItem Route="login" FlyoutItemIsVisible="False">
         <ShellContent ContentTemplate="{DataTemplate views:LoginPage}" />
     </ShellItem>
 
-    <!-- Main Navigation Flyout -->
-    <FlyoutItem Title="Dashboard" Route="dashboard">
-        <ShellContent ContentTemplate="{DataTemplate views:DashboardPage}" />
-    </FlyoutItem>
+    <!-- Main Navigation TabBar -->
+    <TabBar>
+        <Tab Title="Dashboard" Route="dashboard">
+            <ShellContent ContentTemplate="{DataTemplate views:DashboardPage}" />
+        </Tab>
 
-    <FlyoutItem Title="Members" Route="members">
-        <ShellContent ContentTemplate="{DataTemplate views:MembersPage}" />
-    </FlyoutItem>
+        <Tab Title="Members" Route="members">
+            <ShellContent ContentTemplate="{DataTemplate views:MembersPage}" />
+        </Tab>
 
-    <FlyoutItem Title="Attendance" Route="attendance">
-        <ShellContent ContentTemplate="{DataTemplate views:AttendancePage}" />
-    </FlyoutItem>
+        <Tab Title="Attendance" Route="attendance">
+            <ShellContent ContentTemplate="{DataTemplate views:AttendancePage}" />
+        </Tab>
 
-    <FlyoutItem Title="Payments" Route="payments">
-        <ShellContent ContentTemplate="{DataTemplate views:PaymentsPage}" />
-    </FlyoutItem>
+        <Tab Title="Payments" Route="payments">
+            <ShellContent ContentTemplate="{DataTemplate views:PaymentsPage}" />
+        </Tab>
 
-    <FlyoutItem Title="Membership Plans" Route="plans">
-        <ShellContent ContentTemplate="{DataTemplate views:PlansPage}" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Reports" Route="reports">
-        <ShellContent ContentTemplate="{DataTemplate views:ReportsPage}" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Notifications" Route="notifications">
-        <ShellContent ContentTemplate="{DataTemplate views:NotificationsPage}" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Settings" Route="settings">
-        <ShellContent ContentTemplate="{DataTemplate views:SettingsPage}" />
-    </FlyoutItem>
+        <Tab Title="More" Route="more">
+            <ShellContent Title="Settings" Route="settings" ContentTemplate="{DataTemplate views:SettingsPage}" />
+            <ShellContent Title="Membership Plans" Route="plans" ContentTemplate="{DataTemplate views:PlansPage}" />
+            <ShellContent Title="Reports" Route="reports" ContentTemplate="{DataTemplate views:ReportsPage}" />
+            <ShellContent Title="Notifications" Route="notifications" ContentTemplate="{DataTemplate views:NotificationsPage}" />
+        </Tab>
+    </TabBar>
 
 </Shell>

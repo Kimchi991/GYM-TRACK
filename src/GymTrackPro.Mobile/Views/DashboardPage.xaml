@@ -9,12 +9,12 @@
 
 
     <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="25" BackgroundColor="{StaticResource Background}">
+        <VerticalStackLayout Padding="20,20,20,85" Spacing="25" BackgroundColor="{StaticResource Background}">
 
             <!-- Welcome Header -->
             <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
                 <VerticalStackLayout Spacing="4">
-                    <Label Text="Good Morning, Admin 👋"
+                    <Label Text="Good Morning, Admin"
                            TextColor="{StaticResource TextPrimary}"
                            FontSize="24"
                            FontAttributes="Bold" />
@@ -57,7 +57,7 @@
             <!-- Metrics Grid -->
             <Grid RowDefinitions="Auto, Auto" ColumnDefinitions="*, *" ColumnSpacing="15" RowSpacing="15">
                 <!-- Today's Revenue -->
-                <Border StrokeShape="RoundRectangle 16" Stroke="{StaticResource BorderBrush}" Padding="0" HeightRequest="120">
+                <Border StrokeShape="RoundRectangle 16" Stroke="{StaticResource BorderBrush}" Padding="0">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                             <GradientStop Color="#1E293B" Offset="0.0" />
@@ -78,7 +78,7 @@
                 </Border>
 
                 <!-- Monthly Revenue -->
-                <Border Grid.Column="1" StrokeShape="RoundRectangle 16" Stroke="{StaticResource BorderBrush}" Padding="0" HeightRequest="120">
+                <Border Grid.Column="1" StrokeShape="RoundRectangle 16" Stroke="{StaticResource BorderBrush}" Padding="0">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                             <GradientStop Color="#1E293B" Offset="0.0" />
@@ -99,7 +99,7 @@
                 </Border>
 
                 <!-- Members Checked In -->
-                <Border Grid.Row="1" StrokeShape="RoundRectangle 16" Stroke="{StaticResource BorderBrush}" Padding="0" HeightRequest="120">
+                <Border Grid.Row="1" StrokeShape="RoundRectangle 16" Stroke="{StaticResource BorderBrush}" Padding="0">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                             <GradientStop Color="#1E293B" Offset="0.0" />
@@ -120,7 +120,7 @@
                 </Border>
 
                 <!-- Active Memberships -->
-                <Border Grid.Row="1" Grid.Column="1" StrokeShape="RoundRectangle 16" Stroke="{StaticResource BorderBrush}" Padding="0" HeightRequest="120">
+                <Border Grid.Row="1" Grid.Column="1" StrokeShape="RoundRectangle 16" Stroke="{StaticResource BorderBrush}" Padding="0">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                             <GradientStop Color="#1E293B" Offset="0.0" />
@@ -171,49 +171,49 @@
             <!-- Quick Actions -->
             <VerticalStackLayout Spacing="12">
                 <Label Text="Quick Actions" TextColor="{StaticResource TextPrimary}" FontSize="16" FontAttributes="Bold" />
-                <Grid ColumnDefinitions="*, *, *, *" ColumnSpacing="12">
+                <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" ColumnSpacing="12" RowSpacing="12">
                     
-                    <!-- Check-In Action -->
-                    <Border StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="10" HeightRequest="85">
+                    <!-- Check-In Action (Row 0, Col 0) -->
+                    <Border StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="10" HeightRequest="100">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding NavigateToCommand}" CommandParameter="attendance" />
                         </Border.GestureRecognizers>
                         <VerticalStackLayout Spacing="8" HorizontalOptions="Center" VerticalOptions="Center">
-                            <Path Data="{StaticResource IconScan}" Fill="{StaticResource Primary}" Aspect="Uniform" HeightRequest="20" WidthRequest="20" HorizontalOptions="Center" />
-                            <Label Text="Check-In" TextColor="{StaticResource TextPrimary}" FontSize="11" FontAttributes="Bold" HorizontalOptions="Center" />
+                            <Path Data="{StaticResource IconScan}" Fill="{StaticResource Primary}" Aspect="Uniform" HeightRequest="26" WidthRequest="26" HorizontalOptions="Center" />
+                            <Label Text="Check-In" TextColor="{StaticResource TextPrimary}" FontSize="12" FontAttributes="Bold" HorizontalOptions="Center" />
                         </VerticalStackLayout>
                     </Border>
 
-                    <!-- Add Member Action -->
-                    <Border Grid.Column="1" StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="10" HeightRequest="85">
+                    <!-- Add Member Action (Row 0, Col 1) -->
+                    <Border Grid.Column="1" StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="10" HeightRequest="100">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding NavigateToCommand}" CommandParameter="members" />
                         </Border.GestureRecognizers>
                         <VerticalStackLayout Spacing="8" HorizontalOptions="Center" VerticalOptions="Center">
-                            <Path Data="{StaticResource IconPlus}" Fill="{StaticResource Secondary}" Aspect="Uniform" HeightRequest="20" WidthRequest="20" HorizontalOptions="Center" />
-                            <Label Text="Add Member" TextColor="{StaticResource TextPrimary}" FontSize="11" FontAttributes="Bold" HorizontalOptions="Center" />
+                            <Path Data="{StaticResource IconPlus}" Fill="{StaticResource Secondary}" Aspect="Uniform" HeightRequest="26" WidthRequest="26" HorizontalOptions="Center" />
+                            <Label Text="Add Member" TextColor="{StaticResource TextPrimary}" FontSize="12" FontAttributes="Bold" HorizontalOptions="Center" />
                         </VerticalStackLayout>
                     </Border>
 
-                    <!-- Billing Action -->
-                    <Border Grid.Column="2" StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="10" HeightRequest="85">
+                    <!-- Billing Action (Row 1, Col 0) -->
+                    <Border Grid.Row="1" StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="10" HeightRequest="100">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding NavigateToCommand}" CommandParameter="payments" />
                         </Border.GestureRecognizers>
                         <VerticalStackLayout Spacing="8" HorizontalOptions="Center" VerticalOptions="Center">
-                            <Path Data="{StaticResource IconCard}" Fill="{StaticResource Tertiary}" Aspect="Uniform" HeightRequest="20" WidthRequest="20" HorizontalOptions="Center" />
-                            <Label Text="Billing" TextColor="{StaticResource TextPrimary}" FontSize="11" FontAttributes="Bold" HorizontalOptions="Center" />
+                            <Path Data="{StaticResource IconCard}" Fill="{StaticResource Tertiary}" Aspect="Uniform" HeightRequest="26" WidthRequest="26" HorizontalOptions="Center" />
+                            <Label Text="Billing" TextColor="{StaticResource TextPrimary}" FontSize="12" FontAttributes="Bold" HorizontalOptions="Center" />
                         </VerticalStackLayout>
                     </Border>
 
-                    <!-- Reports Action -->
-                    <Border Grid.Column="3" StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="10" HeightRequest="85">
+                    <!-- Reports Action (Row 1, Col 1) -->
+                    <Border Grid.Row="1" Grid.Column="1" StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="10" HeightRequest="100">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding NavigateToCommand}" CommandParameter="reports" />
                         </Border.GestureRecognizers>
                         <VerticalStackLayout Spacing="8" HorizontalOptions="Center" VerticalOptions="Center">
-                            <Path Data="{StaticResource IconChart}" Fill="{StaticResource Info}" Aspect="Uniform" HeightRequest="20" WidthRequest="20" HorizontalOptions="Center" />
-                            <Label Text="Reports" TextColor="{StaticResource TextPrimary}" FontSize="11" FontAttributes="Bold" HorizontalOptions="Center" />
+                            <Path Data="{StaticResource IconChart}" Fill="{StaticResource Info}" Aspect="Uniform" HeightRequest="26" WidthRequest="26" HorizontalOptions="Center" />
+                            <Label Text="Reports" TextColor="{StaticResource TextPrimary}" FontSize="12" FontAttributes="Bold" HorizontalOptions="Center" />
                         </VerticalStackLayout>
                     </Border>
                 </Grid>

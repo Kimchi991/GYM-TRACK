@@ -8,7 +8,7 @@
              BackgroundColor="{StaticResource Background}">
 
     <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="25">
+        <VerticalStackLayout Padding="20,20,20,85" Spacing="25">
             
             <!-- Header -->
             <VerticalStackLayout Spacing="4">
@@ -50,7 +50,7 @@
                                 <!-- Inline Input Form -->
                                 <Grid ColumnDefinitions="*, Auto" ColumnSpacing="15" Margin="0,5,0,0">
                                     <Border StrokeShape="RoundRectangle 6" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
-                                        <Entry Text="{Binding SettingValue}" TextColor="{StaticResource TextPrimary}" HeightRequest="38" />
+                                        <Entry Text="{Binding GymName}" TextColor="{StaticResource TextPrimary}" HeightRequest="48" />
                                     </Border>
 
                                     <Button Grid.Column="1"
@@ -85,13 +85,13 @@
                 <VerticalStackLayout Spacing="10">
                     <Label Text="Account Actions" TextColor="{StaticResource TextPrimary}" FontSize="14" FontAttributes="Bold" />
                     <Label Text="Sign out from your session. You will need to log in again to access the facility database." TextColor="{StaticResource TextMuted}" FontSize="12" />
-                    <Button Text="Logout / Sign Out"
-                            BackgroundColor="{StaticResource Danger}"
-                            TextColor="White"
+                    <Button Text="Save Settings" 
+                            BackgroundColor="{StaticResource Primary}" 
+                            TextColor="White" 
                             CornerRadius="8"
-                            HeightRequest="42"
-                            Margin="0,5,0,0"
-                            Command="{Binding LogoutCommand}" />
+                            HeightRequest="48"
+                            FontAttributes="Bold"
+                            Command="{Binding SaveSettingsCommand}" />
                 </VerticalStackLayout>
             </Border>
 

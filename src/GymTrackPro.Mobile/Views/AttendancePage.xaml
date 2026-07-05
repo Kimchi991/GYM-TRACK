@@ -3,12 +3,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:GymTrackPro.Mobile.ViewModels"
              xmlns:dtos="clr-namespace:GymTrackPro.Shared.DTOs;assembly=GymTrackPro.Shared"
+             xmlns:zxing="clr-namespace:ZXing.Net.Maui.Controls;assembly=ZXing.Net.Maui.Controls"
              x:Class="GymTrackPro.Mobile.Views.AttendancePage"
              Title="GymTrackPro Attendance"
              BackgroundColor="{StaticResource Background}">
 
     <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="25">
+        <VerticalStackLayout Padding="20,20,20,85" Spacing="25">
             
             <!-- Attendance Terminal Card -->
             <Border StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="20">
@@ -19,6 +20,12 @@
                            TextColor="{StaticResource TextSecondary}" 
                            FontSize="13" />
 
+                    <!-- Scanner View -->
+                    <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" HeightRequest="200" BackgroundColor="Black">
+                        <zxing:CameraBarcodeReaderView x:Name="barcodeReader"
+                                                       BarcodesDetected="CameraBarcodeReaderView_BarcodesDetected" />
+                    </Border>
+
                     <!-- Input Grid -->
                     <Grid ColumnDefinitions="*, Auto" ColumnSpacing="15">
                         <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
@@ -26,7 +33,7 @@
                                    TextColor="{StaticResource TextPrimary}"
                                    PlaceholderColor="{StaticResource TextMuted}"
                                    Placeholder="Enter QR Code / Member ID..."
-                                   HeightRequest="42"
+                                   HeightRequest="48"
                                    ReturnCommand="{Binding CheckInCommand}" />
                         </Border>
 
@@ -35,7 +42,7 @@
                                 BackgroundColor="{StaticResource Primary}"
                                 TextColor="White"
                                 CornerRadius="8"
-                                HeightRequest="42"
+                                HeightRequest="48"
                                 FontAttributes="Bold"
                                 Command="{Binding CheckInCommand}" />
                     </Grid>
@@ -105,7 +112,7 @@
                                             BorderWidth="1"
                                             TextColor="{StaticResource TextPrimary}"
                                             CornerRadius="6"
-                                            HeightRequest="36"
+                                            HeightRequest="48"
                                             Padding="10,0"
                                             IsVisible="{Binding CheckOutTime, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}"
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AttendanceViewModel}}, Path=CheckOutCommand}"
