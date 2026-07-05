@@ -124,7 +124,15 @@ erDiagram
         string Description
         datetime Timestamp
     }
-    
+
+    SystemSettings {
+        int SettingID PK
+        string SettingKey UK
+        string SettingValue
+        string Description
+        datetime LastModified
+    }
+
     SyncQueue {
         int QueueID PK "SQLite Only"
         string TableName

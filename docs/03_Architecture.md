@@ -106,3 +106,52 @@ When the API receives an update for a record that has also been modified elsewhe
 *   It compares the `LastModified` timestamp from the incoming client payload with the database record's `LastModified` timestamp.
 *   The record with the **newest** timestamp is saved.
 *   An audit log entry is written to record the resolution.
+
+---
+
+## 🌊 Sequence Diagrams
+
+### Offline Sync Flow
+```mermaid
+sequenceDiagram
+    participant MAUI as MAUI App
+    participant LocalDB as SQLite (SyncQueue)
+    participant SyncService as Sync Service
+    participant API as Server API
+    participant ServerDB as SQL Server
+    
+    Note over MAUI,LocalDB: Offline Operation
+    MAUI->>LocalDB: Save Changes to Table (e.g. Members)
+    MAUI->>LocalDB: Append Record to SyncQueue
+    
+    Note over MAUI,API: Internet Restored
+    SyncService->>SyncService: Detect Network Available
+    SyncService->>LocalDB: Query Pending SyncQueue items
+    LocalDB-->>SyncService: Return Items
+    loop Process Queue
+        SyncService->>API: Push HTTP Payload (POST/PUT)
+        API->>ServerDB: Resolve Conflict & Save
+        ServerDB-->>API: Write Success
+        API-->>SyncService: HTTP 200 OK
+        SyncService->>LocalDB: Mark Synced & Remove from Queue
+    end
+```
+
+### Attendance Check-In Flow
+```mermaid
+sequenceDiagram
+    participant Receptionist
+    participant MobileApp as MAUI Mobile App
+    participant API as Server API
+    participant Database as SQL Server
+    
+    Receptionist->>MobileApp: Scan QR Code
+    MobileApp->>API: POST /api/v1/attendance/checkin { QRCode }
+    API->>Database: Retrieve Member & Validate
+    API->>Database: Query Active Subscription
+    Database-->>API: Valid Subscription Returned
+    API->>Database: Insert Attendance Check-In Record
+    Database-->>API: Success
+    API-->>MobileApp: HTTP 200 OK (Check-In Success)
+    MobileApp-->>Receptionist: Mobile UI Updates (Show Success Info)
+```

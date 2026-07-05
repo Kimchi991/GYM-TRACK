@@ -59,7 +59,10 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IApiService, ApiService>();
 		builder.Services.AddSingleton<IFirebaseAuthService, FirebaseAuthService>();
 
-		// TODO: Register Firebase notification receiver services (Phase 10)
+		// Register Firebase notification receiver services (Phase 10)
+
+		// Explicitly initialize SQLite for Android/iOS
+		SQLitePCL.Batteries_V2.Init();
 
 		return builder.Build();
 	}

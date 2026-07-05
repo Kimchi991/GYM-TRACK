@@ -59,11 +59,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.Authority = "https://securetoken.google.com/fithub-cf45f";
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = true,
-            ValidIssuer = "https://securetoken.google.com/fithub-cf45f",
-            ValidateAudience = true,
-            ValidAudience = "fithub-cf45f",
-            ValidateLifetime = true
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(5)
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                Console.WriteLine($"\n[FIREBASE AUTH ERROR]: {context.Exception.Message}\n");
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -124,8 +131,12 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
-
-app.UseHttpsRedirection();
+else
+{
+    // Only redirect to HTTPS in production. Doing this locally causes 
+    // HttpClient to strip the Authorization header on 307 redirects!
+    app.UseHttpsRedirection();
+}
 
 app.UseRateLimiter();
 

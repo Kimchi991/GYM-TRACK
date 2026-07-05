@@ -58,3 +58,4 @@ appsettings.Development.json
 appsettings.local.json
 .env
 .env.local
+google-services.json
