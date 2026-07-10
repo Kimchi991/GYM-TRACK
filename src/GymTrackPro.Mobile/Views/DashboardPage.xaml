@@ -37,6 +37,27 @@
                         <Path Data="{StaticResource IconRefresh}" Fill="{StaticResource TextPrimary}" Aspect="Uniform" />
                     </Border>
 
+                    <!-- Logout Button -->
+                    <Border StrokeShape="RoundRectangle 20"
+                            Stroke="#EF4444"
+                            StrokeThickness="1.5"
+                            BackgroundColor="#1F0A0A"
+                            WidthRequest="40"
+                            HeightRequest="40"
+                            Padding="10"
+                            x:Name="LogoutButton">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding LogoutCommand}" />
+                        </Border.GestureRecognizers>
+                        <!-- Sign-out icon path matching Lucide/Feather logout style -->
+                        <Path Data="M 9 21 H 5 a 2 2 0 0 1 -2 -2 V 5 a 2 2 0 0 1 2 -2 H 9 M 16 17 L 21 12 L 16 7 M 21 12 H 9"
+                              Stroke="#EF4444"
+                              StrokeThickness="2.5"
+                              StrokeLineCap="Round"
+                              StrokeLineJoin="Round"
+                              Aspect="Uniform" />
+                    </Border>
+
                     <!-- Avatar Initials -->
                     <Border StrokeShape="RoundRectangle 20" 
                             Stroke="{StaticResource Primary}" 

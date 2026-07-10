@@ -45,7 +45,7 @@ public partial class AttendancePage : ContentPage
         barcodeReader.IsDetecting = false;
     }
 
-    private void CameraBarcodeReaderView_BarcodesDetected(object sender, ZXing.Net.Maui.BarcodeDetectionEventArgs e)
+    private void CameraBarcodeReaderView_BarcodesDetected(object? sender, ZXing.Net.Maui.BarcodeDetectionEventArgs e)
     {
         var result = e.Results?.FirstOrDefault();
         if (result != null)

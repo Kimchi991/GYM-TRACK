@@ -35,5 +35,13 @@ namespace GymTrackPro.Mobile.Services
             var authLink = await _provider.SignInWithOAuthAsync(FirebaseAuthType.Google, oauthToken);
             return authLink.FirebaseToken;
         }
+
+        public Task LogoutAsync()
+        {
+            // FirebaseAuthentication.net is stateless on the client side.
+            // Clear any stored token so the app treats the user as signed out.
+            SecureStorage.Default.Remove("firebase_token");
+            return Task.CompletedTask;
+        }
     }
 }

@@ -10,6 +10,7 @@ namespace GymTrackPro.Mobile.ViewModels;
 public partial class DashboardViewModel : BaseViewModel
 {
     private readonly IApiService _apiService;
+    private readonly IFirebaseAuthService _authService;
 
     [ObservableProperty]
     public partial int CheckedInCount { get; set; }
@@ -32,9 +33,10 @@ public partial class DashboardViewModel : BaseViewModel
     [ObservableProperty]
     public partial string ErrorMessage { get; set; } = string.Empty;
 
-    public DashboardViewModel(IApiService apiService)
+    public DashboardViewModel(IApiService apiService, IFirebaseAuthService authService)
     {
         _apiService = apiService;
+        _authService = authService;
         Title = "Dashboard";
     }
 
@@ -70,6 +72,21 @@ public partial class DashboardViewModel : BaseViewModel
         {
             IsBusy = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task LogoutAsync()
+    {
+        bool confirmed = await Shell.Current.DisplayAlertAsync(
+            "Sign Out",
+            "Are you sure you want to sign out?",
+            "Sign Out",
+            "Cancel");
+
+        if (!confirmed) return;
+
+        await _authService.LogoutAsync();
+        await Shell.Current.GoToAsync("///login");
     }
 
     [RelayCommand]

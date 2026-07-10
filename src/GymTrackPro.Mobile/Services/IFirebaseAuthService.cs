@@ -8,5 +8,6 @@ namespace GymTrackPro.Mobile.Services
         Task<string> RegisterAsync(string email, string password);
         Task ResetPasswordAsync(string email);
         Task<string> LoginWithGoogleAsync(string oauthToken);
+        Task LogoutAsync();
     }
 }
