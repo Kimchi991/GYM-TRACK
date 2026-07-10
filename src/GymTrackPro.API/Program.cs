@@ -17,6 +17,11 @@ using GymTrackPro.Shared.Events.Attendance;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure Logging to avoid EventLog permission issues in development/non-admin hosts
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
 // Add services to the container.
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
