@@ -1,0 +1,401 @@
+Using launch settings from src\GymTrackPro.API\Properties\launchSettings.json...
+Building...
+info: GymTrackPro.API.Services.NotificationWorker[0]
+      NotificationWorker background service is starting.
+info: GymTrackPro.API.Services.SubscriptionExpirationWorker[0]
+      Subscription Expiration Worker is starting.
+info: GymTrackPro.API.Services.SubscriptionExpirationWorker[0]
+      Subscription Expiration Worker is executing expiration check checks...
+warn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]
+      The WebRootPath was not found: D:\DEV\DEV\IT123P.GymTracker.APP\src\GymTrackPro.API\wwwroot. Static files may be unavailable.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://localhost:5221
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: D:\DEV\DEV\IT123P.GymTracker.APP\src\GymTrackPro.API
+warn: Microsoft.EntityFrameworkCore.Model.Validation[10622]
+      Entity 'Gym' has a global query filter defined and is the required end of a relationship with the entity 'GymSubscription'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (34ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [g].[GymID], [g].[SettingKey], [g].[Description], [g].[GroupName], [g].[LastModified], [g].[SettingValue]
+      FROM [GymSettings] AS [g]
+      WHERE 0 = 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT [s].[SubscriptionID], [s].[EndDate], [s].[GymID], [s].[LastModified], [s].[MemberID], [s].[PlanID], [s].[StartDate], [s].[Status], [m0].[MemberID], [m0].[Address], [m0].[BirthDate], [m0].[DateRegistered], [m0].[DeletedAt], [m0].[DeletedBy], [m0].[Email], [m0].[EmergencyContact], [m0].[FirstName], [m0].[Gender], [m0].[GymID], [m0].[IsDeleted], [m0].[LastModified], [m0].[LastName], [m0].[PhoneNumber], [m0].[ProfilePicture], [m0].[QRCode], [m0].[Status], [m0].[UserID], [m2].[PlanID], [m2].[DeletedAt], [m2].[DeletedBy], [m2].[Description], [m2].[DurationDays], [m2].[GymID], [m2].[IsDeleted], [m2].[LastModified], [m2].[PlanName], [m2].[Price], [m2].[Status]
+      FROM [Subscriptions] AS [s]
+      INNER JOIN (
+          SELECT [m].[MemberID], [m].[Address], [m].[BirthDate], [m].[DateRegistered], [m].[DeletedAt], [m].[DeletedBy], [m].[Email], [m].[EmergencyContact], [m].[FirstName], [m].[Gender], [m].[GymID], [m].[IsDeleted], [m].[LastModified], [m].[LastName], [m].[PhoneNumber], [m].[ProfilePicture], [m].[QRCode], [m].[Status], [m].[UserID]
+          FROM [Members] AS [m]
+          WHERE 0 = 1
+      ) AS [m0] ON [s].[MemberID] = [m0].[MemberID]
+      INNER JOIN (
+          SELECT [m1].[PlanID], [m1].[DeletedAt], [m1].[DeletedBy], [m1].[Description], [m1].[DurationDays], [m1].[GymID], [m1].[IsDeleted], [m1].[LastModified], [m1].[PlanName], [m1].[Price], [m1].[Status]
+          FROM [MembershipPlans] AS [m1]
+          WHERE 0 = 1
+      ) AS [m2] ON [s].[PlanID] = [m2].[PlanID]
+      WHERE 0 = 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT [s].[SubscriptionID], [s].[EndDate], [s].[GymID], [s].[LastModified], [s].[MemberID], [s].[PlanID], [s].[StartDate], [s].[Status], [m0].[MemberID], [m0].[Address], [m0].[BirthDate], [m0].[DateRegistered], [m0].[DeletedAt], [m0].[DeletedBy], [m0].[Email], [m0].[EmergencyContact], [m0].[FirstName], [m0].[Gender], [m0].[GymID], [m0].[IsDeleted], [m0].[LastModified], [m0].[LastName], [m0].[PhoneNumber], [m0].[ProfilePicture], [m0].[QRCode], [m0].[Status], [m0].[UserID], [m2].[PlanID], [m2].[DeletedAt], [m2].[DeletedBy], [m2].[Description], [m2].[DurationDays], [m2].[GymID], [m2].[IsDeleted], [m2].[LastModified], [m2].[PlanName], [m2].[Price], [m2].[Status]
+      FROM [Subscriptions] AS [s]
+      INNER JOIN (
+          SELECT [m].[MemberID], [m].[Address], [m].[BirthDate], [m].[DateRegistered], [m].[DeletedAt], [m].[DeletedBy], [m].[Email], [m].[EmergencyContact], [m].[FirstName], [m].[Gender], [m].[GymID], [m].[IsDeleted], [m].[LastModified], [m].[LastName], [m].[PhoneNumber], [m].[ProfilePicture], [m].[QRCode], [m].[Status], [m].[UserID]
+          FROM [Members] AS [m]
+          WHERE 0 = 1
+      ) AS [m0] ON [s].[MemberID] = [m0].[MemberID]
+      INNER JOIN (
+          SELECT [m1].[PlanID], [m1].[DeletedAt], [m1].[DeletedBy], [m1].[Description], [m1].[DurationDays], [m1].[GymID], [m1].[IsDeleted], [m1].[LastModified], [m1].[PlanName], [m1].[Price], [m1].[Status]
+          FROM [MembershipPlans] AS [m1]
+          WHERE 0 = 1
+      ) AS [m2] ON [s].[PlanID] = [m2].[PlanID]
+      WHERE 0 = 1
+info: GymTrackPro.API.Services.SubscriptionExpirationWorker[0]
+      Expiration checks successfully completed. Handled 0 expiring reminders and 0 expired subscriptions.
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (20ms) [Parameters=[@username='?' (Size = 50)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [u].[UserID], [u].[CreatedAt], [u].[Email], [u].[EmailVerified], [u].[FirstName], [u].[GymID], [u].[IsActive], [u].[LastLoginAt], [u].[LastName], [u].[PasswordHash], [u].[ResetToken], [u].[ResetTokenExpires], [u].[Role], [u].[UpdatedAt], [u].[Username], [u].[VerificationToken]
+      FROM [Users] AS [u]
+      WHERE [u].[Username] = @username
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (8ms) [Parameters=[@p0='?' (Size = 100), @p1='?' (Size = 4000), @p2='?' (DbType = Int32), @p3='?' (Size = 50), @p4='?' (DbType = DateTime2), @p5='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      INSERT INTO [AuditLogs] ([Action], [Details], [GymID], [IPAddress], [Timestamp], [UserID])
+      OUTPUT INSERTED.[LogID]
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@username='?' (Size = 50)], CommandType='Text', CommandTimeout='30']
+      SELECT CASE
+          WHEN EXISTS (
+              SELECT 1
+              FROM [Users] AS [u]
+              WHERE [u].[Username] = @username) THEN CAST(1 AS bit)
+          ELSE CAST(0 AS bit)
+      END
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@email='?' (Size = 255)], CommandType='Text', CommandTimeout='30']
+      SELECT CASE
+          WHEN EXISTS (
+              SELECT 1
+              FROM [Users] AS [u]
+              WHERE [u].[Email] = @email) THEN CAST(1 AS bit)
+          ELSE CAST(0 AS bit)
+      END
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (9ms) [Parameters=[@p0='?' (DbType = DateTime2), @p1='?' (Size = 255), @p2='?' (DbType = Boolean), @p3='?' (Size = 100), @p4='?' (DbType = Int32), @p5='?' (DbType = Boolean), @p6='?' (DbType = DateTime2), @p7='?' (Size = 100), @p8='?' (Size = 255), @p9='?' (Size = 100), @p10='?' (DbType = DateTime2), @p11='?' (DbType = Int32), @p12='?' (DbType = DateTime2), @p13='?' (Size = 50), @p14='?' (Size = 100)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      INSERT INTO [Users] ([CreatedAt], [Email], [EmailVerified], [FirstName], [GymID], [IsActive], [LastLoginAt], [LastName], [PasswordHash], [ResetToken], [ResetTokenExpires], [Role], [UpdatedAt], [Username], [VerificationToken])
+      OUTPUT INSERTED.[UserID]
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13, @p14);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (21ms) [Parameters=[@p0='?' (Size = 100), @p1='?' (Size = 4000), @p2='?' (DbType = Int32), @p3='?' (Size = 50), @p4='?' (DbType = DateTime2), @p5='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      INSERT INTO [AuditLogs] ([Action], [Details], [GymID], [IPAddress], [Timestamp], [UserID])
+      OUTPUT INSERTED.[LogID]
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5);
+[LOCAL AUTH REGISTRATION]: User verification token is: 2f230d3cd6b34044a7e4ce5bf610f724
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@username='?' (Size = 50)], CommandType='Text', CommandTimeout='30']
+      SELECT CASE
+          WHEN EXISTS (
+              SELECT 1
+              FROM [Users] AS [u]
+              WHERE [u].[Username] = @username) THEN CAST(1 AS bit)
+          ELSE CAST(0 AS bit)
+      END
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@email='?' (Size = 255)], CommandType='Text', CommandTimeout='30']
+      SELECT CASE
+          WHEN EXISTS (
+              SELECT 1
+              FROM [Users] AS [u]
+              WHERE [u].[Email] = @email) THEN CAST(1 AS bit)
+          ELSE CAST(0 AS bit)
+      END
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (7ms) [Parameters=[@p0='?' (DbType = DateTime2), @p1='?' (Size = 255), @p2='?' (DbType = Boolean), @p3='?' (Size = 100), @p4='?' (DbType = Int32), @p5='?' (DbType = Boolean), @p6='?' (DbType = DateTime2), @p7='?' (Size = 100), @p8='?' (Size = 255), @p9='?' (Size = 100), @p10='?' (DbType = DateTime2), @p11='?' (DbType = Int32), @p12='?' (DbType = DateTime2), @p13='?' (Size = 50), @p14='?' (Size = 100)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      INSERT INTO [Users] ([CreatedAt], [Email], [EmailVerified], [FirstName], [GymID], [IsActive], [LastLoginAt], [LastName], [PasswordHash], [ResetToken], [ResetTokenExpires], [Role], [UpdatedAt], [Username], [VerificationToken])
+      OUTPUT INSERTED.[UserID]
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13, @p14);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (Size = 100), @p1='?' (Size = 4000), @p2='?' (DbType = Int32), @p3='?' (Size = 50), @p4='?' (DbType = DateTime2), @p5='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      INSERT INTO [AuditLogs] ([Action], [Details], [GymID], [IPAddress], [Timestamp], [UserID])
+      OUTPUT INSERTED.[LogID]
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5);
+[LOCAL AUTH REGISTRATION]: User verification token is: 1f92fccba44c475cb8f069146969dd56
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@username='?' (Size = 50)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [u].[UserID], [u].[CreatedAt], [u].[Email], [u].[EmailVerified], [u].[FirstName], [u].[GymID], [u].[IsActive], [u].[LastLoginAt], [u].[LastName], [u].[PasswordHash], [u].[ResetToken], [u].[ResetTokenExpires], [u].[Role], [u].[UpdatedAt], [u].[Username], [u].[VerificationToken]
+      FROM [Users] AS [u]
+      WHERE [u].[Username] = @username
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@id='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [u].[UserID], [u].[CreatedAt], [u].[Email], [u].[EmailVerified], [u].[FirstName], [u].[GymID], [u].[IsActive], [u].[LastLoginAt], [u].[LastName], [u].[PasswordHash], [u].[ResetToken], [u].[ResetTokenExpires], [u].[Role], [u].[UpdatedAt], [u].[Username], [u].[VerificationToken]
+      FROM [Users] AS [u]
+      WHERE [u].[UserID] = @id
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (7ms) [Parameters=[@p15='?' (DbType = Int32), @p0='?' (DbType = DateTime2), @p1='?' (Size = 255), @p2='?' (DbType = Boolean), @p3='?' (Size = 100), @p4='?' (DbType = Int32), @p5='?' (DbType = Boolean), @p6='?' (DbType = DateTime2), @p7='?' (Size = 100), @p8='?' (Size = 255), @p9='?' (Size = 100), @p10='?' (DbType = DateTime2), @p11='?' (DbType = Int32), @p12='?' (DbType = DateTime2), @p13='?' (Size = 50), @p14='?' (Size = 100)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      UPDATE [Users] SET [CreatedAt] = @p0, [Email] = @p1, [EmailVerified] = @p2, [FirstName] = @p3, [GymID] = @p4, [IsActive] = @p5, [LastLoginAt] = @p6, [LastName] = @p7, [PasswordHash] = @p8, [ResetToken] = @p9, [ResetTokenExpires] = @p10, [Role] = @p11, [UpdatedAt] = @p12, [Username] = @p13, [VerificationToken] = @p14
+      OUTPUT 1
+      WHERE [UserID] = @p15;
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@p0='?' (Size = 100), @p1='?' (Size = 4000), @p2='?' (DbType = Int32), @p3='?' (Size = 50), @p4='?' (DbType = DateTime2), @p5='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      INSERT INTO [AuditLogs] ([Action], [Details], [GymID], [IPAddress], [Timestamp], [UserID])
+      OUTPUT INSERTED.[LogID]
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@username='?' (Size = 50)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [u].[UserID], [u].[CreatedAt], [u].[Email], [u].[EmailVerified], [u].[FirstName], [u].[GymID], [u].[IsActive], [u].[LastLoginAt], [u].[LastName], [u].[PasswordHash], [u].[ResetToken], [u].[ResetTokenExpires], [u].[Role], [u].[UpdatedAt], [u].[Username], [u].[VerificationToken]
+      FROM [Users] AS [u]
+      WHERE [u].[Username] = @username
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@id='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [u].[UserID], [u].[CreatedAt], [u].[Email], [u].[EmailVerified], [u].[FirstName], [u].[GymID], [u].[IsActive], [u].[LastLoginAt], [u].[LastName], [u].[PasswordHash], [u].[ResetToken], [u].[ResetTokenExpires], [u].[Role], [u].[UpdatedAt], [u].[Username], [u].[VerificationToken]
+      FROM [Users] AS [u]
+      WHERE [u].[UserID] = @id
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@p15='?' (DbType = Int32), @p0='?' (DbType = DateTime2), @p1='?' (Size = 255), @p2='?' (DbType = Boolean), @p3='?' (Size = 100), @p4='?' (DbType = Int32), @p5='?' (DbType = Boolean), @p6='?' (DbType = DateTime2), @p7='?' (Size = 100), @p8='?' (Size = 255), @p9='?' (Size = 100), @p10='?' (DbType = DateTime2), @p11='?' (DbType = Int32), @p12='?' (DbType = DateTime2), @p13='?' (Size = 50), @p14='?' (Size = 100)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      UPDATE [Users] SET [CreatedAt] = @p0, [Email] = @p1, [EmailVerified] = @p2, [FirstName] = @p3, [GymID] = @p4, [IsActive] = @p5, [LastLoginAt] = @p6, [LastName] = @p7, [PasswordHash] = @p8, [ResetToken] = @p9, [ResetTokenExpires] = @p10, [Role] = @p11, [UpdatedAt] = @p12, [Username] = @p13, [VerificationToken] = @p14
+      OUTPUT 1
+      WHERE [UserID] = @p15;
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (Size = 100), @p1='?' (Size = 4000), @p2='?' (DbType = Int32), @p3='?' (Size = 50), @p4='?' (DbType = DateTime2), @p5='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      INSERT INTO [AuditLogs] ([Action], [Details], [GymID], [IPAddress], [Timestamp], [UserID])
+      OUTPUT INSERTED.[LogID]
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@emailClaim='?' (Size = 255)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [u].[UserID], [u].[CreatedAt], [u].[Email], [u].[EmailVerified], [u].[FirstName], [u].[GymID], [u].[IsActive], [u].[LastLoginAt], [u].[LastName], [u].[PasswordHash], [u].[ResetToken], [u].[ResetTokenExpires], [u].[Role], [u].[UpdatedAt], [u].[Username], [u].[VerificationToken]
+      FROM [Users] AS [u]
+      WHERE [u].[Email] = @emailClaim
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@ef_filter__CurrentGymID='?' (DbType = Int32), @name='?' (Size = 50)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [m].[PlanID], [m].[DeletedAt], [m].[DeletedBy], [m].[Description], [m].[DurationDays], [m].[GymID], [m].[IsDeleted], [m].[LastModified], [m].[PlanName], [m].[Price], [m].[Status]
+      FROM [MembershipPlans] AS [m]
+      WHERE [m].[GymID] = @ef_filter__CurrentGymID AND [m].[IsDeleted] = CAST(0 AS bit) AND [m].[PlanName] = @name
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (6ms) [Parameters=[@p0='?' (DbType = DateTime2), @p1='?' (DbType = Int32), @p2='?' (Size = 255), @p3='?' (DbType = Int32), @p4='?' (DbType = Int32), @p5='?' (DbType = Boolean), @p6='?' (DbType = DateTime2), @p7='?' (Size = 50), @p8='?' (Precision = 18) (Scale = 2) (DbType = Decimal), @p9='?' (Size = 20)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      INSERT INTO [MembershipPlans] ([DeletedAt], [DeletedBy], [Description], [DurationDays], [GymID], [IsDeleted], [LastModified], [PlanName], [Price], [Status])
+      OUTPUT INSERTED.[PlanID]
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (6ms) [Parameters=[@p0='?' (Size = 100), @p1='?' (Size = 4000), @p2='?' (DbType = Int32), @p3='?' (Size = 50), @p4='?' (DbType = DateTime2), @p5='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      INSERT INTO [AuditLogs] ([Action], [Details], [GymID], [IPAddress], [Timestamp], [UserID])
+      OUTPUT INSERTED.[LogID]
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@emailClaim='?' (Size = 255)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [u].[UserID], [u].[CreatedAt], [u].[Email], [u].[EmailVerified], [u].[FirstName], [u].[GymID], [u].[IsActive], [u].[LastLoginAt], [u].[LastName], [u].[PasswordHash], [u].[ResetToken], [u].[ResetTokenExpires], [u].[Role], [u].[UpdatedAt], [u].[Username], [u].[VerificationToken]
+      FROM [Users] AS [u]
+      WHERE [u].[Email] = @emailClaim
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@ef_filter__CurrentGymID='?' (DbType = Int32), @name='?' (Size = 50)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [m].[PlanID], [m].[DeletedAt], [m].[DeletedBy], [m].[Description], [m].[DurationDays], [m].[GymID], [m].[IsDeleted], [m].[LastModified], [m].[PlanName], [m].[Price], [m].[Status]
+      FROM [MembershipPlans] AS [m]
+      WHERE [m].[GymID] = @ef_filter__CurrentGymID AND [m].[IsDeleted] = CAST(0 AS bit) AND [m].[PlanName] = @name
+fail: GymTrackPro.API.Middleware.ExceptionHandlingMiddleware[0]
+      An unhandled exception occurred during request execution.
+      System.ArgumentException: A membership plan with this name already exists.
+         at GymTrackPro.API.Services.MembershipPlanService.CreatePlanAsync(CreateMembershipPlanDto createDto) in D:\DEV\DEV\IT123P.GymTracker.APP\src\GymTrackPro.API\Services\MembershipPlanService.cs:line 63
+         at GymTrackPro.API.Controllers.PlansController.Create(CreateMembershipPlanDto createDto) in D:\DEV\DEV\IT123P.GymTracker.APP\src\GymTrackPro.API\Controllers\PlansController.cs:line 68
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.TaskOfIActionResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeActionMethodAsync>g__Awaited|12_0(ControllerActionInvoker invoker, ValueTask`1 actionResultValueTask)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeNextActionFilterAsync>g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeInnerFilterAsync>g__Awaited|13_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeFilterPipelineAsync>g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+         at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+         at GymTrackPro.API.Middleware.TenantResolverMiddleware.InvokeAsync(HttpContext context, GymDbContext dbContext, TenantState tenantState) in D:\DEV\DEV\IT123P.GymTracker.APP\src\GymTrackPro.API\Middleware\TenantResolverMiddleware.cs:line 59
+         at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+         at GymTrackPro.API.Middleware.SecurityHeadersMiddleware.InvokeAsync(HttpContext context) in D:\DEV\DEV\IT123P.GymTracker.APP\src\GymTrackPro.API\Middleware\SecurityHeadersMiddleware.cs:line 22
+         at GymTrackPro.API.Middleware.ExceptionHandlingMiddleware.InvokeAsync(HttpContext context) in D:\DEV\DEV\IT123P.GymTracker.APP\src\GymTrackPro.API\Middleware\ExceptionHandlingMiddleware.cs:line 27
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@emailClaim='?' (Size = 255)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [u].[UserID], [u].[CreatedAt], [u].[Email], [u].[EmailVerified], [u].[FirstName], [u].[GymID], [u].[IsActive], [u].[LastLoginAt], [u].[LastName], [u].[PasswordHash], [u].[ResetToken], [u].[ResetTokenExpires], [u].[Role], [u].[UpdatedAt], [u].[Username], [u].[VerificationToken]
+      FROM [Users] AS [u]
+      WHERE [u].[Email] = @emailClaim
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (7ms) [Parameters=[@ef_filter__CurrentGymID='?' (DbType = Int32), @p='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [m].[PlanID], [m].[DeletedAt], [m].[DeletedBy], [m].[Description], [m].[DurationDays], [m].[GymID], [m].[IsDeleted], [m].[LastModified], [m].[PlanName], [m].[Price], [m].[Status]
+      FROM [MembershipPlans] AS [m]
+      WHERE [m].[GymID] = @ef_filter__CurrentGymID AND [m].[IsDeleted] = CAST(0 AS bit) AND [m].[PlanID] = @p
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@emailClaim='?' (Size = 255)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [u].[UserID], [u].[CreatedAt], [u].[Email], [u].[EmailVerified], [u].[FirstName], [u].[GymID], [u].[IsActive], [u].[LastLoginAt], [u].[LastName], [u].[PasswordHash], [u].[ResetToken], [u].[ResetTokenExpires], [u].[Role], [u].[UpdatedAt], [u].[Username], [u].[VerificationToken]
+      FROM [Users] AS [u]
+      WHERE [u].[Email] = @emailClaim
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (6ms) [Parameters=[@ef_filter__CurrentGymID='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SELECT [m].[PlanID], [m].[DeletedAt], [m].[DeletedBy], [m].[Description], [m].[DurationDays], [m].[GymID], [m].[IsDeleted], [m].[LastModified], [m].[PlanName], [m].[Price], [m].[Status]
+      FROM [MembershipPlans] AS [m]
+      WHERE [m].[GymID] = @ef_filter__CurrentGymID AND [m].[IsDeleted] = CAST(0 AS bit)
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@emailClaim='?' (Size = 255)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [u].[UserID], [u].[CreatedAt], [u].[Email], [u].[EmailVerified], [u].[FirstName], [u].[GymID], [u].[IsActive], [u].[LastLoginAt], [u].[LastName], [u].[PasswordHash], [u].[ResetToken], [u].[ResetTokenExpires], [u].[Role], [u].[UpdatedAt], [u].[Username], [u].[VerificationToken]
+      FROM [Users] AS [u]
+      WHERE [u].[Email] = @emailClaim
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@ef_filter__CurrentGymID='?' (DbType = Int32), @p='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [m].[PlanID], [m].[DeletedAt], [m].[DeletedBy], [m].[Description], [m].[DurationDays], [m].[GymID], [m].[IsDeleted], [m].[LastModified], [m].[PlanName], [m].[Price], [m].[Status]
+      FROM [MembershipPlans] AS [m]
+      WHERE [m].[GymID] = @ef_filter__CurrentGymID AND [m].[IsDeleted] = CAST(0 AS bit) AND [m].[PlanID] = @p
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@ef_filter__CurrentGymID='?' (DbType = Int32), @name='?' (Size = 50)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [m].[PlanID], [m].[DeletedAt], [m].[DeletedBy], [m].[Description], [m].[DurationDays], [m].[GymID], [m].[IsDeleted], [m].[LastModified], [m].[PlanName], [m].[Price], [m].[Status]
+      FROM [MembershipPlans] AS [m]
+      WHERE [m].[GymID] = @ef_filter__CurrentGymID AND [m].[IsDeleted] = CAST(0 AS bit) AND [m].[PlanName] = @name
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (11ms) [Parameters=[@p10='?' (DbType = Int32), @p0='?' (DbType = DateTime2), @p1='?' (DbType = Int32), @p2='?' (Size = 255), @p3='?' (DbType = Int32), @p4='?' (DbType = Int32), @p5='?' (DbType = Boolean), @p6='?' (DbType = DateTime2), @p7='?' (Size = 50), @p8='?' (Precision = 18) (Scale = 2) (DbType = Decimal), @p9='?' (Size = 20)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      UPDATE [MembershipPlans] SET [DeletedAt] = @p0, [DeletedBy] = @p1, [Description] = @p2, [DurationDays] = @p3, [GymID] = @p4, [IsDeleted] = @p5, [LastModified] = @p6, [PlanName] = @p7, [Price] = @p8, [Status] = @p9
+      OUTPUT 1
+      WHERE [PlanID] = @p10;
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@p0='?' (Size = 100), @p1='?' (Size = 4000), @p2='?' (DbType = Int32), @p3='?' (Size = 50), @p4='?' (DbType = DateTime2), @p5='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      INSERT INTO [AuditLogs] ([Action], [Details], [GymID], [IPAddress], [Timestamp], [UserID])
+      OUTPUT INSERTED.[LogID]
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@emailClaim='?' (Size = 255)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [u].[UserID], [u].[CreatedAt], [u].[Email], [u].[EmailVerified], [u].[FirstName], [u].[GymID], [u].[IsActive], [u].[LastLoginAt], [u].[LastName], [u].[PasswordHash], [u].[ResetToken], [u].[ResetTokenExpires], [u].[Role], [u].[UpdatedAt], [u].[Username], [u].[VerificationToken]
+      FROM [Users] AS [u]
+      WHERE [u].[Email] = @emailClaim
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@ef_filter__CurrentGymID='?' (DbType = Int32), @name='?' (Size = 50)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [m].[PlanID], [m].[DeletedAt], [m].[DeletedBy], [m].[Description], [m].[DurationDays], [m].[GymID], [m].[IsDeleted], [m].[LastModified], [m].[PlanName], [m].[Price], [m].[Status]
+      FROM [MembershipPlans] AS [m]
+      WHERE [m].[GymID] = @ef_filter__CurrentGymID AND [m].[IsDeleted] = CAST(0 AS bit) AND [m].[PlanName] = @name
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = DateTime2), @p1='?' (DbType = Int32), @p2='?' (Size = 255), @p3='?' (DbType = Int32), @p4='?' (DbType = Int32), @p5='?' (DbType = Boolean), @p6='?' (DbType = DateTime2), @p7='?' (Size = 50), @p8='?' (Precision = 18) (Scale = 2) (DbType = Decimal), @p9='?' (Size = 20)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      INSERT INTO [MembershipPlans] ([DeletedAt], [DeletedBy], [Description], [DurationDays], [GymID], [IsDeleted], [LastModified], [PlanName], [Price], [Status])
+      OUTPUT INSERTED.[PlanID]
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (Size = 100), @p1='?' (Size = 4000), @p2='?' (DbType = Int32), @p3='?' (Size = 50), @p4='?' (DbType = DateTime2), @p5='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      INSERT INTO [AuditLogs] ([Action], [Details], [GymID], [IPAddress], [Timestamp], [UserID])
+      OUTPUT INSERTED.[LogID]
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@emailClaim='?' (Size = 255)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [u].[UserID], [u].[CreatedAt], [u].[Email], [u].[EmailVerified], [u].[FirstName], [u].[GymID], [u].[IsActive], [u].[LastLoginAt], [u].[LastName], [u].[PasswordHash], [u].[ResetToken], [u].[ResetTokenExpires], [u].[Role], [u].[UpdatedAt], [u].[Username], [u].[VerificationToken]
+      FROM [Users] AS [u]
+      WHERE [u].[Email] = @emailClaim
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@ef_filter__CurrentGymID='?' (DbType = Int32), @p='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [m].[PlanID], [m].[DeletedAt], [m].[DeletedBy], [m].[Description], [m].[DurationDays], [m].[GymID], [m].[IsDeleted], [m].[LastModified], [m].[PlanName], [m].[Price], [m].[Status]
+      FROM [MembershipPlans] AS [m]
+      WHERE [m].[GymID] = @ef_filter__CurrentGymID AND [m].[IsDeleted] = CAST(0 AS bit) AND [m].[PlanID] = @p
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@ef_filter__CurrentGymID='?' (DbType = Int32), @name='?' (Size = 50)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [m].[PlanID], [m].[DeletedAt], [m].[DeletedBy], [m].[Description], [m].[DurationDays], [m].[GymID], [m].[IsDeleted], [m].[LastModified], [m].[PlanName], [m].[Price], [m].[Status]
+      FROM [MembershipPlans] AS [m]
+      WHERE [m].[GymID] = @ef_filter__CurrentGymID AND [m].[IsDeleted] = CAST(0 AS bit) AND [m].[PlanName] = @name
+fail: GymTrackPro.API.Middleware.ExceptionHandlingMiddleware[0]
+      An unhandled exception occurred during request execution.
+      System.ArgumentException: A membership plan with this name already exists.
+         at GymTrackPro.API.Services.MembershipPlanService.UpdatePlanAsync(Int32 id, CreateMembershipPlanDto updateDto) in D:\DEV\DEV\IT123P.GymTracker.APP\src\GymTrackPro.API\Services\MembershipPlanService.cs:line 96
+         at GymTrackPro.API.Controllers.PlansController.Update(Int32 id, CreateMembershipPlanDto updateDto) in D:\DEV\DEV\IT123P.GymTracker.APP\src\GymTrackPro.API\Controllers\PlansController.cs:line 84
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.TaskOfIActionResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeActionMethodAsync>g__Awaited|12_0(ControllerActionInvoker invoker, ValueTask`1 actionResultValueTask)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeNextActionFilterAsync>g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeInnerFilterAsync>g__Awaited|13_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeFilterPipelineAsync>g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+         at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+         at GymTrackPro.API.Middleware.TenantResolverMiddleware.InvokeAsync(HttpContext context, GymDbContext dbContext, TenantState tenantState) in D:\DEV\DEV\IT123P.GymTracker.APP\src\GymTrackPro.API\Middleware\TenantResolverMiddleware.cs:line 59
+         at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+         at GymTrackPro.API.Middleware.SecurityHeadersMiddleware.InvokeAsync(HttpContext context) in D:\DEV\DEV\IT123P.GymTracker.APP\src\GymTrackPro.API\Middleware\SecurityHeadersMiddleware.cs:line 22
+         at GymTrackPro.API.Middleware.ExceptionHandlingMiddleware.InvokeAsync(HttpContext context) in D:\DEV\DEV\IT123P.GymTracker.APP\src\GymTrackPro.API\Middleware\ExceptionHandlingMiddleware.cs:line 27
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@emailClaim='?' (Size = 255)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [u].[UserID], [u].[CreatedAt], [u].[Email], [u].[EmailVerified], [u].[FirstName], [u].[GymID], [u].[IsActive], [u].[LastLoginAt], [u].[LastName], [u].[PasswordHash], [u].[ResetToken], [u].[ResetTokenExpires], [u].[Role], [u].[UpdatedAt], [u].[Username], [u].[VerificationToken]
+      FROM [Users] AS [u]
+      WHERE [u].[Email] = @emailClaim
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@ef_filter__CurrentGymID='?' (DbType = Int32), @p='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [m].[PlanID], [m].[DeletedAt], [m].[DeletedBy], [m].[Description], [m].[DurationDays], [m].[GymID], [m].[IsDeleted], [m].[LastModified], [m].[PlanName], [m].[Price], [m].[Status]
+      FROM [MembershipPlans] AS [m]
+      WHERE [m].[GymID] = @ef_filter__CurrentGymID AND [m].[IsDeleted] = CAST(0 AS bit) AND [m].[PlanID] = @p
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@p10='?' (DbType = Int32), @p0='?' (DbType = DateTime2), @p1='?' (DbType = Int32), @p2='?' (Size = 255), @p3='?' (DbType = Int32), @p4='?' (DbType = Int32), @p5='?' (DbType = Boolean), @p6='?' (DbType = DateTime2), @p7='?' (Size = 50), @p8='?' (Precision = 18) (Scale = 2) (DbType = Decimal), @p9='?' (Size = 20)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      UPDATE [MembershipPlans] SET [DeletedAt] = @p0, [DeletedBy] = @p1, [Description] = @p2, [DurationDays] = @p3, [GymID] = @p4, [IsDeleted] = @p5, [LastModified] = @p6, [PlanName] = @p7, [Price] = @p8, [Status] = @p9
+      OUTPUT 1
+      WHERE [PlanID] = @p10;
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (Size = 100), @p1='?' (Size = 4000), @p2='?' (DbType = Int32), @p3='?' (Size = 50), @p4='?' (DbType = DateTime2), @p5='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      INSERT INTO [AuditLogs] ([Action], [Details], [GymID], [IPAddress], [Timestamp], [UserID])
+      OUTPUT INSERTED.[LogID]
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@emailClaim='?' (Size = 255)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [u].[UserID], [u].[CreatedAt], [u].[Email], [u].[EmailVerified], [u].[FirstName], [u].[GymID], [u].[IsActive], [u].[LastLoginAt], [u].[LastName], [u].[PasswordHash], [u].[ResetToken], [u].[ResetTokenExpires], [u].[Role], [u].[UpdatedAt], [u].[Username], [u].[VerificationToken]
+      FROM [Users] AS [u]
+      WHERE [u].[Email] = @emailClaim
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@ef_filter__CurrentGymID='?' (DbType = Int32), @p='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [m].[PlanID], [m].[DeletedAt], [m].[DeletedBy], [m].[Description], [m].[DurationDays], [m].[GymID], [m].[IsDeleted], [m].[LastModified], [m].[PlanName], [m].[Price], [m].[Status]
+      FROM [MembershipPlans] AS [m]
+      WHERE [m].[GymID] = @ef_filter__CurrentGymID AND [m].[IsDeleted] = CAST(0 AS bit) AND [m].[PlanID] = @p
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@emailClaim='?' (Size = 255)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [u].[UserID], [u].[CreatedAt], [u].[Email], [u].[EmailVerified], [u].[FirstName], [u].[GymID], [u].[IsActive], [u].[LastLoginAt], [u].[LastName], [u].[PasswordHash], [u].[ResetToken], [u].[ResetTokenExpires], [u].[Role], [u].[UpdatedAt], [u].[Username], [u].[VerificationToken]
+      FROM [Users] AS [u]
+      WHERE [u].[Email] = @emailClaim
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@ef_filter__CurrentGymID='?' (DbType = Int32), @name='?' (Size = 50)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [m].[PlanID], [m].[DeletedAt], [m].[DeletedBy], [m].[Description], [m].[DurationDays], [m].[GymID], [m].[IsDeleted], [m].[LastModified], [m].[PlanName], [m].[Price], [m].[Status]
+      FROM [MembershipPlans] AS [m]
+      WHERE [m].[GymID] = @ef_filter__CurrentGymID AND [m].[IsDeleted] = CAST(0 AS bit) AND [m].[PlanName] = @name
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@p0='?' (DbType = DateTime2), @p1='?' (DbType = Int32), @p2='?' (Size = 255), @p3='?' (DbType = Int32), @p4='?' (DbType = Int32), @p5='?' (DbType = Boolean), @p6='?' (DbType = DateTime2), @p7='?' (Size = 50), @p8='?' (Precision = 18) (Scale = 2) (DbType = Decimal), @p9='?' (Size = 20)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      INSERT INTO [MembershipPlans] ([DeletedAt], [DeletedBy], [Description], [DurationDays], [GymID], [IsDeleted], [LastModified], [PlanName], [Price], [Status])
+      OUTPUT INSERTED.[PlanID]
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (Size = 100), @p1='?' (Size = 4000), @p2='?' (DbType = Int32), @p3='?' (Size = 50), @p4='?' (DbType = DateTime2), @p5='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SET IMPLICIT_TRANSACTIONS OFF;
+      SET NOCOUNT ON;
+      INSERT INTO [AuditLogs] ([Action], [Details], [GymID], [IPAddress], [Timestamp], [UserID])
+      OUTPUT INSERTED.[LogID]
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5);
