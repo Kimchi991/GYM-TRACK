@@ -13,24 +13,29 @@ public class UserRepository : BaseRepository<User>, IUserRepository
     {
     }
 
+    public override async Task<User?> GetByIdAsync(int id)
+    {
+        return await _dbSet.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.UserID == id);
+    }
+
     public async Task<User?> GetByUsernameAsync(string username)
     {
-        return await _dbSet.FirstOrDefaultAsync(u => u.Username == username);
+        return await _dbSet.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Username == username);
     }
 
     public async Task<User?> GetByEmailAsync(string email)
     {
-        return await _dbSet.FirstOrDefaultAsync(u => u.Email == email);
+        return await _dbSet.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Email == email);
     }
 
     public async Task<bool> UsernameExistsAsync(string username)
     {
-        return await _dbSet.AnyAsync(u => u.Username == username);
+        return await _dbSet.IgnoreQueryFilters().AnyAsync(u => u.Username == username);
     }
 
     public async Task<bool> EmailExistsAsync(string email)
     {
-        return await _dbSet.AnyAsync(u => u.Email == email);
+        return await _dbSet.IgnoreQueryFilters().AnyAsync(u => u.Email == email);
     }
 
     public async Task UpdateLastLoginAsync(int userId)

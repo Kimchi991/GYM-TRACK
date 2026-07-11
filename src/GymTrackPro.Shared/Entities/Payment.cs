@@ -12,6 +12,12 @@ public class Payment
     public int PaymentID { get; set; }
 
     [Required]
+    public int GymID { get; set; }
+
+    [ForeignKey("GymID")]
+    public Gym? Gym { get; set; }
+
+    [Required]
     public int MemberID { get; set; }
 
     [ForeignKey("MemberID")]
@@ -53,4 +59,8 @@ public class Payment
 
     [Required]
     public bool IsDeleted { get; set; } = false;
+
+    public DateTime? DeletedAt { get; set; }
+
+    public int? DeletedBy { get; set; }
 }

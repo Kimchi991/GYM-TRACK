@@ -16,21 +16,21 @@ public class SystemSettingRepository : ISystemSettingRepository
         _context = context;
     }
 
-    public async Task<SystemSetting?> GetByKeyAsync(string key)
+    public async Task<GymSetting?> GetByKeyAsync(string key)
     {
-        return await _context.SystemSettings
+        return await _context.GymSettings
             .FirstOrDefaultAsync(s => s.SettingKey == key);
     }
 
-    public async Task<IEnumerable<SystemSetting>> GetAllAsync()
+    public async Task<IEnumerable<GymSetting>> GetAllAsync()
     {
-        return await _context.SystemSettings
+        return await _context.GymSettings
             .ToListAsync();
     }
 
-    public async Task UpdateAsync(SystemSetting setting)
+    public async Task UpdateAsync(GymSetting setting)
     {
-        _context.SystemSettings.Update(setting);
+        _context.GymSettings.Update(setting);
         await _context.SaveChangesAsync();
     }
 }

@@ -12,6 +12,12 @@ public class Notification
     public int NotificationID { get; set; }
 
     [Required]
+    public int GymID { get; set; }
+
+    [ForeignKey("GymID")]
+    public Gym? Gym { get; set; }
+
+    [Required]
     public int MemberID { get; set; }
 
     [ForeignKey("MemberID")]

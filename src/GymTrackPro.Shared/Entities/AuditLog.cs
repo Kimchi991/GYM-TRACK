@@ -10,6 +10,8 @@ public class AuditLog
     [Key]
     public int LogID { get; set; }
 
+    public int? GymID { get; set; }
+
     public int? UserID { get; set; }
 
     [ForeignKey("UserID")]

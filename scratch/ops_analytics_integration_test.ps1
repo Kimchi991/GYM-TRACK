@@ -10,13 +10,13 @@ Write-Host "=============================================" -ForegroundColor Cyan
 
 # 0. Clean DB
 Write-Host "Cleaning Database..." -ForegroundColor Yellow
-$cleanQuery = "SET QUOTED_IDENTIFIER ON; SET NOCOUNT ON; DELETE FROM AttendanceLogs; DELETE FROM Payments; DELETE FROM Subscriptions; DELETE FROM Members; DELETE FROM MembershipPlans; DELETE FROM AuditLogs; DELETE FROM Users;"
+$cleanQuery = "SET QUOTED_IDENTIFIER ON; SET NOCOUNT ON; DELETE FROM AttendanceLogs; DELETE FROM Notifications; DELETE FROM WalkInVisitors; DELETE FROM GymInvitations; DELETE FROM Payments; DELETE FROM MembershipPauses; DELETE FROM Subscriptions; DELETE FROM Members; DELETE FROM MembershipPlans; DELETE FROM AuditLogs; DELETE FROM Users;"
 docker exec -t mssql_container_gym /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P YourStrongPass@123 -C -d GymTrackProDB -W -h -1 -Q "$cleanQuery" | Out-Null
 Write-Host "Database cleaned successfully." -ForegroundColor Green
 
 # 1. Start the API in the background
 Write-Host "Starting ASP.NET Core API..." -ForegroundColor Yellow
-$apiProcess = Start-Process dotnet -ArgumentList "run --project src/GymTrackPro.API" -WorkingDirectory $PWD -PassThru -WindowStyle Hidden
+$apiProcess = Start-Process dotnet -ArgumentList "run --project src/GymTrackPro.API" -WorkingDirectory $PWD -PassThru -NoNewWindow -RedirectStandardOutput "api_ops_analytics_integration_test.log" -RedirectStandardError "api_ops_analytics_integration_test_error.log"
 
 # Wait for API to respond
 $apiReady = $false
@@ -113,6 +113,12 @@ Invoke-RestMethod -Uri "$baseUrl/payments/$paymentId2/refund" -Method Post -Head
 
 Write-Host "Seed completed successfully. Running analytics E2E checks..." -ForegroundColor Green
 
+# --- Dynamic Date Range for Queries (today-1 to today+1) ---
+$startDate = (Get-Date).AddDays(-1).ToString("yyyy-MM-dd")
+$endDate   = (Get-Date).AddDays(1).ToString("yyyy-MM-dd")
+$thisMonth = (Get-Date).ToString("yyyy-MM")
+Write-Host "Using date range: $startDate to $endDate" -ForegroundColor DarkCyan
+
 # --- Case 1: Dashboard Metrics JSON Query ---
 Assert-Test "Dashboard: Fetch Metrics successfully" {
     $res = Invoke-RestMethod -Uri "$baseUrl/dashboard/metrics" -Method Get -Headers $adminHeaders
@@ -125,9 +131,9 @@ Assert-Test "Dashboard: Fetch Metrics successfully" {
 
 # --- Case 2: Daily Revenue JSON & CSV Export ---
 Assert-Test "Reports: Daily Revenue JSON and CSV Export" {
-    $jsonRes = Invoke-RestMethod -Uri "$baseUrl/reports/daily-revenue?startDate=2026-07-01&endDate=2026-07-03" -Method Get -Headers $adminHeaders
+    $jsonRes = Invoke-RestMethod -Uri "$baseUrl/reports/daily-revenue?startDate=$startDate&endDate=$endDate" -Method Get -Headers $adminHeaders
     
-    $req = [System.Net.HttpWebRequest]::Create("$baseUrl/reports/daily-revenue/export?startDate=2026-07-01&endDate=2026-07-03")
+    $req = [System.Net.HttpWebRequest]::Create("$baseUrl/reports/daily-revenue/export?startDate=$startDate&endDate=$endDate")
     $req.Headers.Add("Authorization", "Bearer $adminToken")
     $resp = $req.GetResponse()
     $contentType = $resp.ContentType
@@ -138,15 +144,15 @@ Assert-Test "Reports: Daily Revenue JSON and CSV Export" {
 
 # --- Case 3: Monthly Revenue Report ---
 Assert-Test "Reports: Monthly Revenue Query" {
-    $res = Invoke-RestMethod -Uri "$baseUrl/reports/monthly-revenue?startDate=2026-07-01&endDate=2026-07-03" -Method Get -Headers $adminHeaders
-    $res.success -eq $true -and $res.data[0].month -eq "2026-07"
+    $res = Invoke-RestMethod -Uri "$baseUrl/reports/monthly-revenue?startDate=$startDate&endDate=$endDate" -Method Get -Headers $adminHeaders
+    $res.success -eq $true -and $res.data[0].month -eq $thisMonth
 }
 
 # --- Case 4: Attendance Report ---
 Assert-Test "Reports: Attendance Query and Export" {
-    $jsonRes = Invoke-RestMethod -Uri "$baseUrl/reports/attendance?startDate=2026-07-01&endDate=2026-07-03" -Method Get -Headers $adminHeaders
+    $jsonRes = Invoke-RestMethod -Uri "$baseUrl/reports/attendance?startDate=$startDate&endDate=$endDate" -Method Get -Headers $adminHeaders
     
-    $req = [System.Net.HttpWebRequest]::Create("$baseUrl/reports/attendance/export?startDate=2026-07-01&endDate=2026-07-03")
+    $req = [System.Net.HttpWebRequest]::Create("$baseUrl/reports/attendance/export?startDate=$startDate&endDate=$endDate")
     $req.Headers.Add("Authorization", "Bearer $adminToken")
     $resp = $req.GetResponse()
     $contentType = $resp.ContentType
@@ -157,7 +163,7 @@ Assert-Test "Reports: Attendance Query and Export" {
 
 # --- Case 5: Membership Sales Report ---
 Assert-Test "Reports: Membership Sales Query" {
-    $res = Invoke-RestMethod -Uri "$baseUrl/reports/membership-sales?startDate=2026-07-01&endDate=2026-07-03" -Method Get -Headers $adminHeaders
+    $res = Invoke-RestMethod -Uri "$baseUrl/reports/membership-sales?startDate=$startDate&endDate=$endDate" -Method Get -Headers $adminHeaders
     $res.success -eq $true -and $res.data.Count -eq 1 -and $res.data[0].finalAmount -eq 1800.00
 }
 
@@ -169,9 +175,9 @@ Assert-Test "Reports: Expiring Memberships Query" {
 
 # --- Case 7: Refund Report ---
 Assert-Test "Reports: Refund Query and Export" {
-    $jsonRes = Invoke-RestMethod -Uri "$baseUrl/reports/refunds?startDate=2026-07-01&endDate=2026-07-03" -Method Get -Headers $adminHeaders
+    $jsonRes = Invoke-RestMethod -Uri "$baseUrl/reports/refunds?startDate=$startDate&endDate=$endDate" -Method Get -Headers $adminHeaders
     
-    $req = [System.Net.HttpWebRequest]::Create("$baseUrl/reports/refunds/export?startDate=2026-07-01&endDate=2026-07-03")
+    $req = [System.Net.HttpWebRequest]::Create("$baseUrl/reports/refunds/export?startDate=$startDate&endDate=$endDate")
     $req.Headers.Add("Authorization", "Bearer $adminToken")
     $resp = $req.GetResponse()
     $contentType = $resp.ContentType
@@ -182,9 +188,9 @@ Assert-Test "Reports: Refund Query and Export" {
 
 # --- Case 8: Cashier Activity Report ---
 Assert-Test "Reports: Cashier Activity Query and Export" {
-    $jsonRes = Invoke-RestMethod -Uri "$baseUrl/reports/cashier-activity?startDate=2026-07-01&endDate=2026-07-03" -Method Get -Headers $adminHeaders
+    $jsonRes = Invoke-RestMethod -Uri "$baseUrl/reports/cashier-activity?startDate=$startDate&endDate=$endDate" -Method Get -Headers $adminHeaders
     
-    $req = [System.Net.HttpWebRequest]::Create("$baseUrl/reports/cashier-activity/export?startDate=2026-07-01&endDate=2026-07-03")
+    $req = [System.Net.HttpWebRequest]::Create("$baseUrl/reports/cashier-activity/export?startDate=$startDate&endDate=$endDate")
     $req.Headers.Add("Authorization", "Bearer $adminToken")
     $resp = $req.GetResponse()
     $contentType = $resp.ContentType

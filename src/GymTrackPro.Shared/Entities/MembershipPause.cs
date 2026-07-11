@@ -11,6 +11,12 @@ public class MembershipPause
     public int PauseID { get; set; }
 
     [Required]
+    public int GymID { get; set; }
+
+    [ForeignKey("GymID")]
+    public Gym? Gym { get; set; }
+
+    [Required]
     public int SubscriptionID { get; set; }
 
     [ForeignKey("SubscriptionID")]

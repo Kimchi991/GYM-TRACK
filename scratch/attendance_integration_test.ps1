@@ -10,13 +10,13 @@ Write-Host "=============================================" -ForegroundColor Cyan
 
 # 0. Clean DB
 Write-Host "Cleaning Database..." -ForegroundColor Yellow
-$cleanQuery = "SET QUOTED_IDENTIFIER ON; SET NOCOUNT ON; DELETE FROM AttendanceLogs; DELETE FROM Payments; DELETE FROM Subscriptions; DELETE FROM Members; DELETE FROM MembershipPlans; DELETE FROM AuditLogs; DELETE FROM Users;"
+$cleanQuery = "SET QUOTED_IDENTIFIER ON; SET NOCOUNT ON; DELETE FROM AttendanceLogs; DELETE FROM Notifications; DELETE FROM WalkInVisitors; DELETE FROM GymInvitations; DELETE FROM Payments; DELETE FROM MembershipPauses; DELETE FROM Subscriptions; DELETE FROM Members; DELETE FROM MembershipPlans; DELETE FROM AuditLogs; DELETE FROM Users;"
 docker exec -t mssql_container_gym /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P YourStrongPass@123 -C -d GymTrackProDB -W -h -1 -Q "$cleanQuery" | Out-Null
 Write-Host "Database cleaned successfully." -ForegroundColor Green
 
 # 1. Start the API in the background
 Write-Host "Starting ASP.NET Core API..." -ForegroundColor Yellow
-$apiProcess = Start-Process dotnet -ArgumentList "run --project src/GymTrackPro.API" -WorkingDirectory $PWD -PassThru -WindowStyle Hidden
+$apiProcess = Start-Process dotnet -ArgumentList "run --project src/GymTrackPro.API" -WorkingDirectory $PWD -PassThru -NoNewWindow -RedirectStandardOutput "api_attendance_integration_test.log" -RedirectStandardError "api_attendance_integration_test_error.log"
 
 # Wait for API to respond
 $apiReady = $false
@@ -106,7 +106,7 @@ $recepHeaders = @{
 
 # --- Setup Membership Plan & Members ---
 Write-Host "Creating Membership Plan in Database..." -ForegroundColor Yellow
-$planQuery = "SET NOCOUNT ON; INSERT INTO MembershipPlans (PlanName, DurationDays, Price, Description, Status, LastModified) VALUES ('Standard Monthly', 30, 49.99, 'Standard monthly plan', 'Active', GETDATE()); SELECT @@IDENTITY;"
+$planQuery = "SET NOCOUNT ON; INSERT INTO MembershipPlans (PlanName, DurationDays, Price, Description, Status, LastModified, GymID, IsDeleted) VALUES ('Standard Monthly', 30, 49.99, 'Standard monthly plan', 'Active', GETDATE(), 1, 0); SELECT @@IDENTITY;"
 $planId = (docker exec -t mssql_container_gym /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P YourStrongPass@123 -C -d GymTrackProDB -W -h -1 -Q "$planQuery").Trim()
 Write-Host "Created Membership Plan ID: $planId" -ForegroundColor Green
 
@@ -132,11 +132,11 @@ $charlie = Invoke-RestMethod -Uri "$baseUrl/members" -Method Post -Body (Convert
 Write-Host "Configuring member subscriptions..." -ForegroundColor Yellow
 
 # Alice: Active subscription (starts 1 day ago, ends in 29 days)
-$subAliceQuery = "INSERT INTO Subscriptions (MemberID, PlanID, StartDate, EndDate, Status, LastModified) VALUES ($($alice.data.memberID), $planId, DATEADD(day, -1, GETDATE()), DATEADD(day, 29, GETDATE()), 'Active', GETDATE());"
+$subAliceQuery = "INSERT INTO Subscriptions (MemberID, PlanID, StartDate, EndDate, Status, LastModified, GymID) VALUES ($($alice.data.memberID), $planId, DATEADD(day, -1, GETDATE()), DATEADD(day, 29, GETDATE()), 'Active', GETDATE(), 1);"
 docker exec -t mssql_container_gym /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P YourStrongPass@123 -C -d GymTrackProDB -Q "$subAliceQuery" | Out-Null
 
 # Bob: Expired subscription (starts 40 days ago, ended 10 days ago)
-$subBobQuery = "INSERT INTO Subscriptions (MemberID, PlanID, StartDate, EndDate, Status, LastModified) VALUES ($($bob.data.memberID), $planId, DATEADD(day, -40, GETDATE()), DATEADD(day, -10, GETDATE()), 'Active', GETDATE());"
+$subBobQuery = "INSERT INTO Subscriptions (MemberID, PlanID, StartDate, EndDate, Status, LastModified, GymID) VALUES ($($bob.data.memberID), $planId, DATEADD(day, -40, GETDATE()), DATEADD(day, -10, GETDATE()), 'Active', GETDATE(), 1);"
 docker exec -t mssql_container_gym /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P YourStrongPass@123 -C -d GymTrackProDB -Q "$subBobQuery" | Out-Null
 
 Write-Host "Test setup complete! Running test suite..." -ForegroundColor Green

@@ -4,12 +4,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GymTrackPro.Shared.Entities;
 
-[Table("AttendanceLogs")]
-public class Attendance
+[Table("GymSettings")]
+public class GymSetting
 {
-    [Key]
-    public int AttendanceID { get; set; }
-
     [Required]
     public int GymID { get; set; }
 
@@ -17,18 +14,18 @@ public class Attendance
     public Gym? Gym { get; set; }
 
     [Required]
-    public int MemberID { get; set; }
-
-    [ForeignKey("MemberID")]
-    public Member? Member { get; set; }
+    [StringLength(100)]
+    public string SettingKey { get; set; } = string.Empty;
 
     [Required]
-    public DateTime AttendanceDate { get; set; } = DateTime.UtcNow;
+    public string SettingValue { get; set; } = string.Empty;
 
     [Required]
-    public DateTime CheckInTime { get; set; } = DateTime.UtcNow;
+    [StringLength(100)]
+    public string GroupName { get; set; } = "General";
 
-    public DateTime? CheckOutTime { get; set; }
+    [StringLength(255)]
+    public string? Description { get; set; }
 
     [Required]
     public DateTime LastModified { get; set; } = DateTime.UtcNow;

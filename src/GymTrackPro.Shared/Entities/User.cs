@@ -11,6 +11,8 @@ public class User
     [Key]
     public int UserID { get; set; }
 
+    public int? GymID { get; set; }
+
     [Required]
     [StringLength(50)]
     public string Username { get; set; } = string.Empty;

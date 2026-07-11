@@ -11,6 +11,12 @@ public class MembershipPlan
     public int PlanID { get; set; }
 
     [Required]
+    public int GymID { get; set; }
+
+    [ForeignKey("GymID")]
+    public Gym? Gym { get; set; }
+
+    [Required]
     [StringLength(50)]
     public string PlanName { get; set; } = string.Empty;
 
@@ -29,4 +35,11 @@ public class MembershipPlan
 
     [Required]
     public DateTime LastModified { get; set; } = DateTime.UtcNow;
+
+    [Required]
+    public bool IsDeleted { get; set; } = false;
+
+    public DateTime? DeletedAt { get; set; }
+
+    public int? DeletedBy { get; set; }
 }

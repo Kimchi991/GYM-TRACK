@@ -11,6 +11,17 @@ public class Member
     public int MemberID { get; set; }
 
     [Required]
+    public int GymID { get; set; }
+
+    [ForeignKey("GymID")]
+    public Gym? Gym { get; set; }
+
+    public int? UserID { get; set; }
+
+    [ForeignKey("UserID")]
+    public User? User { get; set; }
+
+    [Required]
     [StringLength(50)]
     public string FirstName { get; set; } = string.Empty;
 
@@ -57,4 +68,8 @@ public class Member
 
     [Required]
     public bool IsDeleted { get; set; } = false;
+
+    public DateTime? DeletedAt { get; set; }
+
+    public int? DeletedBy { get; set; }
 }

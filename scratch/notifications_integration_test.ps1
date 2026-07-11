@@ -10,13 +10,13 @@ Write-Host "=============================================" -ForegroundColor Cyan
 
 # 0. Clean DB
 Write-Host "Cleaning Database..." -ForegroundColor Yellow
-$cleanQuery = "SET QUOTED_IDENTIFIER ON; SET NOCOUNT ON; DELETE FROM AttendanceLogs; DELETE FROM Payments; DELETE FROM Subscriptions; DELETE FROM Members; DELETE FROM MembershipPlans; DELETE FROM AuditLogs; DELETE FROM Users; DELETE FROM SystemSettings; DELETE FROM Notifications;"
+$cleanQuery = "SET QUOTED_IDENTIFIER ON; SET NOCOUNT ON; DELETE FROM AttendanceLogs; DELETE FROM Notifications; DELETE FROM WalkInVisitors; DELETE FROM GymInvitations; DELETE FROM Payments; DELETE FROM MembershipPauses; DELETE FROM Subscriptions; DELETE FROM Members; DELETE FROM MembershipPlans; DELETE FROM AuditLogs; DELETE FROM Users;"
 docker exec -t mssql_container_gym /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P YourStrongPass@123 -C -d GymTrackProDB -W -h -1 -Q "$cleanQuery" | Out-Null
 Write-Host "Database cleaned successfully." -ForegroundColor Green
 
 # 1. Start the API in the background
 Write-Host "Starting ASP.NET Core API..." -ForegroundColor Yellow
-$apiProcess = Start-Process dotnet -ArgumentList "run --project src/GymTrackPro.API" -WorkingDirectory $PWD -PassThru -WindowStyle Hidden
+$apiProcess = Start-Process dotnet -ArgumentList "run --project src/GymTrackPro.API" -WorkingDirectory $PWD -PassThru -NoNewWindow -RedirectStandardOutput "api_notifications_integration_test.log" -RedirectStandardError "api_notifications_integration_test_error.log"
 
 # Wait for API to respond
 $apiReady = $false

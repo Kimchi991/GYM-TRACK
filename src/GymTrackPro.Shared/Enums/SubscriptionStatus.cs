@@ -3,13 +3,12 @@ using System.Text.Json.Serialization;
 namespace GymTrackPro.Shared.Enums;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum UserRole
+public enum SubscriptionStatus
 {
-    PlatformAdmin,
-    GymOwner,
-    Manager,
-    Receptionist,
-    Trainer,
-    FinanceStaff,
-    GymGoer
+    Trial,
+    Active,
+    GracePeriod,
+    Suspended,
+    Expired,
+    Cancelled
 }

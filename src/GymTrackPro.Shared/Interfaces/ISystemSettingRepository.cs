@@ -6,7 +6,7 @@ namespace GymTrackPro.Shared.Interfaces;
 
 public interface ISystemSettingRepository
 {
-    Task<SystemSetting?> GetByKeyAsync(string key);
-    Task<IEnumerable<SystemSetting>> GetAllAsync();
-    Task UpdateAsync(SystemSetting setting);
+    Task<GymSetting?> GetByKeyAsync(string key);
+    Task<IEnumerable<GymSetting>> GetAllAsync();
+    Task UpdateAsync(GymSetting setting);
 }

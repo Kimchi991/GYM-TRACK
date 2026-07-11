@@ -10,13 +10,13 @@ Write-Host "=============================================" -ForegroundColor Cyan
 
 # 0. Clean DB
 Write-Host "Cleaning Database..." -ForegroundColor Yellow
-$cleanQuery = "SET QUOTED_IDENTIFIER ON; SET NOCOUNT ON; DELETE FROM AttendanceLogs; DELETE FROM Payments; DELETE FROM Subscriptions; DELETE FROM Members; DELETE FROM MembershipPlans; DELETE FROM AuditLogs; DELETE FROM Users;"
+$cleanQuery = "SET QUOTED_IDENTIFIER ON; SET NOCOUNT ON; DELETE FROM AttendanceLogs; DELETE FROM Notifications; DELETE FROM WalkInVisitors; DELETE FROM GymInvitations; DELETE FROM Payments; DELETE FROM MembershipPauses; DELETE FROM Subscriptions; DELETE FROM Members; DELETE FROM MembershipPlans; DELETE FROM AuditLogs; DELETE FROM Users;"
 docker exec -t mssql_container_gym /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P YourStrongPass@123 -C -d GymTrackProDB -W -h -1 -Q "$cleanQuery" | Out-Null
 Write-Host "Database cleaned successfully." -ForegroundColor Green
 
 # 1. Start the API in the background
 Write-Host "Starting ASP.NET Core API..." -ForegroundColor Yellow
-$apiProcess = Start-Process dotnet -ArgumentList "run --project src/GymTrackPro.API" -WorkingDirectory $PWD -PassThru -WindowStyle Hidden
+$apiProcess = Start-Process dotnet -ArgumentList "run --project src/GymTrackPro.API" -WorkingDirectory $PWD -PassThru -NoNewWindow -RedirectStandardOutput "api_payments_integration_test.log" -RedirectStandardError "api_payments_integration_test_error.log"
 
 # Wait for API to respond
 $apiReady = $false
@@ -281,9 +281,19 @@ Assert-Test "Refund Payment: Status becomes Refunded, Subscription becomes Cance
 
 # --- Case 12: Block Receptionist from Refunding ---
 Assert-Test "RBAC: Block Receptionist from Refund" {
+    # Create a fresh subscription + payment for this RBAC test (the previous one was already refunded)
+    $newSubRes = Invoke-RestMethod -Uri "$baseUrl/subscriptions" -Method Post -Body (ConvertTo-Json @{ MemberID=$memberId; PlanID=$planId }) -Headers $adminHeaders
+    $newSubId = $newSubRes.data.subscriptionID
+    $newPayRes = Invoke-RestMethod -Uri "$baseUrl/payments" -Method Post -Body (ConvertTo-Json @{
+        memberID = $memberId; subscriptionID = $newSubId
+        amount = 1500.00; discount = 0.00
+        paymentMethod = "Cash"; paymentStatus = "Paid"; referenceNumber = ""
+    }) -Headers $adminHeaders
+    $newPayId = $newPayRes.data.paymentID
+
     $blocked = $false
     try {
-        Invoke-RestMethod -Uri "$baseUrl/payments/$paymentId/refund" -Method Post -Headers $recepHeaders
+        Invoke-RestMethod -Uri "$baseUrl/payments/$newPayId/refund" -Method Post -Headers $recepHeaders
     } catch {
         if ($_.Exception.Response.StatusCode -eq "Forbidden") {
             $blocked = $true

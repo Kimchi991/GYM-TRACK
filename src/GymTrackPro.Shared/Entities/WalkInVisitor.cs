@@ -11,6 +11,12 @@ public class WalkInVisitor
     public int VisitorID { get; set; }
 
     [Required]
+    public int GymID { get; set; }
+
+    [ForeignKey("GymID")]
+    public Gym? Gym { get; set; }
+
+    [Required]
     [StringLength(100)]
     public string VisitorName { get; set; } = string.Empty;
 

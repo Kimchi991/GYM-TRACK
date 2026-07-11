@@ -4,8 +4,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GymTrackPro.Shared.Entities;
 
-[Table("SystemSettings")]
-public class SystemSetting
+[Table("PlatformSettings")]
+public class PlatformSetting
 {
     [Key]
     [Required]

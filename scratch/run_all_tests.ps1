@@ -21,20 +21,43 @@ $passedTests = 0
 
 foreach ($script in $scripts) {
     Write-Host "Running: $script..." -ForegroundColor Yellow
+    
+    # Hard-kill any lingering dotnet/API processes before each suite
+    Get-Process -Name "GymTrackPro.API" -ErrorAction SilentlyContinue | Stop-Process -Force
+    Get-Process -Name "dotnet" -ErrorAction SilentlyContinue | Stop-Process -Force
+    Start-Sleep -Seconds 3   # Give OS time to release port 5221 and file locks
+
     $output = powershell -ExecutionPolicy Bypass -File $script
-    
-    # Parse output for pass/fail counts
-    $passes = ($output | Select-String -Pattern "\[PASS\]").Count
-    $failures = ($output | Select-String -Pattern "\[FAIL\]").Count
-    
-    $totalTests += ($passes + $failures)
+
+    # Each test script prints a "===...===" summary divider near the end, 
+    # then lists each result exactly once. Count only those summary lines.
+    $inSummary = $false
+    $passes    = 0
+    $failures  = 0
+    $failLines = @()
+
+    foreach ($line in $output) {
+        # The summary block starts after "Results Summary" or the final "===" banner
+        if ($line -match "Results Summary|E2E Summary|Test Results") {
+            $inSummary = $true
+            continue
+        }
+        if ($inSummary) {
+            if ($line -match "^\[PASS\]") { $passes++ }
+            elseif ($line -match "^\[FAIL\]") {
+                $failures++
+                $failLines += $line
+            }
+        }
+    }
+
+    $totalTests  += ($passes + $failures)
     $passedTests += $passes
-    
+
     if ($failures -gt 0) {
         $hasFailures = $true
         Write-Host " -> $script had $failures failures!" -ForegroundColor Red
-        # Print output lines that contain FAIL
-        $output | Select-String -Pattern "\[FAIL\]" | ForEach-Object { Write-Host "    $_" -ForegroundColor Red }
+        $failLines | ForEach-Object { Write-Host "    $_" -ForegroundColor Red }
     } else {
         Write-Host " -> $script passed successfully ($passes tests)." -ForegroundColor Green
     }
@@ -43,12 +66,12 @@ foreach ($script in $scripts) {
 
 Write-Host "=============================================" -ForegroundColor Cyan
 Write-Host "  Master E2E Verification Complete           " -ForegroundColor Cyan
-Write-Host "  Total Tests Run: $totalTests" -ForegroundColor Cyan
-Write-Host "  Passed: $passedTests" -ForegroundColor Green
+Write-Host "  Total Tests Run: $totalTests"               -ForegroundColor Cyan
+Write-Host "  Passed: $passedTests"                       -ForegroundColor Green
 if ($hasFailures) {
-    Write-Host "  Failed: $($totalTests - $passedTests)" -ForegroundColor Red
+    Write-Host "  Failed: $($totalTests - $passedTests)"  -ForegroundColor Red
     exit 1
 } else {
-    Write-Host "  All tests passed successfully!" -ForegroundColor Green
+    Write-Host "  All tests passed successfully!"         -ForegroundColor Green
     exit 0
 }

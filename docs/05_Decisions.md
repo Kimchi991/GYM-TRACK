@@ -73,3 +73,52 @@ Every major architectural or technology change must be documented using the foll
 *   **Decision:** **Option B** (Supporting services only).
 *   **Reason:** Keeps identity management locally controlled, preserving offline operability.
 *   **Consequences:** The Web API must integrate FCM sending client SDKs, and mobile clients must register devices with FCM.
+
+---
+
+## 🏛️ ADR 5: Multi-Tenant Strategy
+*   **Date:** 2026-07-10
+*   **Problem:** Transition GymTrackPro to support multiple gym business tenants in a single deployment while ensuring secure data separation.
+*   **Options Considered:**
+    *   *Option A (Database-per-tenant):* High isolation, but high cost, complex deployment, and difficult cross-tenant platform queries.
+    *   *Option B (Schema-per-tenant):* Moderate isolation, but high complexity in migrations and schema updates.
+    *   *Option C (Shared Database, Shared Schema with GymID):* Low cost, simple migrations, straightforward platform-level analytics, easily supports future multi-branch ownership.
+*   **Decision:** **Option C** (Shared Database, Shared Schema with GymID).
+*   **Reason:** Fits the constraint of low operational costs and simplicity for deployment, while easily accommodating future multi-branch capabilities.
+*   **Consequences:** Developers must ensure tenant boundaries are securely enforced at the database query level to prevent accidental cross-tenant leaks.
+
+---
+
+## 🏛️ ADR 6: Soft Delete Policy
+*   **Date:** 2026-07-10
+*   **Problem:** Prevent accidental data loss of members, payments, plans, and other operational data while maintaining a clean user experience.
+*   **Options Considered:**
+    *   *Option A (Physical Delete):* Simple SQL `DELETE` commands, but results in permanent data loss and breaks referential historical statistics.
+    *   *Option B (Soft Delete via IsDeleted flags):* Records remain in the database but are marked inactive with deletion metadata (`DeletedAt`, `DeletedBy`).
+*   **Decision:** **Option B** (Soft Delete Policy).
+*   **Reason:** Preserves historical audit trails and analytical reporting integrity (e.g. keeping payments and membership analytics accurate even if a member is removed).
+*   **Consequences:** Operational queries must filter out soft-deleted records, which will be automated using EF Core global filters.
+
+---
+
+## 🏛️ ADR 7: Tenant Isolation Enforcement
+*   **Date:** 2026-07-10
+*   **Problem:** Ensure that gym tenants cannot read or write data belonging to another gym, preventing leakage.
+*   **Options Considered:**
+    *   *Option A (Manual service-level filters):* Add `Where(x => x.GymID == currentGymId)` manually to every database query. High risk of human error or omissions.
+    *   *Option B (EF Core Global Query Filters):* Define dynamic filters inside `OnModelCreating` to automatically restrict all queries to the tenant context unless explicitly bypassed.
+*   **Decision:** **Option B** (EF Core Global Query Filters).
+*   **Reason:** Provides a centralized, compile-time safety boundary. Most application code (services/controllers) remains completely unaware of tenant filtering, reducing boilerplate and preventing bugs.
+*   **Consequences:** Administrative operations (e.g., Platform Admin queries) must explicitly call `.IgnoreQueryFilters()` to view multi-tenant records.
+
+---
+
+## 🏛️ ADR 8: Settings Separation
+*   **Date:** 2026-07-10
+*   **Problem:** Support global platform-level system configurations while allowing individual gyms to customize local settings (e.g. QR formats, receipt prefixes).
+*   **Options Considered:**
+    *   *Option A (Unified table with GymID nullable):* A single table where global settings have `GymID = null` and overrides have `GymID = tenant_id`. Can lead to index collision on composite keys or complex lookup queries.
+    *   *Option B (PlatformSetting and GymSetting tables):* Two distinct database models. `PlatformSetting` is platform-scoped (read-only for tenants). `GymSetting` is tenant-scoped and uses a composite key of `(GymID, SettingKey)`.
+*   **Decision:** **Option B** (PlatformSetting and GymSetting tables).
+*   **Reason:** Clearer database layout, cleaner validation rules, and no risk of key collisions between global platform settings and local tenant overrides.
+*   **Consequences:** Services must explicitly fetch from the corresponding table based on whether the config parameter is platform-level or gym-level.

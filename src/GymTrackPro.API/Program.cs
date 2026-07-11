@@ -9,6 +9,7 @@ using GymTrackPro.API.Middleware;
 using GymTrackPro.API.Repositories;
 using GymTrackPro.API.Services;
 using GymTrackPro.Shared.Interfaces;
+using GymTrackPro.Shared.Entities;
 using GymTrackPro.Shared.Events.Members;
 using GymTrackPro.Shared.Events.Payments;
 using GymTrackPro.Shared.Events.Membership;
@@ -72,7 +73,27 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuer = false,
             ValidateAudience = false,
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromMinutes(5)
+            ClockSkew = TimeSpan.FromMinutes(5),
+            IssuerSigningKeyResolver = (token, securityToken, kid, validationParameters) =>
+            {
+                var keys = new System.Collections.Generic.List<SecurityKey>();
+                string? issuer = null;
+                if (securityToken is System.IdentityModel.Tokens.Jwt.JwtSecurityToken jwtToken)
+                {
+                    issuer = jwtToken.Issuer;
+                }
+                else if (securityToken is Microsoft.IdentityModel.JsonWebTokens.JsonWebToken jsonToken)
+                {
+                    issuer = jsonToken.Issuer;
+                }
+
+                if (issuer == (builder.Configuration["Jwt:Issuer"] ?? "GymTrackProAPI"))
+                {
+                    var keyBytes = Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "GymTrackProSecretKeyPlaceholder123456");
+                    keys.Add(new SymmetricSecurityKey(keyBytes));
+                }
+                return keys;
+            }
         };
         options.Events = new JwtBearerEvents
         {
@@ -85,6 +106,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 // Register Repositories
+builder.Services.AddScoped<TenantState>();
+builder.Services.AddScoped<ITenantProvider, TenantProvider>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IMemberRepository, MemberRepository>();
 builder.Services.AddScoped<IMembershipPlanRepository, MembershipPlanRepository>();
@@ -151,33 +174,11 @@ else
 app.UseRateLimiter();
 
 app.UseAuthentication();
+app.UseMiddleware<TenantResolverMiddleware>();
 app.UseAuthorization();
 
 app.UseStaticFiles();
 
 app.MapControllers();
-
-// Seed settings if table is empty
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<GymDbContext>();
-    if (!context.SystemSettings.Any())
-    {
-        var seedDate = new DateTime(2026, 7, 2, 0, 0, 0, DateTimeKind.Utc);
-        context.SystemSettings.AddRange(
-            new GymTrackPro.Shared.Entities.SystemSetting { SettingKey = "GymName", SettingValue = "GymTrackPro", GroupName = "General", Description = "Name of the gym facility.", LastModified = seedDate },
-            new GymTrackPro.Shared.Entities.SystemSetting { SettingKey = "ContactNumber", SettingValue = "+639170000000", GroupName = "General", Description = "Gym contact helpline phone number.", LastModified = seedDate },
-            new GymTrackPro.Shared.Entities.SystemSetting { SettingKey = "Currency", SettingValue = "PHP", GroupName = "General", Description = "Currency code used for financial billing transactions.", LastModified = seedDate },
-            new GymTrackPro.Shared.Entities.SystemSetting { SettingKey = "Timezone", SettingValue = "Asia/Manila", GroupName = "General", Description = "System local timezone identifier.", LastModified = seedDate },
-            new GymTrackPro.Shared.Entities.SystemSetting { SettingKey = "QRPrefix", SettingValue = "GTP-", GroupName = "Membership", Description = "Format prefix added to automatically generated member QR codes.", LastModified = seedDate },
-            new GymTrackPro.Shared.Entities.SystemSetting { SettingKey = "ReceiptPrefix", SettingValue = "REC-", GroupName = "Payments", Description = "Format prefix added to payment invoice transaction receipts.", LastModified = seedDate },
-            new GymTrackPro.Shared.Entities.SystemSetting { SettingKey = "MaxUploadSize", SettingValue = "5242880", GroupName = "Security", Description = "Maximum member photo upload limit size in bytes (e.g. 5MB = 5242880).", LastModified = seedDate },
-            new GymTrackPro.Shared.Entities.SystemSetting { SettingKey = "AllowedImageTypes", SettingValue = ".jpg,.jpeg,.png", GroupName = "Security", Description = "Comma-separated list of approved image file extensions.", LastModified = seedDate },
-            new GymTrackPro.Shared.Entities.SystemSetting { SettingKey = "PasswordPolicyRegex", SettingValue = @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$", GroupName = "Security", Description = "Regex pattern validating password strength rules.", LastModified = seedDate },
-            new GymTrackPro.Shared.Entities.SystemSetting { SettingKey = "ReminderDaysBeforeExpiration", SettingValue = "3", GroupName = "Membership", Description = "Days ahead of membership expiration to raise alerts or send reminders.", LastModified = seedDate }
-        );
-        context.SaveChanges();
-    }
-}
 
 app.Run();

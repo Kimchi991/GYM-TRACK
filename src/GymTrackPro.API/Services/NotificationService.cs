@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using GymTrackPro.API.Data;
 using GymTrackPro.Shared.Entities;
@@ -33,7 +34,7 @@ public class NotificationService : INotificationService
     {
         _logger.LogInformation("Routing notification to Member ID {MemberID} via {Channel}. Title: {Title}", memberId, channel, title);
 
-        var member = await _context.Members.FindAsync(memberId);
+        var member = await _context.Members.IgnoreQueryFilters().FirstOrDefaultAsync(m => m.MemberID == memberId && !m.IsDeleted);
         if (member == null)
         {
             _logger.LogWarning("Member with ID {MemberID} not found. Cannot route notification.", memberId);
