@@ -85,13 +85,13 @@
                 <VerticalStackLayout Spacing="10">
                     <Label Text="Account Actions" TextColor="{StaticResource TextPrimary}" FontSize="14" FontAttributes="Bold" />
                     <Label Text="Sign out from your session. You will need to log in again to access the facility database." TextColor="{StaticResource TextMuted}" FontSize="12" />
-                    <Button Text="Save Settings" 
-                            BackgroundColor="{StaticResource Primary}" 
+                    <Button Text="Sign Out" 
+                            BackgroundColor="{StaticResource Danger}" 
                             TextColor="White" 
                             CornerRadius="8"
                             HeightRequest="48"
                             FontAttributes="Bold"
-                            Command="{Binding SaveSettingsCommand}" />
+                            Command="{Binding LogoutCommand}" />
                 </VerticalStackLayout>
             </Border>
 
