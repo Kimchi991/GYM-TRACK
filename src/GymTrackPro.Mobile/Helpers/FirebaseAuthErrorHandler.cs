@@ -23,7 +23,16 @@ namespace GymTrackPro.Mobile.Helpers
                         return "This account has been disabled.";
                     case AuthErrorReason.InvalidEmailAddress:
                         return "The email address is badly formatted.";
+                    case AuthErrorReason.OperationNotAllowed:
+                        return "Sign-in is not enabled for this account type.";
                     default:
+                        // Catch the "conflicts with existing account state" error
+                        // which Firebase returns as a raw message rather than an enum.
+                        if (ex.Message.Contains("conflict", StringComparison.OrdinalIgnoreCase) ||
+                            ex.Message.Contains("existing account state", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return "A previous session is still active. Please try again.";
+                        }
                         return "Authentication failed. Please check your credentials.";
                 }
             }
