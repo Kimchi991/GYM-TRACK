@@ -13,6 +13,7 @@ namespace GymTrackPro.Mobile.ViewModels;
 [QueryProperty(nameof(Member), "Member")]
 public partial class MemberDetailsViewModel : BaseViewModel
 {
+    private const string MemberAppInvitePurpose = "Member mobile app access";
     private readonly IApiService _apiService;
 
     [ObservableProperty]
@@ -20,6 +21,9 @@ public partial class MemberDetailsViewModel : BaseViewModel
 
     [ObservableProperty]
     public partial SubscriptionResponseDto? ActiveSubscription { get; set; }
+
+    [ObservableProperty]
+    public partial AppInviteResponseDto? InviteStatus { get; set; }
 
     [ObservableProperty]
     public partial string ErrorMessage { get; set; } = string.Empty;
@@ -133,10 +137,91 @@ public partial class MemberDetailsViewModel : BaseViewModel
                     PaymentLogs.Add(pay);
                 }
             }
+
+            // 4. Fetch Invite Status
+            var inviteRes = await _apiService.GetMemberInviteStatusAsync(Member.MemberID);
+            if (inviteRes.Success && inviteRes.Data != null)
+            {
+                InviteStatus = string.Equals(
+                    inviteRes.Data.Status,
+                    "NotFound",
+                    StringComparison.Ordinal)
+                    ? null
+                    : inviteRes.Data;
+            }
         }
         catch (Exception ex)
         {
             ErrorMessage = $"Error loading details: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task GenerateInviteAsync()
+    {
+        if (Member == null) return;
+
+        IsBusy = true;
+        ErrorMessage = string.Empty;
+        SuccessMessage = string.Empty;
+
+        try
+        {
+            var res = await _apiService.GenerateMemberInviteAsync(
+                Member.MemberID,
+                new CreateAppInviteDto { Purpose = MemberAppInvitePurpose });
+            if (res.Success && res.Data != null)
+            {
+                SuccessMessage = $"Invite Code: {res.Data.InviteCode}";
+                await LoadMemberDetailsDataAsync(); // Refresh invite status
+            }
+            else
+            {
+                ErrorMessage = res.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to generate invite: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task RevokeInviteAsync()
+    {
+        if (Member == null) return;
+
+        bool confirm = await Shell.Current.DisplayAlert("Revoke Invite", "Are you sure you want to revoke this invite?", "Yes", "No");
+        if (!confirm) return;
+
+        IsBusy = true;
+        ErrorMessage = string.Empty;
+        SuccessMessage = string.Empty;
+
+        try
+        {
+            var res = await _apiService.RevokeMemberInviteAsync(Member.MemberID);
+            if (res.Success)
+            {
+                SuccessMessage = "Invite revoked successfully.";
+                await LoadMemberDetailsDataAsync(); // Refresh invite status
+            }
+            else
+            {
+                ErrorMessage = res.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to revoke invite: {ex.Message}";
         }
         finally
         {

@@ -48,6 +48,12 @@ public partial class LoginViewModel : BaseViewModel
             return;
         }
 
+        if (!System.Text.RegularExpressions.Regex.IsMatch(Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+        {
+            ErrorMessage = "Please enter a valid email address.";
+            return;
+        }
+
         IsBusy = true;
         ErrorMessage = string.Empty;
 
@@ -57,7 +63,14 @@ public partial class LoginViewModel : BaseViewModel
             var result = await _apiService.SyncUserWithBackendAsync(firebaseToken);
             if (result.Success)
             {
-                await Shell.Current.GoToAsync("///dashboard");
+                if (result.Data?.Role == GymTrackPro.Shared.Enums.UserRole.GymGoer)
+                {
+                    Application.Current.MainPage = new GoerAppShell();
+                }
+                else
+                {
+                    await Shell.Current.GoToAsync("///dashboard");
+                }
             }
             else
             {

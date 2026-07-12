@@ -33,7 +33,7 @@ public class NotificationHandler :
     {
         _logger.LogInformation("Handling MemberRegisteredEvent for Member ID {MemberId}", @event.MemberId);
         var title = "Welcome to GymTrackPro!";
-        var body = $"Hi {@event.FirstName}, welcome to our gym family! Your personal check-in QR Code is {@event.QRCode}.";
+        var body = $"Hi {@event.FirstName}, welcome to our gym family! Your digital access card is available in the app.";
         
         _queue.QueueNotification(@event.MemberId, title, body, NotificationChannel.Email);
         _queue.QueueNotification(@event.MemberId, title, body, NotificationChannel.InApp);
@@ -86,8 +86,8 @@ public class NotificationHandler :
 
     public async Task HandleAsync(PasswordResetRequestedEvent @event)
     {
-        _logger.LogInformation("Handling PasswordResetRequestedEvent for User ID {UserId}", @event.UserId);
-        _logger.LogInformation("Sending password reset instructions to {Email}. Token: {ResetToken}", @event.Email, @event.ResetToken);
+        // Retired compatibility handler. Firebase owns password-reset delivery; this path
+        // intentionally performs no delivery and never observes or logs the legacy token.
         await Task.CompletedTask;
     }
 

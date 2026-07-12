@@ -10,6 +10,8 @@ public interface IApiService
 {
     // Authentication
     Task<ApiResponse<UserResponseDto>> SyncUserWithBackendAsync(string firebaseToken);
+    Task<ApiResponse<UserResponseDto>> ActivateInviteAsync(ActivateInviteDto dto);
+    Task<ApiResponse<UserResponseDto>> GetCurrentUserAsync();
     void SetAuthToken(string token);
     string? GetAuthToken();
     void ClearAuthToken();
@@ -25,10 +27,25 @@ public interface IApiService
     Task<ApiResponse<MemberResponseDto>> UpdateMemberAsync(int id, UpdateMemberDto memberDto);
     Task<ApiResponse> DeleteMemberAsync(int id);
 
+    // Invites
+    Task<ApiResponse<AppInviteCodeResponseDto>> GenerateMemberInviteAsync(
+        int memberId,
+        CreateAppInviteDto request);
+    Task<ApiResponse<AppInviteResponseDto>> GetMemberInviteStatusAsync(int memberId);
+    Task<ApiResponse> RevokeMemberInviteAsync(int memberId);
+
     // Attendance
     Task<ApiResponse<AttendanceDto>> CheckInAsync(string qrCode);
     Task<ApiResponse> CheckOutAsync(int attendanceId);
     Task<ApiResponse<IEnumerable<AttendanceDto>>> GetAttendanceByMemberIdAsync(int memberId);
+
+    // Gym Goer Self-Service
+    Task<ApiResponse<GoerDashboardDto>> GetGoerDashboardAsync();
+    Task<ApiResponse<GoerDigitalCardDto>> GetGoerDigitalCardAsync();
+    Task<ApiResponse<AttendanceDto>> GetGoerCurrentAttendanceAsync();
+    Task<ApiResponse<PagedResultDto<AttendanceDto>>> GetGoerAttendanceHistoryAsync(DateTime? from, DateTime? to, int page = 1, int pageSize = 10);
+    Task<ApiResponse<AttendanceDto>> GoerCheckOutAsync(Guid operationId);
+    Task<ApiResponse<GoerProgressDto>> GetGoerProgressAsync(string month);
 
     // Payments
     Task<ApiResponse<PaymentResponseDto>> ProcessPaymentAsync(CreatePaymentDto paymentDto);
@@ -68,4 +85,8 @@ public interface IApiService
     Task<byte[]> ExportMembershipSalesCsvAsync(DateTime startDate, DateTime endDate);
     Task<byte[]> ExportRefundsCsvAsync(DateTime startDate, DateTime endDate);
     Task<byte[]> ExportExpiringMembershipsCsvAsync(int nextDays = 7);
+
+    // Owner Analytics
+    Task<ApiResponse<OwnerAttendanceSummaryDto>> GetOwnerAttendanceSummaryAsync(DateTime? from, DateTime? to, string bucket = "day");
+    Task<byte[]> ExportOwnerAttendanceSummaryCsvAsync(DateTime? from, DateTime? to, string bucket = "day");
 }

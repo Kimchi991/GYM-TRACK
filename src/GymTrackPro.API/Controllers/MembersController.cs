@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GymTrackPro.Shared.DTOs;
 using GymTrackPro.Shared.Interfaces;
+using GymTrackPro.API.Services;
+using GymTrackPro.API.Authorization;
 
 namespace GymTrackPro.API.Controllers;
 
@@ -12,14 +14,18 @@ namespace GymTrackPro.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
-[Authorize]
+[Authorize(Policy = Policies.BackOffice)]
 public class MembersController : ControllerBase
 {
     private readonly IMemberService _memberService;
+    private readonly IAuthenticationService _authService;
+    private readonly ICurrentUserContext _currentUser;
 
-    public MembersController(IMemberService memberService)
+    public MembersController(IMemberService memberService, IAuthenticationService authService, ICurrentUserContext currentUser)
     {
         _memberService = memberService;
+        _authService = authService;
+        _currentUser = currentUser;
     }
 
     /// <summary>
@@ -57,16 +63,16 @@ public class MembersController : ControllerBase
     /// <summary>
     /// Retrieves a specific member profile by their unique QR check-in code.
     /// </summary>
-    /// <param name="qrCode">The QR code assigned to the member.</param>
+    /// <param name="request">Body containing the QR code assigned to the member.</param>
     /// <returns>A standardized API response containing the member's profile.</returns>
     /// <response code="200">If the member is found.</response>
     /// <response code="404">If no member matches the QR code.</response>
-    [HttpGet("qr/{qrCode}")]
+    [HttpPost("qr/lookup")]
     [ProducesResponseType(typeof(ApiResponse<MemberResponseDto>), 200)]
     [ProducesResponseType(typeof(ApiResponse), 404)]
-    public async Task<IActionResult> GetByQRCode(string qrCode)
+    public async Task<IActionResult> GetByQRCode([FromBody] QrCodeLookupRequestDto request)
     {
-        var member = await _memberService.GetByQRCodeAsync(qrCode);
+        var member = await _memberService.GetByQRCodeAsync(request.QrCode);
         if (member == null)
         {
             return NotFound(ApiResponse.FailureResponse("Member not found for the provided QR code."));
@@ -131,7 +137,7 @@ public class MembersController : ControllerBase
     /// <response code="200">If the member was soft-deleted successfully.</response>
     /// <response code="404">If the member does not exist.</response>
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Administrator")]
+    [Authorize(Policy = Policies.OwnerOnly)]
     [ProducesResponseType(typeof(ApiResponse), 200)]
     [ProducesResponseType(typeof(ApiResponse), 404)]
     public async Task<IActionResult> Delete(int id)
@@ -143,4 +149,35 @@ public class MembersController : ControllerBase
         }
         return Ok(ApiResponse.SuccessResponse("Member deleted successfully."));
     }
+
+    [HttpPost("{id:int}/app-invite")]
+    [Authorize(Policy = Policies.BackOffice)]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    [ProducesResponseType(typeof(ApiResponse<AppInviteCodeResponseDto>), 200)]
+    public async Task<IActionResult> CreateMemberInvite(int id, [FromBody] CreateAppInviteDto dto)
+    {
+        var response = await _authService.CreateMemberInviteAsync(id, GetRequiredActorUserId(), dto);
+        return Ok(ApiResponse<AppInviteCodeResponseDto>.SuccessResponse(response, "Member invite created."));
+    }
+
+    [HttpGet("{id:int}/app-invite/status")]
+    [Authorize(Policy = Policies.BackOffice)]
+    [ProducesResponseType(typeof(ApiResponse<AppInviteResponseDto>), 200)]
+    public async Task<IActionResult> GetMemberInviteStatus(int id)
+    {
+        var response = await _authService.GetMemberInviteStatusAsync(id);
+        return Ok(ApiResponse<AppInviteResponseDto>.SuccessResponse(response, "Member invite status retrieved."));
+    }
+
+    [HttpDelete("{id:int}/app-invite")]
+    [Authorize(Policy = Policies.BackOffice)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+    public async Task<IActionResult> RevokeMemberInvite(int id)
+    {
+        await _authService.RevokeMemberInviteAsync(id, GetRequiredActorUserId());
+        return Ok(ApiResponse<object>.SuccessResponse(new object(), "Member invite revoked."));
+    }
+
+    private int GetRequiredActorUserId() => _currentUser.UserId
+        ?? throw new UnauthorizedAccessException("An internally resolved SQL user is required.");
 }

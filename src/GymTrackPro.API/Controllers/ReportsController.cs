@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Globalization;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GymTrackPro.Shared.DTOs;
 using GymTrackPro.Shared.Interfaces;
+using GymTrackPro.API.Authorization;
 
 namespace GymTrackPro.API.Controllers;
 
@@ -15,7 +17,7 @@ namespace GymTrackPro.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
-[Authorize(Roles = "Administrator")]
+[Authorize(Policy = Policies.OwnerOnly)]
 public class ReportsController : ControllerBase
 {
     private readonly IReportsService _reportsService;
@@ -42,7 +44,12 @@ public class ReportsController : ControllerBase
         csv.AppendLine("Date,TransactionCount,GrossAmount,TotalDiscount,NetAmount");
         foreach (var d in data)
         {
-            csv.AppendLine($"{d.Date:yyyy-MM-dd},{d.TransactionCount},{d.GrossAmount:F2},{d.TotalDiscount:F2},{d.NetAmount:F2}");
+            AppendCsvRow(csv,
+                d.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                d.TransactionCount,
+                d.GrossAmount.ToString("F2", CultureInfo.InvariantCulture),
+                d.TotalDiscount.ToString("F2", CultureInfo.InvariantCulture),
+                d.NetAmount.ToString("F2", CultureInfo.InvariantCulture));
         }
         return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"daily_revenue_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.csv");
     }
@@ -64,7 +71,12 @@ public class ReportsController : ControllerBase
         csv.AppendLine("Month,TransactionCount,GrossAmount,TotalDiscount,NetAmount");
         foreach (var m in data)
         {
-            csv.AppendLine($"{m.Month},{m.TransactionCount},{m.GrossAmount:F2},{m.TotalDiscount:F2},{m.NetAmount:F2}");
+            AppendCsvRow(csv,
+                m.Month,
+                m.TransactionCount,
+                m.GrossAmount.ToString("F2", CultureInfo.InvariantCulture),
+                m.TotalDiscount.ToString("F2", CultureInfo.InvariantCulture),
+                m.NetAmount.ToString("F2", CultureInfo.InvariantCulture));
         }
         return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"monthly_revenue_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.csv");
     }
@@ -83,10 +95,15 @@ public class ReportsController : ControllerBase
     {
         var data = await _reportsService.GetAttendanceReportAsync(startDate, endDate);
         var csv = new StringBuilder();
-        csv.AppendLine("AttendanceID,MemberName,PlanName,CheckInTime,CheckOutTime");
+        csv.AppendLine("AttendanceID,MemberName,PlanName,CheckInTimeUtc,CheckOutTimeUtc");
         foreach (var a in data)
         {
-            csv.AppendLine($"{a.AttendanceID},\"{a.MemberName}\",\"{a.PlanName}\",{a.CheckInTime:yyyy-MM-dd HH:mm:ss},{a.CheckOutTime?.ToString("yyyy-MM-dd HH:mm:ss")}");
+            AppendCsvRow(csv,
+                a.AttendanceID,
+                a.MemberName,
+                a.PlanName,
+                FormatUtcInstant(a.CheckInTime),
+                a.CheckOutTime.HasValue ? FormatUtcInstant(a.CheckOutTime.Value) : null);
         }
         return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"attendance_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.csv");
     }
@@ -105,10 +122,17 @@ public class ReportsController : ControllerBase
     {
         var data = await _reportsService.GetMembershipSalesReportAsync(startDate, endDate);
         var csv = new StringBuilder();
-        csv.AppendLine("MemberName,PlanName,Amount,Discount,FinalAmount,DatePaid,PaymentMethod");
+        csv.AppendLine("MemberName,PlanName,Amount,Discount,FinalAmount,DatePaidUtc,PaymentMethod");
         foreach (var s in data)
         {
-            csv.AppendLine($"\"{s.MemberName}\",\"{s.PlanName}\",{s.Amount:F2},{s.Discount:F2},{s.FinalAmount:F2},{s.DatePaid:yyyy-MM-dd HH:mm:ss},{s.PaymentMethod}");
+            AppendCsvRow(csv,
+                s.MemberName,
+                s.PlanName,
+                s.Amount.ToString("F2", CultureInfo.InvariantCulture),
+                s.Discount.ToString("F2", CultureInfo.InvariantCulture),
+                s.FinalAmount.ToString("F2", CultureInfo.InvariantCulture),
+                FormatUtcInstant(s.DatePaid),
+                s.PaymentMethod);
         }
         return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"membership_sales_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.csv");
     }
@@ -130,7 +154,12 @@ public class ReportsController : ControllerBase
         csv.AppendLine("MemberName,PlanName,StartDate,EndDate,Status");
         foreach (var e in data)
         {
-            csv.AppendLine($"\"{e.MemberName}\",\"{e.PlanName}\",{e.StartDate:yyyy-MM-dd},{e.EndDate:yyyy-MM-dd},{e.Status}");
+            AppendCsvRow(csv,
+                e.MemberName,
+                e.PlanName,
+                e.StartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                e.EndDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                e.Status);
         }
         return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"expiring_memberships_next_{nextDays}_days.csv");
     }
@@ -149,10 +178,15 @@ public class ReportsController : ControllerBase
     {
         var data = await _reportsService.GetRefundReportAsync(startDate, endDate);
         var csv = new StringBuilder();
-        csv.AppendLine("PaymentID,MemberName,ReceiptNumber,RefundedAmount,DateRefunded");
+        csv.AppendLine("PaymentID,MemberName,ReceiptNumber,RefundedAmount,DateRefundedUtc");
         foreach (var r in data)
         {
-            csv.AppendLine($"{r.PaymentID},\"{r.MemberName}\",{r.ReceiptNumber},{r.Amount:F2},{r.DateRefunded:yyyy-MM-dd HH:mm:ss}");
+            AppendCsvRow(csv,
+                r.PaymentID,
+                r.MemberName,
+                r.ReceiptNumber,
+                r.Amount.ToString("F2", CultureInfo.InvariantCulture),
+                FormatUtcInstant(r.DateRefunded));
         }
         return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"refunds_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.csv");
     }
@@ -171,11 +205,88 @@ public class ReportsController : ControllerBase
     {
         var data = await _reportsService.GetCashierActivityReportAsync(startDate, endDate);
         var csv = new StringBuilder();
-        csv.AppendLine("Username,Action,Details,Timestamp,IpAddress");
+        csv.AppendLine("Username,Action,Details,TimestampUtc,IpAddress");
         foreach (var c in data)
         {
-            csv.AppendLine($"\"{c.Username}\",\"{c.Action}\",\"{c.Details.Replace("\"", "\"\"")}\",{c.Timestamp:yyyy-MM-dd HH:mm:ss},{c.IpAddress}");
+            AppendCsvRow(csv,
+                c.Username,
+                c.Action,
+                c.Details,
+                FormatUtcInstant(c.Timestamp),
+                c.IpAddress);
         }
         return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"cashier_activity_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.csv");
+    }
+    // --- 8. Attendance Summary (Graph) ---
+    [HttpGet("attendance/summary")]
+    [ProducesResponseType(typeof(ApiResponse<OwnerAttendanceSummaryDto>), 200)]
+    public async Task<IActionResult> GetAttendanceSummary(
+        [FromQuery(Name = "from")] DateOnly? from,
+        [FromQuery(Name = "to")] DateOnly? to,
+        [FromQuery(Name = "bucket")] string bucket = "day")
+    {
+        var data = await _reportsService.GetAttendanceSummaryAsync(from, to, bucket);
+        return Ok(ApiResponse<OwnerAttendanceSummaryDto>.SuccessResponse(data));
+    }
+
+    [HttpGet("attendance/summary/export")]
+    public async Task<IActionResult> ExportAttendanceSummary(
+        [FromQuery(Name = "from")] DateOnly? from,
+        [FromQuery(Name = "to")] DateOnly? to,
+        [FromQuery(Name = "bucket")] string bucket = "day")
+    {
+        var data = await _reportsService.GetAttendanceSummaryAsync(from, to, bucket);
+        var csv = new StringBuilder();
+        csv.AppendLine("GymDate,Label,VisitCount");
+        foreach (var point in data.Points)
+        {
+            AppendCsvRow(
+                csv,
+                point.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                point.Label,
+                point.VisitCount);
+        }
+
+        return File(
+            Encoding.UTF8.GetBytes(csv.ToString()),
+            "text/csv",
+            $"attendance_summary_{data.FromGymDate:yyyyMMdd}_{data.EndExclusiveGymDate:yyyyMMdd}.csv");
+    }
+
+    private static string FormatUtcInstant(DateTime value)
+    {
+        var utc = value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Unspecified => DateTime.SpecifyKind(value, DateTimeKind.Utc),
+            _ => throw new InvalidOperationException("A persisted UTC timestamp had an invalid DateTime kind.")
+        };
+        return utc.ToString("O", CultureInfo.InvariantCulture);
+    }
+
+    private static void AppendCsvRow(StringBuilder builder, params object?[] cells)
+    {
+        builder.AppendLine(string.Join(',', cells.Select(CsvCellEncoder.Encode)));
+    }
+}
+
+public static class CsvCellEncoder
+{
+    public static string Encode(object? value)
+    {
+        var text = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
+        var firstContentIndex = 0;
+        while (firstContentIndex < text.Length && char.IsWhiteSpace(text[firstContentIndex]))
+        {
+            firstContentIndex++;
+        }
+
+        if (firstContentIndex < text.Length
+            && text[firstContentIndex] is '=' or '+' or '-' or '@')
+        {
+            text = "'" + text;
+        }
+
+        return $"\"{text.Replace("\"", "\"\"")}\"";
     }
 }

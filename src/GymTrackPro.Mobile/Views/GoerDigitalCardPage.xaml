@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:zxing="clr-namespace:ZXing.Net.Maui.Controls;assembly=ZXing.Net.MAUI.Controls"
+             xmlns:viewmodels="clr-namespace:GymTrackPro.Mobile.ViewModels"
+             x:Class="GymTrackPro.Mobile.Views.GoerDigitalCardPage"
+             Title="{Binding Title}"
+             BackgroundColor="#0F172A">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20" HorizontalOptions="Center">
+            
+            <Frame BackgroundColor="#1E293B" CornerRadius="16" Padding="30" HasShadow="True" BorderColor="Transparent" WidthRequest="300">
+                <VerticalStackLayout Spacing="15" HorizontalOptions="Center">
+                    <Label Text="Access Card" 
+                           FontSize="22" 
+                           FontAttributes="Bold" 
+                           TextColor="#F8FAFC"
+                           HorizontalOptions="Center" />
+
+                    <zxing:BarcodeGeneratorView 
+                        Value="{Binding CardData.QrCodeValue}"
+                        Format="QrCode"
+                        HeightRequest="200"
+                        WidthRequest="200"
+                        HorizontalOptions="Center"
+                        BackgroundColor="White" />
+
+                    <Label Text="{Binding CardData.MemberId, StringFormat='Member ID: {0}'}" 
+                           FontSize="16" 
+                           TextColor="#94A3B8"
+                           HorizontalOptions="Center" />
+                           
+                    <Label Text="{Binding CardData.MembershipStatus, TargetNullValue='Checking...'}" 
+                           FontSize="18" 
+                           FontAttributes="Bold" 
+                           TextColor="#10B981"
+                           HorizontalOptions="Center" />
+                           
+                    <Label Text="{Binding CardData.ExpiryDate, StringFormat='Expires: {0:MMM dd, yyyy}'}" 
+                           FontSize="14" 
+                           TextColor="#94A3B8"
+                           HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Button Text="Refresh" Command="{Binding LoadDataCommand}" BackgroundColor="#3B82F6" TextColor="White" CornerRadius="8" WidthRequest="200" HorizontalOptions="Center" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using GymTrackPro.API.Data;
 using GymTrackPro.Shared.DTOs;
@@ -12,89 +8,151 @@ namespace GymTrackPro.API.Services;
 
 public class DashboardService : IDashboardService
 {
+    private const int DefaultStaleSessionHours = 16;
     private readonly GymDbContext _context;
+    private readonly ITimezoneService _timezoneService;
+    private readonly IClockService _clock;
+    private readonly ISystemSettingService _settingService;
 
-    public DashboardService(GymDbContext context)
+    public DashboardService(
+        GymDbContext context,
+        ITimezoneService timezoneService,
+        IClockService clock,
+        ISystemSettingService settingService)
     {
         _context = context;
+        _timezoneService = timezoneService;
+        _clock = clock;
+        _settingService = settingService;
     }
 
     public async Task<DashboardMetricsDto> GetDashboardMetricsAsync()
     {
-        var now = DateTime.UtcNow;
-        var todayStart = now.Date;
-        var startOfMonth = new DateTime(now.Year, now.Month, 1);
-        var sevenDaysAgo = now.AddDays(-7);
-        var sevenDaysFuture = now.AddDays(7);
+        var nowUtc = _clock.UtcNow;
+        if (nowUtc.Kind != DateTimeKind.Utc)
+        {
+            throw new InvalidOperationException("The application clock must return UTC values.");
+        }
 
-        // 1. Members currently checked in
-        int checkedInCount = await _context.AttendanceLogs
-            .CountAsync(a => a.CheckOutTime == null);
+        var gymDate = await _timezoneService.GetGymDateAsync(nowUtc);
+        var dayRange = await _timezoneService.GetUtcRangeForGymDateAsync(gymDate);
+        var monthStart = new DateOnly(gymDate.Year, gymDate.Month, 1);
+        var monthRange = await _timezoneService.GetUtcRangeForGymDateRangeAsync(
+            monthStart,
+            monthStart.AddMonths(1));
+        var timeZone = await _timezoneService.GetGymTimeZoneAsync();
+        var staleSessionHours = await GetStaleSessionHoursAsync();
+        var staleCutoffUtc = nowUtc.AddHours(-staleSessionHours);
+        var sevenDaysAgoUtc = nowUtc.AddDays(-7);
+        var gymDayStart = GymMembershipPolicy.ToStorageDate(gymDate);
+        var gymDayEndExclusive = GymMembershipPolicy.ToStorageDate(gymDate.AddDays(1));
+        var expiryEndExclusive = gymDate.AddDays(7);
 
-        // 2. Active memberships
-        int activeMembershipsCount = await _context.Subscriptions
-            .CountAsync(s => s.Status == "Active");
-
-        // 3. Revenue today
-        decimal revenueToday = await _context.Payments
-            .Where(p => !p.IsDeleted && p.PaymentStatus == PaymentStatus.Paid && p.DatePaid >= todayStart)
-            .SumAsync(p => (decimal?)p.FinalAmount) ?? 0.00m;
-
-        // 4. Revenue this month
-        decimal revenueThisMonth = await _context.Payments
-            .Where(p => !p.IsDeleted && p.PaymentStatus == PaymentStatus.Paid && p.DatePaid >= startOfMonth)
-            .SumAsync(p => (decimal?)p.FinalAmount) ?? 0.00m;
-
-        // 5. Expiring memberships (Active, expiring in next 7 days)
-        int expiringCount = await _context.Subscriptions
-            .CountAsync(s => s.Status == "Active" && s.EndDate >= now && s.EndDate <= sevenDaysFuture);
-
-        // 6. New member registrations (last 7 days)
-        int newRegistrationsCount = await _context.Members
-            .CountAsync(m => !m.IsDeleted && m.DateRegistered >= sevenDaysAgo);
-
-        // 7. Check-ins by hour (for today)
-        var checkinsToday = await _context.AttendanceLogs
-            .Where(a => a.CheckInTime >= todayStart)
+        var openSessions = await _context.AttendanceLogs
+            .AsNoTracking()
+            .CountAsync(attendance => !attendance.IsVoided && attendance.CheckOutTime == null);
+        var staleOpenSessions = await _context.AttendanceLogs
+            .AsNoTracking()
+            .CountAsync(attendance => !attendance.IsVoided
+                && attendance.CheckOutTime == null
+                && attendance.CheckInTime < staleCutoffUtc);
+        var visitsToday = await _context.AttendanceLogs
+            .AsNoTracking()
+            .CountAsync(attendance => !attendance.IsVoided && attendance.AttendanceDate == gymDate);
+        var effectiveActiveMemberships = _context.Subscriptions
+            .AsNoTracking()
+            .Where(subscription => subscription.Status == GymMembershipPolicy.Active
+                && subscription.StartDate < gymDayEndExclusive
+                && subscription.EndDate >= gymDayStart
+                && subscription.Member != null
+                && !subscription.Member.IsDeleted
+                && subscription.Member.Status == GymMembershipPolicy.MemberActive
+                && !_context.MembershipPauses.Any(pause =>
+                    pause.SubscriptionID == subscription.SubscriptionID
+                    && pause.PauseEndDate == null));
+        var activeMemberships = await effectiveActiveMemberships
+            .Select(subscription => subscription.MemberID)
+            .Distinct()
+            .CountAsync();
+        var revenueToday = await _context.Payments
+            .AsNoTracking()
+            .Where(payment => !payment.IsDeleted
+                && payment.PaymentStatus == PaymentStatus.Paid
+                && payment.DatePaid >= dayRange.StartUtc
+                && payment.DatePaid < dayRange.EndExclusiveUtc)
+            .SumAsync(payment => (decimal?)payment.FinalAmount);
+        var revenueThisMonth = await _context.Payments
+            .AsNoTracking()
+            .Where(payment => !payment.IsDeleted
+                && payment.PaymentStatus == PaymentStatus.Paid
+                && payment.DatePaid >= monthRange.StartUtc
+                && payment.DatePaid < monthRange.EndExclusiveUtc)
+            .SumAsync(payment => (decimal?)payment.FinalAmount);
+        var selectedExpiryDates = await effectiveActiveMemberships
+            .GroupBy(subscription => subscription.MemberID)
+            .Select(group => group.Max(subscription => subscription.EndDate))
+            .ToListAsync();
+        var expiringMemberships = selectedExpiryDates.Count(endDate =>
+        {
+            var expiryDate = GymMembershipPolicy.ToCalendarDate(endDate);
+            return expiryDate >= gymDate && expiryDate < expiryEndExclusive;
+        });
+        var newRegistrations = await _context.Members
+            .AsNoTracking()
+            .CountAsync(member => !member.IsDeleted && member.DateRegistered >= sevenDaysAgoUtc);
+        var checkInTimes = await _context.AttendanceLogs
+            .AsNoTracking()
+            .Where(attendance => !attendance.IsVoided
+                && attendance.CheckInTime >= dayRange.StartUtc
+                && attendance.CheckInTime < dayRange.EndExclusiveUtc)
+            .Select(attendance => attendance.CheckInTime)
+            .ToListAsync();
+        var revenueByPlan = await _context.Payments
+            .AsNoTracking()
+            .Where(payment => !payment.IsDeleted && payment.PaymentStatus == PaymentStatus.Paid)
+            .GroupBy(payment => payment.Subscription != null && payment.Subscription.Plan != null
+                ? payment.Subscription.Plan.PlanName
+                : "Unknown Plan")
+            .Select(group => new PlanRevenueDto
+            {
+                PlanName = group.Key,
+                Revenue = group.Sum(payment => payment.FinalAmount)
+            })
+            .OrderByDescending(item => item.Revenue)
             .ToListAsync();
 
-        var hourlyCheckins = checkinsToday
-            .GroupBy(a => a.CheckInTime.Hour)
-            .Select(g => new HourlyCheckInDto
+        var countsByHour = checkInTimes
+            .GroupBy(checkInUtc => TimeZoneInfo.ConvertTimeFromUtc(checkInUtc, timeZone).Hour)
+            .ToDictionary(group => group.Key, group => group.Count());
+        var hourlyCheckIns = Enumerable.Range(0, 24)
+            .Select(hour => new HourlyCheckInDto
             {
-                Hour = g.Key,
-                Count = g.Count()
+                Hour = hour,
+                Count = countsByHour.GetValueOrDefault(hour)
             })
-            .OrderBy(h => h.Hour)
-            .ToList();
-
-        // 8. Revenue by plan
-        var revenueByPlanRaw = await _context.Payments
-            .Include(p => p.Subscription)
-            .ThenInclude(s => s.Plan)
-            .Where(p => !p.IsDeleted && p.PaymentStatus == PaymentStatus.Paid)
-            .ToListAsync();
-
-        var revenueByPlanList = revenueByPlanRaw
-            .GroupBy(p => p.Subscription?.Plan?.PlanName ?? "Unknown Plan")
-            .Select(g => new PlanRevenueDto
-            {
-                PlanName = g.Key,
-                Revenue = g.Sum(p => p.FinalAmount)
-            })
-            .OrderByDescending(r => r.Revenue)
             .ToList();
 
         return new DashboardMetricsDto
         {
-            MembersCheckedInCount = checkedInCount,
-            ActiveMembershipsCount = activeMembershipsCount,
-            RevenueToday = revenueToday,
-            RevenueThisMonth = revenueThisMonth,
-            ExpiringMembershipsCount = expiringCount,
-            NewRegistrationsCount = newRegistrationsCount,
-            CheckInsByHour = hourlyCheckins,
-            RevenueByPlan = revenueByPlanList
+            MembersCheckedInCount = openSessions,
+            MembersCheckedInLabel = "Open sessions",
+            VisitsTodayCount = visitsToday,
+            StaleOpenSessionCount = staleOpenSessions,
+            StaleSessionThresholdHours = staleSessionHours,
+            ActiveMembershipsCount = activeMemberships,
+            RevenueToday = revenueToday ?? 0m,
+            RevenueThisMonth = revenueThisMonth ?? 0m,
+            ExpiringMembershipsCount = expiringMemberships,
+            NewRegistrationsCount = newRegistrations,
+            CheckInsByHour = hourlyCheckIns,
+            RevenueByPlan = revenueByPlan
         };
+    }
+
+    private async Task<int> GetStaleSessionHoursAsync()
+    {
+        return await _settingService.GetValueIntAsync(
+            SystemSettingService.StaleSessionHoursKey,
+            DefaultStaleSessionHours);
     }
 }

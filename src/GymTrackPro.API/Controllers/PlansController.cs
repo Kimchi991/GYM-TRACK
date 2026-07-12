@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using GymTrackPro.API.Authorization;
 using GymTrackPro.Shared.DTOs;
 using GymTrackPro.Shared.Interfaces;
 
@@ -12,7 +13,7 @@ namespace GymTrackPro.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
-[Authorize]
+[Authorize(Policy = Policies.BackOffice)]
 public class PlansController : ControllerBase
 {
     private readonly IMembershipPlanService _planService;
@@ -61,7 +62,7 @@ public class PlansController : ControllerBase
     /// <returns>A standardized API response containing the created plan details.</returns>
     /// <response code="201">If the plan was created successfully.</response>
     [HttpPost]
-    [Authorize(Roles = "Administrator")]
+    [Authorize(Policy = Policies.OwnerOnly)]
     [ProducesResponseType(typeof(ApiResponse<MembershipPlanResponseDto>), 201)]
     public async Task<IActionResult> Create([FromBody] CreateMembershipPlanDto createDto)
     {
@@ -77,7 +78,7 @@ public class PlansController : ControllerBase
     /// <returns>A standardized API response containing the updated plan details.</returns>
     /// <response code="200">If the plan was successfully updated.</response>
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Administrator")]
+    [Authorize(Policy = Policies.OwnerOnly)]
     [ProducesResponseType(typeof(ApiResponse<MembershipPlanResponseDto>), 200)]
     public async Task<IActionResult> Update(int id, [FromBody] CreateMembershipPlanDto updateDto)
     {
@@ -92,7 +93,7 @@ public class PlansController : ControllerBase
     /// <returns>A standardized API response confirming the deletion.</returns>
     /// <response code="200">If the plan was successfully deleted.</response>
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Administrator")]
+    [Authorize(Policy = Policies.OwnerOnly)]
     [ProducesResponseType(typeof(ApiResponse), 200)]
     public async Task<IActionResult> Delete(int id)
     {

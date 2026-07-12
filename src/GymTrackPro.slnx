@@ -1,5 +1,10 @@
 <Solution>
   <Project Path="GymTrackPro.API/GymTrackPro.API.csproj" />
   <Project Path="GymTrackPro.Mobile/GymTrackPro.Mobile.csproj" />
+  <Project Path="GymTrackPro.Mobile.Tests/GymTrackPro.Mobile.Tests.csproj" />
   <Project Path="GymTrackPro.Shared/GymTrackPro.Shared.csproj" />
+  <Project Path="GymTrackPro.Tests/GymTrackPro.Tests.csproj" />
+  <Project Path="../tools/GymTrackPro.Bootstrap/GymTrackPro.Bootstrap.csproj" />
+  <Project Path="../tools/GymTrackPro.NormalizedEmailBackfill/GymTrackPro.NormalizedEmailBackfill.csproj" />
+  <Project Path="../tools/GymTrackPro.Preflight/GymTrackPro.Preflight.csproj" />
 </Solution>

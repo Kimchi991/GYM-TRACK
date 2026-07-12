@@ -1,11 +1,11 @@
-using System.Linq;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using GymTrackPro.Shared.DTOs;
 using GymTrackPro.Shared.Interfaces;
+using GymTrackPro.API.Authorization;
+using GymTrackPro.API.Authentication;
 
 namespace GymTrackPro.API.Controllers;
 
@@ -21,20 +21,36 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("sync-user")]
-    [Authorize]
+    [Authorize(Policy = Policies.FirebaseOnboarding)]
     [EnableRateLimiting("Auth")]
     [ProducesResponseType(typeof(ApiResponse<UserResponseDto>), 200)]
     public async Task<IActionResult> SyncUser()
     {
-        var uidClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier || c.Type == "user_id");
-        var emailClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email || c.Type == "email");
-
-        if (uidClaim == null || emailClaim == null)
+        if (!FirebaseClaimTypes.TryGetVerifiedIdentity(User, out var uid, out var email))
         {
-            return Unauthorized(ApiResponse.FailureResponse("Invalid Firebase token: Missing UID or Email."));
+            return Unauthorized(ApiResponse.FailureResponse(
+                "A valid Firebase identity is required.",
+                "FIREBASE_IDENTITY_INVALID"));
         }
 
-        var response = await _authService.SyncUserAsync(uidClaim.Value, emailClaim.Value);
+        var response = await _authService.SyncUserAsync(uid, email);
         return Ok(ApiResponse<UserResponseDto>.SuccessResponse(response, "User synchronized successfully."));
+    }
+
+    [HttpPost("activate")]
+    [Authorize(Policy = Policies.FirebaseOnboarding)]
+    [EnableRateLimiting("Activation")]
+    [ProducesResponseType(typeof(ApiResponse<UserResponseDto>), 200)]
+    public async Task<IActionResult> ActivateApp([FromBody] ActivateInviteDto request)
+    {
+        if (!FirebaseClaimTypes.TryGetVerifiedIdentity(User, out var uid, out var email))
+        {
+            return Unauthorized(ApiResponse.FailureResponse(
+                "A valid Firebase identity is required.",
+                "FIREBASE_IDENTITY_INVALID"));
+        }
+
+        var response = await _authService.ActivateAppAsync(uid, email, request);
+        return Ok(ApiResponse<UserResponseDto>.SuccessResponse(response, "App activated successfully."));
     }
 }

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using GymTrackPro.API.Authorization;
 using GymTrackPro.API.Data;
 using GymTrackPro.Shared.Entities;
 using GymTrackPro.Shared.Enums;
@@ -12,7 +13,7 @@ namespace GymTrackPro.API.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
-[Authorize]
+[Authorize(Policy = Policies.BackOffice)]
 public class NotificationsController : ControllerBase
 {
     private readonly GymDbContext _context;

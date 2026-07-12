@@ -1,0 +1,70 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin\**;obj\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FirebaseAuthentication.net" Version="4.1.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="sqlite-net-pcl" Version="1.11.284-beta" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GymTrackPro.Shared\GymTrackPro.Shared.csproj" />
+  </ItemGroup>
+
+  <!-- Link the platform-neutral production foundations directly. Referencing the
+       multi-target MAUI executable from a net10.0 test host is not supported. -->
+  <ItemGroup>
+    <Compile Include="..\GymTrackPro.Mobile\Services\ApiEndpointConfiguration.cs" Link="Production\ApiEndpointConfiguration.cs" />
+    <Compile Include="..\GymTrackPro.Mobile\Services\ApiService.cs" Link="Production\ApiService.cs" />
+    <Compile Include="..\GymTrackPro.Mobile\Services\AuthenticatedHttpClientHandler.cs" Link="Production\AuthenticatedHttpClientHandler.cs" />
+    <Compile Include="..\GymTrackPro.Mobile\Services\FirebaseAuthSettings.cs" Link="Production\FirebaseAuthSettings.cs" />
+    <Compile Include="..\GymTrackPro.Mobile\Services\IAuthenticationSession.cs" Link="Production\IAuthenticationSession.cs" />
+    <Compile Include="..\GymTrackPro.Mobile\Services\IApiService.cs" Link="Production\IApiService.cs" />
+    <Compile Include="..\GymTrackPro.Mobile\Services\IFirebaseAuthService.cs" Link="Production\IFirebaseAuthService.cs" />
+    <Compile Include="..\GymTrackPro.Mobile\Services\LocalDatabaseCompatibilityException.cs" Link="Production\LocalDatabaseCompatibilityException.cs" />
+    <Compile Include="..\GymTrackPro.Mobile\Services\SecureStorageUserRepository.cs" Link="Production\SecureStorageUserRepository.cs" />
+    <Compile Include="..\GymTrackPro.Mobile\Services\SqliteDatabaseGuard.cs" Link="Production\SqliteDatabaseGuard.cs" />
+  </ItemGroup>
+
+  <!-- Platform policy files are copied as fixtures so the platform-neutral test
+       host can verify source-level invariants without referencing MAUI/Apple SDKs.
+       Packaged-resource and OS xattr behavior still require artifact/device checks. -->
+  <ItemGroup>
+    <None Include="..\GymTrackPro.Mobile\Platforms\Android\Resources\xml\backup_rules.xml"
+          Link="PolicyFixtures\Android\backup_rules.xml"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\GymTrackPro.Mobile\Platforms\Android\Resources\xml\data_extraction_rules.xml"
+          Link="PolicyFixtures\Android\data_extraction_rules.xml"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\GymTrackPro.Mobile\Platforms\iOS\AppleBackupExclusion.cs"
+          Link="PolicyFixtures\Apple\iOS\AppleBackupExclusion.cs"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\GymTrackPro.Mobile\Platforms\iOS\AppDelegate.cs"
+          Link="PolicyFixtures\Apple\iOS\AppDelegate.cs"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\GymTrackPro.Mobile\Platforms\MacCatalyst\AppleBackupExclusion.cs"
+          Link="PolicyFixtures\Apple\MacCatalyst\AppleBackupExclusion.cs"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\GymTrackPro.Mobile\Platforms\MacCatalyst\AppDelegate.cs"
+          Link="PolicyFixtures\Apple\MacCatalyst\AppDelegate.cs"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

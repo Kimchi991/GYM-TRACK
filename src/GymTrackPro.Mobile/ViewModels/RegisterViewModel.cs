@@ -38,6 +38,9 @@ public partial class RegisterViewModel : BaseViewModel
     [ObservableProperty]
     public partial string SuccessMessage { get; set; } = string.Empty;
 
+    [ObservableProperty]
+    public partial string InviteCode { get; set; } = string.Empty;
+
     public RegisterViewModel(IFirebaseAuthService firebaseAuthService, IApiService apiService)
     {
         _firebaseAuthService = firebaseAuthService;
@@ -55,6 +58,12 @@ public partial class RegisterViewModel : BaseViewModel
             string.IsNullOrWhiteSpace(FirstName) || string.IsNullOrWhiteSpace(LastName))
         {
             ErrorMessage = "All fields are required.";
+            return;
+        }
+
+        if (!System.Text.RegularExpressions.Regex.IsMatch(Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+        {
+            ErrorMessage = "Please enter a valid email address.";
             return;
         }
 
@@ -96,12 +105,24 @@ public partial class RegisterViewModel : BaseViewModel
         {
             await _firebaseAuthService.RegisterAsync(Email, Password);
 
+            if (!string.IsNullOrWhiteSpace(InviteCode))
+            {
+                var firebaseToken = await _firebaseAuthService.LoginAsync(Email, Password);
+                _apiService.SetAuthToken(firebaseToken);
+                await _apiService.ActivateInviteAsync(new GymTrackPro.Shared.DTOs.ActivateInviteDto
+                {
+                    InviteCode = InviteCode,
+                    OperationId = Guid.NewGuid()
+                });
+            }
+
             SuccessMessage = "Registration successful! Please verify your email before logging in.";
             Username = string.Empty;
             Email = string.Empty;
             Password = string.Empty;
             FirstName = string.Empty;
             LastName = string.Empty;
+            InviteCode = string.Empty;
         }
         catch (Exception ex)
         {

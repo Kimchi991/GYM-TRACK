@@ -1,14 +1,9 @@
-using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using GymTrackPro.API.Data;
+using GymTrackPro.Shared.Entities;
+using GymTrackPro.Shared.Enums;
 using GymTrackPro.Shared.Events.Membership;
 using GymTrackPro.Shared.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace GymTrackPro.API.Services;
 
@@ -18,7 +13,9 @@ public class SubscriptionExpirationWorker : BackgroundService
     private readonly ILogger<SubscriptionExpirationWorker> _logger;
     private readonly TimeSpan _checkInterval = TimeSpan.FromHours(24);
 
-    public SubscriptionExpirationWorker(IServiceProvider services, ILogger<SubscriptionExpirationWorker> logger)
+    public SubscriptionExpirationWorker(
+        IServiceProvider services,
+        ILogger<SubscriptionExpirationWorker> logger)
     {
         _services = services;
         _logger = logger;
@@ -26,83 +23,157 @@ public class SubscriptionExpirationWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Subscription Expiration Worker is starting.");
-
+        _logger.LogInformation("Subscription expiration worker is starting.");
         while (!stoppingToken.IsCancellationRequested)
         {
-            _logger.LogInformation("Subscription Expiration Worker is executing expiration check checks...");
-
             try
             {
-                using (var scope = _services.CreateScope())
-                {
-                    var settingsService = scope.ServiceProvider.GetRequiredService<ISystemSettingService>();
-                    var eventPublisher = scope.ServiceProvider.GetRequiredService<IDomainEventPublisher>();
-                    var context = scope.ServiceProvider.GetRequiredService<GymDbContext>();
-                    var auditService = scope.ServiceProvider.GetRequiredService<IAuditService>();
-
-                    var reminderDays = await settingsService.GetValueIntAsync("ReminderDaysBeforeExpiration", 3);
-                    var today = DateTime.UtcNow.Date;
-                    var reminderTargetDate = today.AddDays(reminderDays);
-
-                    // 1. Find active subscriptions that expire on reminderTargetDate to trigger reminders
-                    var expiringSubs = await context.Subscriptions
-                        .Include(s => s.Member)
-                        .Include(s => s.Plan)
-                        .Where(s => s.Status == "Active" && s.EndDate.Date == reminderTargetDate)
-                        .ToListAsync(stoppingToken);
-
-                    foreach (var sub in expiringSubs)
-                    {
-                        _logger.LogInformation("Subscription {SubId} is expiring in {Days} days on {EndDate}.", sub.SubscriptionID, reminderDays, sub.EndDate);
-                        await eventPublisher.PublishAsync(new MembershipExpiringEvent
-                        {
-                            SubscriptionId = sub.SubscriptionID,
-                            MemberId = sub.MemberID,
-                            MemberEmail = sub.Member?.Email ?? string.Empty,
-                            PlanName = sub.Plan?.PlanName ?? "Unknown Plan",
-                            EndDate = sub.EndDate
-                        });
-                    }
-
-                    // 2. Find active subscriptions that have passed their EndDate and mark them as Expired
-                    var pastSubs = await context.Subscriptions
-                        .Include(s => s.Member)
-                        .Include(s => s.Plan)
-                        .Where(s => s.Status == "Active" && s.EndDate.Date < today)
-                        .ToListAsync(stoppingToken);
-
-                    foreach (var sub in pastSubs)
-                    {
-                        _logger.LogInformation("Expiring subscription {SubId} because EndDate {EndDate} has passed today {Today}.", sub.SubscriptionID, sub.EndDate, today);
-                        sub.Status = "Expired";
-                        sub.LastModified = DateTime.UtcNow;
-
-                        // Create Audit Log
-                        await auditService.LogActivityAsync(
-                            null, 
-                            "Subscription Expired", 
-                            $"Subscription ID: {sub.SubscriptionID} for member {sub.Member?.FirstName} {sub.Member?.LastName} (ID: {sub.MemberID}) automatically expired.", 
-                            "System Background Service"
-                        );
-                    }
-
-                    if (pastSubs.Any())
-                    {
-                        await context.SaveChangesAsync(stoppingToken);
-                    }
-
-                    _logger.LogInformation("Expiration checks successfully completed. Handled {ExpiringCount} expiring reminders and {ExpiredCount} expired subscriptions.", expiringSubs.Count, pastSubs.Count);
-                }
+                await RunOnceAsync(stoppingToken);
             }
-            catch (Exception ex)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                _logger.LogError(ex, "An error occurred while running subscription expiration check.");
+                break;
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "Subscription expiration processing failed.");
             }
 
             await Task.Delay(_checkInterval, stoppingToken);
         }
 
-        _logger.LogInformation("Subscription Expiration Worker is stopping.");
+        _logger.LogInformation("Subscription expiration worker is stopping.");
     }
+
+    public async Task RunOnceAsync(CancellationToken cancellationToken = default)
+    {
+        using var scope = _services.CreateScope();
+        var settings = scope.ServiceProvider.GetRequiredService<ISystemSettingService>();
+        var publisher = scope.ServiceProvider.GetRequiredService<IDomainEventPublisher>();
+        var context = scope.ServiceProvider.GetRequiredService<GymDbContext>();
+        var clock = scope.ServiceProvider.GetRequiredService<IClockService>();
+        var timezone = scope.ServiceProvider.GetRequiredService<ITimezoneService>();
+        var nowUtc = clock.UtcNow;
+        if (nowUtc.Kind != DateTimeKind.Utc)
+        {
+            throw new InvalidOperationException("The application clock must return UTC values.");
+        }
+
+        var today = await timezone.GetGymDateAsync(nowUtc, cancellationToken);
+        var reminderDays = await settings.GetValueIntAsync(
+            "ReminderDaysBeforeExpiration",
+            3);
+        if (reminderDays is < 1 or > 366)
+        {
+            throw new InvalidOperationException("ReminderDaysBeforeExpiration is outside 1..366.");
+        }
+
+        var todayStorage = GymMembershipPolicy.ToStorageDate(today);
+        var tomorrowStorage = GymMembershipPolicy.ToStorageDate(today.AddDays(1));
+        var currentRows = await context.Subscriptions
+            .AsNoTracking()
+            .Include(subscription => subscription.Member)
+            .Include(subscription => subscription.Plan)
+            .Where(subscription => subscription.Status == GymMembershipPolicy.Active
+                && subscription.StartDate < tomorrowStorage
+                && subscription.EndDate >= todayStorage
+                && subscription.Member != null
+                && !subscription.Member.IsDeleted
+                && subscription.Member.Status == GymMembershipPolicy.MemberActive)
+            .Select(subscription => new
+            {
+                Subscription = subscription,
+                HasOpenPause = context.MembershipPauses.Any(pause =>
+                    pause.SubscriptionID == subscription.SubscriptionID
+                    && pause.PauseEndDate == null)
+            })
+            .ToListAsync(cancellationToken);
+        var selectedCurrent = currentRows
+            .GroupBy(row => row.Subscription.MemberID)
+            .Select(group => GymMembershipPolicy.SelectCurrentCoverage(
+                group.Select(row => new MembershipCoverageCandidate(
+                    row.Subscription,
+                    row.HasOpenPause)),
+                today))
+            .Where(selection => selection.State == AttendanceMembershipState.Active
+                && selection.Subscription is not null)
+            .Select(selection => selection.Subscription!)
+            .ToList();
+
+        var expiredIds = await context.Subscriptions
+            .AsNoTracking()
+            .Where(subscription => subscription.Status == GymMembershipPolicy.Active
+                && subscription.EndDate < todayStorage)
+            .Select(subscription => subscription.SubscriptionID)
+            .ToListAsync(cancellationToken);
+        if (expiredIds.Count > 0)
+        {
+            var key = new ExpirationBatchKey(expiredIds.OrderBy(id => id).ToArray(), nowUtc);
+            await GymMembershipTransaction.ExecuteVerifiedAsync(
+                context,
+                key,
+                async (operationKey, transactionToken) =>
+                {
+                    var subscriptions = await context.Subscriptions
+                        .Where(subscription => operationKey.SubscriptionIds.Contains(
+                            subscription.SubscriptionID))
+                        .ToListAsync(transactionToken);
+                    foreach (var subscription in subscriptions)
+                    {
+                        if (!string.Equals(
+                                subscription.Status,
+                                GymMembershipPolicy.Active,
+                                StringComparison.Ordinal)
+                            || GymMembershipPolicy.ToCalendarDate(subscription.EndDate) >= today)
+                        {
+                            continue;
+                        }
+
+                        subscription.Status = GymMembershipPolicy.Expired;
+                        subscription.LastModified = operationKey.TimestampUtc;
+                        context.AuditLogs.Add(new AuditLog
+                        {
+                            Action = "Subscription Expired",
+                            Details = $"Subscription ID {subscription.SubscriptionID} automatically expired.",
+                            IPAddress = "System Background Service",
+                            Timestamp = operationKey.TimestampUtc
+                        });
+                    }
+
+                    return true;
+                },
+                async (operationKey, verificationToken) =>
+                    await context.Subscriptions.AsNoTracking().CountAsync(
+                        subscription => operationKey.SubscriptionIds.Contains(subscription.SubscriptionID)
+                            && subscription.Status == GymMembershipPolicy.Expired
+                            && subscription.LastModified == operationKey.TimestampUtc,
+                        verificationToken) == operationKey.SubscriptionIds.Length,
+                cancellationToken);
+        }
+
+        var reminderDate = today.AddDays(reminderDays);
+        var expiring = selectedCurrent
+            .Where(subscription => GymMembershipPolicy.ToCalendarDate(subscription.EndDate) == reminderDate)
+            .ToList();
+        foreach (var subscription in expiring)
+        {
+            await publisher.PublishAsync(new MembershipExpiringEvent
+            {
+                SubscriptionId = subscription.SubscriptionID,
+                MemberId = subscription.MemberID,
+                MemberEmail = subscription.Member?.Email ?? string.Empty,
+                PlanName = subscription.Plan?.PlanName ?? "Unknown Plan",
+                EndDate = GymMembershipPolicy.NormalizeCalendarDate(subscription.EndDate)
+            });
+        }
+
+        _logger.LogInformation(
+            "Expiration processing completed. Reminders: {ReminderCount}; expired: {ExpiredCount}.",
+            expiring.Count,
+            expiredIds.Count);
+    }
+
+    private sealed record ExpirationBatchKey(
+        int[] SubscriptionIds,
+        DateTime TimestampUtc);
 }

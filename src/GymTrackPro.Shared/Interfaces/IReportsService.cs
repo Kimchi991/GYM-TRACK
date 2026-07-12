@@ -14,4 +14,8 @@ public interface IReportsService
     Task<IEnumerable<ExpiringMembershipsReportDto>> GetExpiringMembershipsReportAsync(int nextDays);
     Task<IEnumerable<RefundReportDto>> GetRefundReportAsync(DateTime startDate, DateTime endDate);
     Task<IEnumerable<CashierActivityReportDto>> GetCashierActivityReportAsync(DateTime startDate, DateTime endDate);
+    Task<OwnerAttendanceSummaryDto> GetAttendanceSummaryAsync(
+        DateOnly? fromGymDate,
+        DateOnly? endExclusiveGymDate,
+        string bucket);
 }

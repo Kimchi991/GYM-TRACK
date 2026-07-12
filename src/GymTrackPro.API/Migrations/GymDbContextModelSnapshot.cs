@@ -22,6 +22,77 @@ namespace GymTrackPro.API.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("GymTrackPro.Shared.Entities.AccountInvite", b =>
+                {
+                    b.Property<int>("AccountInviteID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AccountInviteID"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("IntendedRole")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NormalizedEmail")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("RedemptionOperationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int?>("TargetMemberID")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TargetUserID")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varbinary(32)");
+
+                    b.Property<DateTime?>("UsedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UsedByFirebaseUid")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.HasKey("AccountInviteID");
+
+                    b.HasIndex("CreatedByUserID");
+
+                    b.HasIndex("TargetMemberID");
+
+                    b.HasIndex("TargetUserID");
+
+                    b.ToTable("AccountInvites");
+                });
+
             modelBuilder.Entity("GymTrackPro.Shared.Entities.Attendance", b =>
                 {
                     b.Property<int>("AttendanceID")
@@ -30,8 +101,11 @@ namespace GymTrackPro.API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AttendanceID"));
 
-                    b.Property<DateTime>("AttendanceDate")
-                        .HasColumnType("datetime2");
+                    b.Property<int?>("ActorUserID")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly>("AttendanceDate")
+                        .HasColumnType("date");
 
                     b.Property<DateTime>("CheckInTime")
                         .HasColumnType("datetime2");
@@ -39,17 +113,153 @@ namespace GymTrackPro.API.Migrations
                     b.Property<DateTime?>("CheckOutTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsVoided")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime>("LastModified")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("MemberID")
                         .HasColumnType("int");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<int?>("SupersededByAttendanceID")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("VoidActorUserID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("VoidReason")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTime?>("VoidedAtUtc")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("AttendanceID");
+
+                    b.HasIndex("ActorUserID");
 
                     b.HasIndex("MemberID");
 
+                    b.HasIndex("SupersededByAttendanceID");
+
+                    b.HasIndex("VoidActorUserID");
+
                     b.ToTable("AttendanceLogs");
+                });
+
+            modelBuilder.Entity("GymTrackPro.Shared.Entities.AttendanceAdjustment", b =>
+                {
+                    b.Property<long>("AttendanceAdjustmentID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("AttendanceAdjustmentID"));
+
+                    b.Property<int>("ActorUserID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("AfterCheckOutTimeUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool?>("AfterIsVoided")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("AfterSupersededByAttendanceID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("AttendanceID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("BeforeCheckOutTimeUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool?>("BeforeIsVoided")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("BeforeSupersededByAttendanceID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("OperationID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.HasKey("AttendanceAdjustmentID");
+
+                    b.HasIndex("ActorUserID");
+
+                    b.HasIndex("AttendanceID");
+
+                    b.HasIndex("OperationID")
+                        .IsUnique();
+
+                    b.ToTable("AttendanceAdjustments");
+                });
+
+            modelBuilder.Entity("GymTrackPro.Shared.Entities.AttendanceOperation", b =>
+                {
+                    b.Property<Guid>("OperationID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ActorUserID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("OperationType")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OriginalHttpStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("OriginalResultCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<byte[]>("RequestFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varbinary(32)");
+
+                    b.Property<int>("State")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TargetAttendanceID")
+                        .HasColumnType("int");
+
+                    b.HasKey("OperationID");
+
+                    b.HasIndex("ActorUserID");
+
+                    b.HasIndex("TargetAttendanceID");
+
+                    b.ToTable("AttendanceOperations");
                 });
 
             modelBuilder.Entity("GymTrackPro.Shared.Entities.AuditLog", b =>
@@ -166,6 +376,25 @@ namespace GymTrackPro.API.Migrations
                         .IsUnique();
 
                     b.ToTable("Members");
+                });
+
+            modelBuilder.Entity("GymTrackPro.Shared.Entities.MemberProjectionVersion", b =>
+                {
+                    b.Property<int>("MemberID")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<long>("Version")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("MemberID");
+
+                    b.ToTable("MemberProjectionVersions");
                 });
 
             modelBuilder.Entity("GymTrackPro.Shared.Entities.MembershipPause", b =>
@@ -503,6 +732,10 @@ namespace GymTrackPro.API.Migrations
                     b.Property<bool>("EmailVerified")
                         .HasColumnType("bit");
 
+                    b.Property<string>("FirebaseUid")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -519,8 +752,14 @@ namespace GymTrackPro.API.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int?>("MemberID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NormalizedEmail")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
                     b.Property<string>("PasswordHash")
-                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
@@ -550,6 +789,8 @@ namespace GymTrackPro.API.Migrations
 
                     b.HasIndex("Email")
                         .IsUnique();
+
+                    b.HasIndex("MemberID");
 
                     b.HasIndex("Username")
                         .IsUnique();
@@ -586,15 +827,100 @@ namespace GymTrackPro.API.Migrations
                     b.ToTable("WalkInVisitors");
                 });
 
+            modelBuilder.Entity("GymTrackPro.Shared.Entities.AccountInvite", b =>
+                {
+                    b.HasOne("GymTrackPro.Shared.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GymTrackPro.Shared.Entities.Member", "TargetMember")
+                        .WithMany()
+                        .HasForeignKey("TargetMemberID");
+
+                    b.HasOne("GymTrackPro.Shared.Entities.User", "TargetUser")
+                        .WithMany()
+                        .HasForeignKey("TargetUserID");
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("TargetMember");
+
+                    b.Navigation("TargetUser");
+                });
+
             modelBuilder.Entity("GymTrackPro.Shared.Entities.Attendance", b =>
                 {
+                    b.HasOne("GymTrackPro.Shared.Entities.User", "ActorUser")
+                        .WithMany()
+                        .HasForeignKey("ActorUserID");
+
                     b.HasOne("GymTrackPro.Shared.Entities.Member", "Member")
                         .WithMany()
                         .HasForeignKey("MemberID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("GymTrackPro.Shared.Entities.Attendance", "SupersededByAttendance")
+                        .WithMany()
+                        .HasForeignKey("SupersededByAttendanceID");
+
+                    b.HasOne("GymTrackPro.Shared.Entities.User", "VoidActorUser")
+                        .WithMany()
+                        .HasForeignKey("VoidActorUserID");
+
+                    b.Navigation("ActorUser");
+
                     b.Navigation("Member");
+
+                    b.Navigation("SupersededByAttendance");
+
+                    b.Navigation("VoidActorUser");
+                });
+
+            modelBuilder.Entity("GymTrackPro.Shared.Entities.AttendanceAdjustment", b =>
+                {
+                    b.HasOne("GymTrackPro.Shared.Entities.User", "ActorUser")
+                        .WithMany()
+                        .HasForeignKey("ActorUserID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GymTrackPro.Shared.Entities.Attendance", "Attendance")
+                        .WithMany("Adjustments")
+                        .HasForeignKey("AttendanceID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GymTrackPro.Shared.Entities.AttendanceOperation", "Operation")
+                        .WithOne("Adjustment")
+                        .HasForeignKey("GymTrackPro.Shared.Entities.AttendanceAdjustment", "OperationID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ActorUser");
+
+                    b.Navigation("Attendance");
+
+                    b.Navigation("Operation");
+                });
+
+            modelBuilder.Entity("GymTrackPro.Shared.Entities.AttendanceOperation", b =>
+                {
+                    b.HasOne("GymTrackPro.Shared.Entities.User", "ActorUser")
+                        .WithMany()
+                        .HasForeignKey("ActorUserID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GymTrackPro.Shared.Entities.Attendance", "TargetAttendance")
+                        .WithMany("Operations")
+                        .HasForeignKey("TargetAttendanceID");
+
+                    b.Navigation("ActorUser");
+
+                    b.Navigation("TargetAttendance");
                 });
 
             modelBuilder.Entity("GymTrackPro.Shared.Entities.AuditLog", b =>
@@ -604,6 +930,17 @@ namespace GymTrackPro.API.Migrations
                         .HasForeignKey("UserID");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("GymTrackPro.Shared.Entities.MemberProjectionVersion", b =>
+                {
+                    b.HasOne("GymTrackPro.Shared.Entities.Member", "Member")
+                        .WithMany()
+                        .HasForeignKey("MemberID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Member");
                 });
 
             modelBuilder.Entity("GymTrackPro.Shared.Entities.MembershipPause", b =>
@@ -664,6 +1001,27 @@ namespace GymTrackPro.API.Migrations
                     b.Navigation("Member");
 
                     b.Navigation("Plan");
+                });
+
+            modelBuilder.Entity("GymTrackPro.Shared.Entities.User", b =>
+                {
+                    b.HasOne("GymTrackPro.Shared.Entities.Member", "Member")
+                        .WithMany()
+                        .HasForeignKey("MemberID");
+
+                    b.Navigation("Member");
+                });
+
+            modelBuilder.Entity("GymTrackPro.Shared.Entities.Attendance", b =>
+                {
+                    b.Navigation("Adjustments");
+
+                    b.Navigation("Operations");
+                });
+
+            modelBuilder.Entity("GymTrackPro.Shared.Entities.AttendanceOperation", b =>
+                {
+                    b.Navigation("Adjustment");
                 });
 #pragma warning restore 612, 618
         }

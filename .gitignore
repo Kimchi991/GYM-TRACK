@@ -17,6 +17,8 @@ SDKRedirects/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+[Aa]rtifacts/
+.artifacts/
 
 # Visual Studio 2015/2017/2019/2022 cache/options directory
 .vs/

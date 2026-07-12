@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:GymTrackPro.Mobile.ViewModels"
+             x:Class="GymTrackPro.Mobile.Views.GoerProgressPage"
+             Title="{Binding Title}"
+             BackgroundColor="#0F172A">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20">
+            <!-- Header -->
+            <Label Text="Your Progress" 
+                   FontSize="24" 
+                   FontAttributes="Bold" 
+                   TextColor="#F8FAFC" />
+
+            <Frame BackgroundColor="#1E293B" CornerRadius="12" Padding="20" HasShadow="False" BorderColor="Transparent">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Monthly Duration (Mins)" FontSize="16" TextColor="#94A3B8" />
+                    <Label Text="{Binding ProgressData.MonthlyDurationMinutes}" 
+                           FontSize="20" 
+                           FontAttributes="Bold" 
+                           TextColor="#10B981" />
+                </VerticalStackLayout>
+            </Frame>
+            
+            <Frame BackgroundColor="#1E293B" CornerRadius="12" Padding="20" HasShadow="False" BorderColor="Transparent">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Monthly Visits" FontSize="16" TextColor="#94A3B8" />
+                    <Label Text="{Binding ProgressData.MonthlyVisits}" 
+                           FontSize="20" 
+                           FontAttributes="Bold" 
+                           TextColor="#3B82F6" />
+                </VerticalStackLayout>
+            </Frame>
+            
+            <Frame BackgroundColor="#1E293B" CornerRadius="12" Padding="20" HasShadow="False" BorderColor="Transparent">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Longest Streak" FontSize="16" TextColor="#94A3B8" />
+                    <Label Text="{Binding ProgressData.LongestStreak}" 
+                           FontSize="20" 
+                           FontAttributes="Bold" 
+                           TextColor="#8B5CF6" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Label Text="Eligible Badges" FontSize="18" FontAttributes="Bold" TextColor="#F8FAFC" Margin="0,10,0,0" />
+            <CollectionView ItemsSource="{Binding ProgressData.EligibleBadges}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Label Text="{Binding .}" FontSize="16" TextColor="#FCD34D" Margin="0,5" />
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+                <CollectionView.EmptyView>
+                    <Label Text="No badges unlocked yet." TextColor="#94A3B8" />
+                </CollectionView.EmptyView>
+            </CollectionView>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

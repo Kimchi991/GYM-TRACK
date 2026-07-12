@@ -62,6 +62,14 @@
                         </VerticalStackLayout>
                     </Grid>
 
+                    <!-- Invite Code (Optional) -->
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Invite Code (Optional)" TextColor="{StaticResource TextSecondary}" FontSize="13" FontAttributes="Bold" />
+                        <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                            <Entry Text="{Binding InviteCode}" TextColor="{StaticResource TextPrimary}" PlaceholderColor="{StaticResource TextMuted}" HeightRequest="42" Placeholder="Enter invite code if you have one" />
+                        </Border>
+                    </VerticalStackLayout>
+
                     <!-- Input Password -->
                     <VerticalStackLayout Spacing="4">
                         <Label Text="Password *" TextColor="{StaticResource TextSecondary}" FontSize="13" FontAttributes="Bold" />

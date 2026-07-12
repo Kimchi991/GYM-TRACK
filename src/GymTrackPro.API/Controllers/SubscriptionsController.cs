@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using GymTrackPro.API.Authorization;
 using GymTrackPro.Shared.DTOs;
 using GymTrackPro.Shared.Interfaces;
 
@@ -12,7 +13,7 @@ namespace GymTrackPro.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
-[Authorize]
+[Authorize(Policy = Policies.BackOffice)]
 public class SubscriptionsController : ControllerBase
 {
     private readonly ISubscriptionService _subscriptionService;
@@ -73,7 +74,7 @@ public class SubscriptionsController : ControllerBase
     /// Temporarily pauses an active member subscription.
     /// </summary>
     /// <param name="id">The unique identifier of the subscription to pause.</param>
-    /// <param name="reason">The reason for pausing the membership.</param>
+    /// <param name="pauseDto">The data transfer object containing the reason for pausing.</param>
     /// <returns>A standardized API response confirming the pause operation.</returns>
     /// <response code="200">If the subscription was successfully paused.</response>
     [HttpPost("{id:int}/pause")]

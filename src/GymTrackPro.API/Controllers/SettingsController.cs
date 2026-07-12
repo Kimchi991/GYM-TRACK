@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using GymTrackPro.API.Authorization;
 using GymTrackPro.Shared.DTOs;
 using GymTrackPro.Shared.Interfaces;
 
@@ -13,7 +14,7 @@ namespace GymTrackPro.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
-[Authorize]
+[Authorize(Policy = Policies.BackOffice)]
 public class SettingsController : ControllerBase
 {
     private readonly ISystemSettingService _settingsService;
@@ -38,7 +39,7 @@ public class SettingsController : ControllerBase
     /// Updates a system configuration setting value. Restricted to Administrator role.
     /// </summary>
     [HttpPut("{key}")]
-    [Authorize(Roles = "Administrator")]
+    [Authorize(Policy = Policies.OwnerOnly)]
     [ProducesResponseType(typeof(ApiResponse<object>), 200)]
     public async Task<IActionResult> UpdateSetting(string key, [FromBody] UpdateSettingDto updateDto)
     {

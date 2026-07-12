@@ -9,5 +9,6 @@ public interface IUserRepository : IBaseRepository<User>
     Task<User?> GetByEmailAsync(string email);
     Task<bool> UsernameExistsAsync(string username);
     Task<bool> EmailExistsAsync(string email);
+    Task<User?> GetByFirebaseUidAsync(string firebaseUid);
     Task UpdateLastLoginAsync(int userId);
 }

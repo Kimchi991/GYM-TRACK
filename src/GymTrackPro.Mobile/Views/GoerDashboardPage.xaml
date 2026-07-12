@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:GymTrackPro.Mobile.ViewModels"
+             x:Class="GymTrackPro.Mobile.Views.GoerDashboardPage"
+             Title="{Binding Title}"
+             BackgroundColor="#0F172A">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20">
+            <!-- Header -->
+            <Label Text="Welcome back!" 
+                   FontSize="24" 
+                   FontAttributes="Bold" 
+                   TextColor="#F8FAFC" />
+
+            <!-- Subscription Status -->
+            <Frame BackgroundColor="#1E293B" CornerRadius="12" Padding="20" HasShadow="False" BorderColor="Transparent">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Membership Status" FontSize="16" TextColor="#94A3B8" />
+                    <Label Text="{Binding DashboardData.MembershipStatus, TargetNullValue='No Active Plan'}" 
+                           FontSize="20" 
+                           FontAttributes="Bold" 
+                           TextColor="#F8FAFC" />
+                </VerticalStackLayout>
+            </Frame>
+            
+            <Frame BackgroundColor="#1E293B" CornerRadius="12" Padding="20" HasShadow="False" BorderColor="Transparent">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Current Streak" FontSize="16" TextColor="#94A3B8" />
+                    <Label Text="{Binding DashboardData.CurrentStreak}" 
+                           FontSize="20" 
+                           FontAttributes="Bold" 
+                           TextColor="#10B981" />
+                </VerticalStackLayout>
+            </Frame>
+            
+            <Frame BackgroundColor="#1E293B" CornerRadius="12" Padding="20" HasShadow="False" BorderColor="Transparent">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Total Visits" FontSize="16" TextColor="#94A3B8" />
+                    <Label Text="{Binding DashboardData.VisitCount}" 
+                           FontSize="20" 
+                           FontAttributes="Bold" 
+                           TextColor="#3B82F6" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Button Text="Refresh" Command="{Binding LoadDataCommand}" BackgroundColor="#3B82F6" TextColor="White" CornerRadius="8" />
+            
+            <Button Text="Logout" Command="{Binding LogoutCommand}" BackgroundColor="Transparent" TextColor="#EF4444" Margin="0,20,0,0" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

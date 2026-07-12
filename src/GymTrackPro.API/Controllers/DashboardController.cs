@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using GymTrackPro.API.Authorization;
 using GymTrackPro.Shared.DTOs;
 using GymTrackPro.Shared.Interfaces;
 
@@ -11,7 +12,7 @@ namespace GymTrackPro.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
-[Authorize]
+[Authorize(Policy = Policies.BackOffice)]
 public class DashboardController : ControllerBase
 {
     private readonly IDashboardService _dashboardService;

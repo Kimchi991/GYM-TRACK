@@ -6,6 +6,7 @@ public class ApiResponse
 {
     public bool Success { get; set; }
     public string Message { get; set; } = string.Empty;
+    public string? ErrorCode { get; set; }
     public List<string> Errors { get; set; } = new();
 
     public static ApiResponse SuccessResponse(string message = "")
@@ -13,12 +14,13 @@ public class ApiResponse
         return new ApiResponse { Success = true, Message = message };
     }
 
-    public static ApiResponse FailureResponse(string message, List<string>? errors = null)
+    public static ApiResponse FailureResponse(string message, string? errorCode = null, List<string>? errors = null)
     {
         return new ApiResponse
         {
             Success = false,
             Message = message,
+            ErrorCode = errorCode,
             Errors = errors ?? new List<string>()
         };
     }
@@ -38,12 +40,13 @@ public class ApiResponse<T> : ApiResponse
         };
     }
 
-    public static new ApiResponse<T> FailureResponse(string message, List<string>? errors = null)
+    public static new ApiResponse<T> FailureResponse(string message, string? errorCode = null, List<string>? errors = null)
     {
         return new ApiResponse<T>
         {
             Success = false,
             Message = message,
+            ErrorCode = errorCode,
             Errors = errors ?? new List<string>(),
             Data = default
         };

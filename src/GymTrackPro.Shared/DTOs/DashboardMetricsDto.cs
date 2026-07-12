@@ -6,6 +6,10 @@ namespace GymTrackPro.Shared.DTOs;
 public class DashboardMetricsDto
 {
     public int MembersCheckedInCount { get; set; }
+    public string MembersCheckedInLabel { get; set; } = "Open sessions";
+    public int VisitsTodayCount { get; set; }
+    public int StaleOpenSessionCount { get; set; }
+    public int StaleSessionThresholdHours { get; set; }
     public int ActiveMembershipsCount { get; set; }
     public decimal RevenueToday { get; set; }
     public decimal RevenueThisMonth { get; set; }

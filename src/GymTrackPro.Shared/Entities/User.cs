@@ -11,6 +11,13 @@ public class User
     [Key]
     public int UserID { get; set; }
 
+    [StringLength(128)]
+    public string? FirebaseUid { get; set; }
+
+    public int? MemberID { get; set; }
+    [ForeignKey("MemberID")]
+    public Member? Member { get; set; }
+
     [Required]
     [StringLength(50)]
     public string Username { get; set; } = string.Empty;
@@ -19,9 +26,11 @@ public class User
     [StringLength(255)]
     public string Email { get; set; } = string.Empty;
 
-    [Required]
     [StringLength(255)]
-    public string PasswordHash { get; set; } = string.Empty;
+    public string? NormalizedEmail { get; set; }
+
+    [StringLength(255)]
+    public string? PasswordHash { get; set; }
 
     [Required]
     [StringLength(100)]

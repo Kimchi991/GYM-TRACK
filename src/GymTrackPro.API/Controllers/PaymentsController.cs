@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using GymTrackPro.API.Authorization;
 using GymTrackPro.Shared.DTOs;
 using GymTrackPro.Shared.Interfaces;
 
@@ -13,7 +14,7 @@ namespace GymTrackPro.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
-[Authorize]
+[Authorize(Policy = Policies.BackOffice)]
 public class PaymentsController : ControllerBase
 {
     private readonly IPaymentService _paymentService;
@@ -77,7 +78,7 @@ public class PaymentsController : ControllerBase
     /// <returns>A standardized API response confirming the refund.</returns>
     /// <response code="200">If the refund was processed successfully.</response>
     [HttpPost("{id:int}/refund")]
-    [Authorize(Roles = "Administrator")]
+    [Authorize(Policy = Policies.OwnerOnly)]
     [ProducesResponseType(typeof(ApiResponse<PaymentResponseDto>), 200)]
     public async Task<IActionResult> Refund(int id)
     {

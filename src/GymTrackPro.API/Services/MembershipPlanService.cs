@@ -14,26 +14,22 @@ public class MembershipPlanService : IMembershipPlanService
     private readonly IMembershipPlanRepository _planRepository;
     private readonly IAuditService _auditService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ICurrentUserContext _currentUser;
 
     public MembershipPlanService(
         IMembershipPlanRepository planRepository,
         IAuditService auditService,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        ICurrentUserContext currentUser)
     {
         _planRepository = planRepository;
         _auditService = auditService;
         _httpContextAccessor = httpContextAccessor;
+        _currentUser = currentUser;
     }
 
-    private int? GetCurrentUserId()
-    {
-        var nameIdentifier = _httpContextAccessor.HttpContext?.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (int.TryParse(nameIdentifier, out int userId))
-        {
-            return userId;
-        }
-        return null;
-    }
+    private int GetRequiredCurrentUserId() => _currentUser.UserId
+        ?? throw new UnauthorizedAccessException("An active application user is required.");
 
     private string GetClientIpAddress()
     {
@@ -56,6 +52,8 @@ public class MembershipPlanService : IMembershipPlanService
 
     public async Task<MembershipPlanResponseDto> CreatePlanAsync(CreateMembershipPlanDto createDto)
     {
+        var actorUserId = GetRequiredCurrentUserId();
+
         // Enforce name uniqueness
         var existing = await _planRepository.GetByNameAsync(createDto.PlanName);
         if (existing != null)
@@ -76,13 +74,15 @@ public class MembershipPlanService : IMembershipPlanService
         await _planRepository.AddAsync(plan);
 
         // Log audit log
-        await _auditService.LogActivityAsync(GetCurrentUserId(), "Plan Created", $"Membership plan '{plan.PlanName}' (ID: {plan.PlanID}) created with Price: {plan.Price:C}, Duration: {plan.DurationDays} days.", GetClientIpAddress());
+        await _auditService.LogActivityAsync(actorUserId, "Plan Created", $"Membership plan '{plan.PlanName}' (ID: {plan.PlanID}) created with Price: {plan.Price:C}, Duration: {plan.DurationDays} days.", GetClientIpAddress());
 
         return MapToDto(plan);
     }
 
     public async Task<MembershipPlanResponseDto> UpdatePlanAsync(int id, CreateMembershipPlanDto updateDto)
     {
+        var actorUserId = GetRequiredCurrentUserId();
+
         var plan = await _planRepository.GetByIdAsync(id);
         if (plan == null)
         {
@@ -106,13 +106,15 @@ public class MembershipPlanService : IMembershipPlanService
         await _planRepository.UpdateAsync(plan);
 
         // Log audit log
-        await _auditService.LogActivityAsync(GetCurrentUserId(), "Plan Updated", $"Membership plan '{oldName}' (ID: {plan.PlanID}) updated. New Name: '{plan.PlanName}', Price: {plan.Price:C}.", GetClientIpAddress());
+        await _auditService.LogActivityAsync(actorUserId, "Plan Updated", $"Membership plan '{oldName}' (ID: {plan.PlanID}) updated. New Name: '{plan.PlanName}', Price: {plan.Price:C}.", GetClientIpAddress());
 
         return MapToDto(plan);
     }
 
     public async Task DeletePlanAsync(int id)
     {
+        var actorUserId = GetRequiredCurrentUserId();
+
         var plan = await _planRepository.GetByIdAsync(id);
         if (plan != null)
         {
@@ -121,7 +123,7 @@ public class MembershipPlanService : IMembershipPlanService
             await _planRepository.UpdateAsync(plan);
 
             // Log audit log
-            await _auditService.LogActivityAsync(GetCurrentUserId(), "Plan Deleted", $"Membership plan '{plan.PlanName}' (ID: {plan.PlanID}) marked Inactive.", GetClientIpAddress());
+            await _auditService.LogActivityAsync(actorUserId, "Plan Deleted", $"Membership plan '{plan.PlanName}' (ID: {plan.PlanID}) marked Inactive.", GetClientIpAddress());
         }
     }
 

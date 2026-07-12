@@ -15,6 +15,18 @@ public class MemberRepository : BaseRepository<Member>, IMemberRepository
     {
     }
 
+    public override async Task AddAsync(Member entity)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+        await _dbSet.AddAsync(entity);
+        _context.MemberProjectionVersions.Add(new MemberProjectionVersion
+        {
+            Member = entity,
+            Version = 0
+        });
+        await _context.SaveChangesAsync();
+    }
+
     public async Task<Member?> GetByPhoneNumberAsync(string phoneNumber)
     {
         return await _dbSet.FirstOrDefaultAsync(m => m.PhoneNumber == phoneNumber && !m.IsDeleted);
@@ -48,7 +60,6 @@ public class MemberRepository : BaseRepository<Member>, IMemberRepository
                 m.FirstName.ToLower().Contains(searchLower) ||
                 m.LastName.ToLower().Contains(searchLower) ||
                 m.PhoneNumber.Contains(search) ||
-                m.QRCode.Contains(search) ||
                 (isInt && m.MemberID == searchId)
             );
         }
@@ -77,10 +88,9 @@ public class MemberRepository : BaseRepository<Member>, IMemberRepository
         return await _dbSet.Where(m => !m.IsDeleted).ToListAsync();
     }
 
-    public override async Task DeleteAsync(Member entity)
+    public override Task DeleteAsync(Member entity)
     {
-        entity.IsDeleted = true;
-        entity.LastModified = DateTime.UtcNow;
-        await UpdateAsync(entity);
+        throw new NotSupportedException(
+            "Member deletion must use the atomic deletion and access-revocation transaction.");
     }
 }

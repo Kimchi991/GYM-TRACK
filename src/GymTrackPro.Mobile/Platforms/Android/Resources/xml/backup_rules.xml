@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <exclude domain="database" path="."/>
+    <exclude domain="sharedpref" path="."/>
+    <!-- FileSystem.AppDataDirectory maps to this domain. Excluding the whole
+         app-private file tree also covers rollback journals and future
+         account-scoped database/WAL/SHM names without wildcard gaps. -->
+    <exclude domain="file" path="."/>
+</full-backup-content>

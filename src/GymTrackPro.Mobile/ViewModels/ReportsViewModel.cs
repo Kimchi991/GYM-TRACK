@@ -13,7 +13,7 @@ public partial class ReportsViewModel : BaseViewModel
     private readonly IApiService _apiService;
 
     [ObservableProperty]
-    public partial string ReportType { get; set; } = "Daily Revenue"; // Daily Revenue, Monthly Revenue, Attendance, Membership Sales, Expiring Memberships, Refunds
+    public partial string ReportType { get; set; } = "Daily Revenue"; // Daily Revenue, Monthly Revenue, Attendance, Membership Sales, Expiring Memberships, Refunds, Owner Attendance Summary
 
     [ObservableProperty]
     public partial DateTime StartDate { get; set; } = DateTime.Today.AddDays(-7);
@@ -92,6 +92,12 @@ public partial class ReportsViewModel : BaseViewModel
                 Header2 = "Receipt #";
                 Header3 = "Refund Amt";
                 Header4 = "Refund Date";
+                break;
+            case "Owner Attendance Summary":
+                Header1 = "Role";
+                Header2 = "Total Check-Ins";
+                Header3 = "Avg Duration (min)";
+                Header4 = "Last Active";
                 break;
             default:
                 Header1 = "Col 1";
@@ -217,6 +223,34 @@ public partial class ReportsViewModel : BaseViewModel
                     }
                 }
             }
+            else if (ReportType == "Owner Attendance Summary")
+            {
+                var res = await _apiService.GetOwnerAttendanceSummaryAsync(StartDate, EndDate);
+                if (res.Success && res.Data != null)
+                {
+                    // Render "Owner graph renderer/text fallback"
+                    // Since we can't easily draw a graph in pure MAUI without third party libs like Microcharts,
+                    // we will use a text-based fallback or a basic representation.
+                    foreach (var kvp in res.Data.DailyCounts)
+                    {
+                        ReportRows.Add(new ReportItemDto
+                        {
+                            Col1 = kvp.Key,
+                            Col2 = kvp.Value.ToString(),
+                            Col3 = "-", // Not applicable
+                            Col4 = "-"  // Not applicable
+                        });
+                    }
+                    // Add summary row
+                    ReportRows.Add(new ReportItemDto
+                    {
+                        Col1 = "TOTAL VISITS",
+                        Col2 = res.Data.TotalVisits.ToString(),
+                        Col3 = "AVG",
+                        Col4 = res.Data.AverageVisits.ToString("F1")
+                    });
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -265,6 +299,10 @@ public partial class ReportsViewModel : BaseViewModel
             else if (ReportType == "Refunds")
             {
                 csvBytes = await _apiService.ExportRefundsCsvAsync(StartDate, EndDate);
+            }
+            else if (ReportType == "Owner Attendance Summary")
+            {
+                csvBytes = await _apiService.ExportOwnerAttendanceSummaryCsvAsync(StartDate, EndDate);
             }
 
             if (csvBytes == null || csvBytes.Length == 0)

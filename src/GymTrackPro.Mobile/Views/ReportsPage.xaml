@@ -27,6 +27,7 @@
                                         <x:String>Membership Sales</x:String>
                                         <x:String>Expiring Memberships</x:String>
                                         <x:String>Refunds</x:String>
+                                        <x:String>Owner Attendance Summary</x:String>
                                     </x:Array>
                                 </Picker.ItemsSource>
                             </Picker>

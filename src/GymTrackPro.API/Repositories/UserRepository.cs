@@ -42,4 +42,9 @@ public class UserRepository : BaseRepository<User>, IUserRepository
             await UpdateAsync(user);
         }
     }
+
+    public async Task<User?> GetByFirebaseUidAsync(string firebaseUid)
+    {
+        return await _dbSet.FirstOrDefaultAsync(u => u.FirebaseUid == firebaseUid);
+    }
 }

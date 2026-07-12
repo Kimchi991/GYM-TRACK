@@ -17,32 +17,31 @@ public class MemberService : IMemberService
     private readonly IMemberRepository _memberRepository;
     private readonly IAuditService _auditService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ICurrentUserContext _currentUser;
     private readonly ISystemSettingService _settingsService;
     private readonly IDomainEventPublisher _eventPublisher;
+    private readonly IMemberDeletionTransaction _memberDeletionTransaction;
 
     public MemberService(
         IMemberRepository memberRepository,
         IAuditService auditService,
         IHttpContextAccessor httpContextAccessor,
+        ICurrentUserContext currentUser,
         ISystemSettingService settingsService,
-        IDomainEventPublisher eventPublisher)
+        IDomainEventPublisher eventPublisher,
+        IMemberDeletionTransaction memberDeletionTransaction)
     {
         _memberRepository = memberRepository;
         _auditService = auditService;
         _httpContextAccessor = httpContextAccessor;
+        _currentUser = currentUser;
         _settingsService = settingsService;
         _eventPublisher = eventPublisher;
+        _memberDeletionTransaction = memberDeletionTransaction;
     }
 
-    private int? GetCurrentUserId()
-    {
-        var nameIdentifier = _httpContextAccessor.HttpContext?.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (int.TryParse(nameIdentifier, out int userId))
-        {
-            return userId;
-        }
-        return null;
-    }
+    private int GetRequiredCurrentUserId() => _currentUser.UserId
+        ?? throw new UnauthorizedAccessException("An active application user is required.");
 
     private string GetClientIpAddress()
     {
@@ -77,8 +76,11 @@ public class MemberService : IMemberService
             {
                 try
                 {
-                    var oldFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot", existingPath.TrimStart('/'));
-                    if (File.Exists(oldFilePath))
+                    if (ProfilePicturePathPolicy.TryResolveOwnedFile(
+                            AppDomain.CurrentDomain.BaseDirectory,
+                            existingPath,
+                            out var oldFilePath)
+                        && File.Exists(oldFilePath))
                     {
                         File.Delete(oldFilePath);
                     }
@@ -153,6 +155,8 @@ public class MemberService : IMemberService
 
     public async Task<MemberResponseDto> CreateMemberAsync(CreateMemberDto createDto)
     {
+        var actorUserId = GetRequiredCurrentUserId();
+
         // Enforce unique Phone and Email constraints
         var existingPhone = await _memberRepository.GetByPhoneNumberAsync(createDto.PhoneNumber);
         if (existingPhone != null)
@@ -206,7 +210,7 @@ public class MemberService : IMemberService
         await _memberRepository.AddAsync(member);
 
         // Audit Logging
-        await _auditService.LogActivityAsync(GetCurrentUserId(), "Member Created", $"Created member {member.FirstName} {member.LastName} (ID: {member.MemberID}, QR: {member.QRCode}).", GetClientIpAddress());
+        await _auditService.LogActivityAsync(actorUserId, "Member Created", $"Created member {member.FirstName} {member.LastName} (ID: {member.MemberID}).", GetClientIpAddress());
 
         // Publish Domain Event
         await _eventPublisher.PublishAsync(new MemberRegisteredEvent
@@ -223,6 +227,8 @@ public class MemberService : IMemberService
 
     public async Task<MemberResponseDto> UpdateMemberAsync(int id, UpdateMemberDto updateDto)
     {
+        var actorUserId = GetRequiredCurrentUserId();
+
         var member = await _memberRepository.GetByIdAsync(id);
         if (member == null)
         {
@@ -266,23 +272,19 @@ public class MemberService : IMemberService
         await _memberRepository.UpdateAsync(member);
 
         // Audit Logging
-        await _auditService.LogActivityAsync(GetCurrentUserId(), "Member Updated", $"Updated member profile for {member.FirstName} {member.LastName} (ID: {member.MemberID}).", GetClientIpAddress());
+        await _auditService.LogActivityAsync(actorUserId, "Member Updated", $"Updated member profile for {member.FirstName} {member.LastName} (ID: {member.MemberID}).", GetClientIpAddress());
 
         return MapToResponseDto(member);
     }
 
     public async Task<bool> DeleteMemberAsync(int id)
     {
-        var member = await _memberRepository.GetByIdAsync(id);
-        if (member == null) return false;
+        var actorUserId = GetRequiredCurrentUserId();
 
-        // Perform Soft Delete
-        await _memberRepository.DeleteAsync(member);
-
-        // Audit Logging
-        await _auditService.LogActivityAsync(GetCurrentUserId(), "Member Deleted", $"Soft-deleted member {member.FirstName} {member.LastName} (ID: {member.MemberID}).", GetClientIpAddress());
-
-        return true;
+        return await _memberDeletionTransaction.SoftDeleteAndRevokeAsync(
+            id,
+            actorUserId,
+            GetClientIpAddress());
     }
 
     private static MemberResponseDto MapToResponseDto(Member member)

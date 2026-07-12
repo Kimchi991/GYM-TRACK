@@ -1,88 +1,180 @@
-using System;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+using GymTrackPro.API.Authentication;
 using GymTrackPro.Shared.DTOs;
 using GymTrackPro.Shared.Entities;
-using GymTrackPro.Shared.Enums;
 using GymTrackPro.Shared.Interfaces;
 
 namespace GymTrackPro.API.Services;
 
 public class AuthenticationService : IAuthenticationService
 {
-    private readonly IUserRepository _userRepository;
-    private readonly IAuditService _auditService;
+    private readonly IIdentityProvisioningStore _identityStore;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IClockService _clock;
 
     public AuthenticationService(
-        IUserRepository userRepository,
-        IAuditService auditService,
+        IIdentityProvisioningStore identityStore,
+        IClockService clock,
         IHttpContextAccessor httpContextAccessor)
     {
-        _userRepository = userRepository;
-        _auditService = auditService;
+        _identityStore = identityStore;
+        _clock = clock;
         _httpContextAccessor = httpContextAccessor;
-    }
-
-    private string GetClientIpAddress()
-    {
-        return _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "Unknown";
     }
 
     public async Task<UserResponseDto> SyncUserAsync(string firebaseUid, string email)
     {
-        var user = await _userRepository.GetByEmailAsync(email);
-        
-        if (user == null)
-        {
-            var username = email.Split('@')[0];
-            
-            // Check if username already exists to avoid collision
-            var baseUsername = username;
-            int counter = 1;
-            while (await _userRepository.UsernameExistsAsync(username))
-            {
-                username = $"{baseUsername}{counter++}";
-            }
+        var user = await _identityStore.SyncLinkedUserAsync(
+            firebaseUid,
+            email,
+            GetOperationContext(),
+            RequestAborted);
+        return user.ToResponse();
+    }
 
-            user = new User
-            {
-                Username = username,
-                Email = email,
-                PasswordHash = string.Empty, // Firebase handles auth
-                FirstName = "New",
-                LastName = "User",
-                Role = UserRole.Receptionist,
-                IsActive = true,
-                EmailVerified = true, // Trust Firebase
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+    public async Task<UserResponseDto> GetCurrentUserAsync(int userId, string firebaseUid)
+    {
+        var user = await _identityStore.GetCurrentUserAsync(
+            userId,
+            firebaseUid,
+            RequestAborted);
+        return user.ToResponse();
+    }
 
-            await _userRepository.AddAsync(user);
-            await _auditService.LogActivityAsync(user.UserID, "SyncUser", $"New user {user.Username} synchronized from Firebase.", GetClientIpAddress());
-        }
-        else
+    public async Task<UserResponseDto> ActivateAppAsync(
+        string firebaseUid,
+        string email,
+        ActivateInviteDto request)
+    {
+        if (request is null
+            || request.OperationId == Guid.Empty
+            || !InviteCodeCodec.TryHash(request.InviteCode, out var tokenHash))
         {
-            await _auditService.LogActivityAsync(user.UserID, "SyncUser", $"User {user.Username} synchronized from Firebase.", GetClientIpAddress());
+            throw new AppAccessException(
+                StatusCodes.Status400BadRequest,
+                Shared.Constants.ErrorCodes.InviteInvalid,
+                "The activation request is invalid or no longer available.");
         }
 
-        await _userRepository.UpdateLastLoginAsync(user.UserID);
+        var user = await _identityStore.RedeemInviteAsync(
+            firebaseUid,
+            email,
+            tokenHash,
+            request.OperationId,
+            GetOperationContext(),
+            RequestAborted);
+        return user.ToResponse();
+    }
 
-        return new UserResponseDto
+    public async Task<AppInviteCodeResponseDto> CreateMemberInviteAsync(
+        int memberId,
+        int creatorUserId,
+        CreateAppInviteDto dto)
+    {
+        var inviteCode = InviteCodeCodec.Generate();
+        _ = InviteCodeCodec.TryHash(inviteCode, out var tokenHash);
+        var invite = await _identityStore.CreateOrReplaceMemberInviteAsync(
+            memberId,
+            creatorUserId,
+            tokenHash,
+            dto?.Purpose ?? string.Empty,
+            GetOperationContext(),
+            RequestAborted);
+        return new AppInviteCodeResponseDto
         {
-            UserID = user.UserID,
-            Username = user.Username,
-            Email = user.Email,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            Role = user.Role,
-            IsActive = user.IsActive,
-            EmailVerified = user.EmailVerified,
-            CreatedAt = user.CreatedAt,
-            UpdatedAt = user.UpdatedAt,
-            LastLoginAt = user.LastLoginAt,
-            Token = string.Empty
+            InviteCode = inviteCode,
+            Details = MapInvite(invite)
         };
     }
+
+    public async Task<AppInviteResponseDto> GetMemberInviteStatusAsync(int memberId)
+    {
+        var invite = await _identityStore.GetLatestMemberInviteAsync(memberId, RequestAborted);
+        return invite is null
+            ? new AppInviteResponseDto { Status = "NotFound" }
+            : MapInvite(invite);
+    }
+
+    public Task RevokeMemberInviteAsync(int memberId, int actorUserId) =>
+        _identityStore.RevokeMemberInvitesAsync(
+            memberId,
+            actorUserId,
+            GetOperationContext(),
+            RequestAborted);
+
+    public async Task<AppInviteCodeResponseDto> CreateUserInviteAsync(
+        int userId,
+        int creatorUserId,
+        CreateAppInviteDto dto)
+    {
+        var inviteCode = InviteCodeCodec.Generate();
+        _ = InviteCodeCodec.TryHash(inviteCode, out var tokenHash);
+        var invite = await _identityStore.CreateOrReplaceStaffInviteAsync(
+            userId,
+            creatorUserId,
+            tokenHash,
+            dto?.Purpose ?? string.Empty,
+            GetOperationContext(),
+            RequestAborted);
+        return new AppInviteCodeResponseDto
+        {
+            InviteCode = inviteCode,
+            Details = MapInvite(invite)
+        };
+    }
+
+    public async Task<AppInviteResponseDto> GetUserInviteStatusAsync(int userId)
+    {
+        var invite = await _identityStore.GetLatestStaffInviteAsync(userId, RequestAborted);
+        return invite is null
+            ? new AppInviteResponseDto { Status = "NotFound" }
+            : MapInvite(invite);
+    }
+
+    public Task RevokeUserInviteAsync(int userId, int actorUserId) =>
+        _identityStore.RevokeStaffInvitesAsync(
+            userId,
+            actorUserId,
+            GetOperationContext(),
+            RequestAborted);
+
+    private AppInviteResponseDto MapInvite(AccountInvite invite)
+    {
+        var status = "Unused";
+        if (invite.UsedAtUtc.HasValue)
+        {
+            status = "Used";
+        }
+        else if (invite.RevokedAtUtc.HasValue)
+        {
+            status = "Revoked";
+        }
+        else if (_clock.UtcNow >= invite.ExpiresAtUtc)
+        {
+            status = "Expired";
+        }
+
+        return new AppInviteResponseDto
+        {
+            TargetMemberID = invite.TargetMemberID,
+            TargetUserID = invite.TargetUserID,
+            IntendedRole = invite.IntendedRole,
+            Purpose = invite.Purpose,
+            ExpiresAtUtc = invite.ExpiresAtUtc,
+            Status = status,
+            UsedAtUtc = invite.UsedAtUtc,
+            RevokedAtUtc = invite.RevokedAtUtc,
+            CreatedAtUtc = invite.CreatedAtUtc
+        };
+    }
+
+    private IdentityOperationContext GetOperationContext()
+    {
+        var context = _httpContextAccessor.HttpContext;
+        return new IdentityOperationContext(
+            context?.TraceIdentifier ?? "unavailable",
+            context?.Connection.RemoteIpAddress?.ToString() ?? "Unknown");
+    }
+
+    private CancellationToken RequestAborted =>
+        _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None;
 }

@@ -12,6 +12,10 @@ public class GymDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<Member> Members => Set<Member>();
     public DbSet<MembershipPlan> MembershipPlans => Set<MembershipPlan>();
+    public DbSet<AccountInvite> AccountInvites => Set<AccountInvite>();
+    public DbSet<MemberProjectionVersion> MemberProjectionVersions => Set<MemberProjectionVersion>();
+    public DbSet<AttendanceOperation> AttendanceOperations => Set<AttendanceOperation>();
+    public DbSet<AttendanceAdjustment> AttendanceAdjustments => Set<AttendanceAdjustment>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<MembershipPause> MembershipPauses => Set<MembershipPause>();
     public DbSet<Payment> Payments => Set<Payment>();
@@ -86,6 +90,24 @@ public class GymDbContext : DbContext
             .HasOne(p => p.Subscription)
             .WithMany()
             .HasForeignKey(p => p.SubscriptionID)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AccountInvite>()
+            .HasOne(i => i.CreatedByUser)
+            .WithMany()
+            .HasForeignKey(i => i.CreatedByUserID)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AttendanceOperation>()
+            .HasOne(o => o.ActorUser)
+            .WithMany()
+            .HasForeignKey(o => o.ActorUserID)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AttendanceAdjustment>()
+            .HasOne(a => a.ActorUser)
+            .WithMany()
+            .HasForeignKey(a => a.ActorUserID)
             .OnDelete(DeleteBehavior.Restrict);
 
         // Seed Default System Settings

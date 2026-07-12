@@ -6,7 +6,6 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using Microsoft.Maui.Storage;
 using GymTrackPro.Shared.DTOs;
 using GymTrackPro.Shared.Entities;
 
@@ -15,59 +14,54 @@ namespace GymTrackPro.Mobile.Services;
 public class ApiService : IApiService
 {
     private readonly HttpClient _httpClient;
-    private string? _authToken;
 
-    private static readonly JsonSerializerOptions _jsonOptions = new()
+    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNameCaseInsensitive = true,
         Converters = { new JsonStringEnumConverter() }
     };
 
-    public ApiService()
+    public ApiService(IFirebaseAuthService authService)
+        : this(CreateAuthenticatedClient(authService))
     {
-#if ANDROID
-        var baseUri = "http://10.0.2.2:5221/api/v1/";
-#else
-        var baseUri = "http://localhost:5221/api/v1/";
-#endif
-
-        // Configure HttpClient
-        _httpClient = new HttpClient { BaseAddress = new Uri(baseUri) };
-        _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
     }
 
-    public async Task InitializeTokenAsync()
+    internal ApiService(HttpClient httpClient)
     {
-        try
+        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        if (!_httpClient.DefaultRequestHeaders.Accept.Any(value =>
+                value.MediaType == "application/json"))
         {
-            var token = await SecureStorage.Default.GetAsync("auth_token");
-            if (!string.IsNullOrEmpty(token))
-            {
-                SetAuthToken(token);
-            }
+            _httpClient.DefaultRequestHeaders.Accept.Add(
+                new MediaTypeWithQualityHeaderValue("application/json"));
         }
-        catch
-        {
-            // SecureStorage might fail if run in non-UI thread or emulator environment initialization
-        }
+    }
+
+    private static HttpClient CreateAuthenticatedClient(IFirebaseAuthService authService)
+    {
+        var endpoint = ApiEndpointConfiguration.LoadForCurrentBuild();
+        var handler = new AuthenticatedHttpClientHandler(authService, endpoint);
+        return new HttpClient(handler) { BaseAddress = endpoint.BaseUri };
+    }
+
+    public Task InitializeTokenAsync()
+    {
+        return Task.CompletedTask;
     }
 
     public void SetAuthToken(string token)
     {
-        _authToken = token;
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        // Handled by AuthenticatedHttpClientHandler
     }
 
     public string? GetAuthToken()
     {
-        return _authToken;
+        return null; // Token is resolved dynamically by the handler
     }
 
     public void ClearAuthToken()
     {
-        _authToken = null;
-        _httpClient.DefaultRequestHeaders.Authorization = null;
-        SecureStorage.Default.Remove("auth_token");
+        // Handled by IFirebaseAuthService / AuthenticatedHttpClientHandler
     }
 
     private async Task<ApiResponse<T>> HandleResponseAsync<T>(HttpResponseMessage response)
@@ -116,15 +110,20 @@ public class ApiService : IApiService
 
     public async Task<ApiResponse<UserResponseDto>> SyncUserWithBackendAsync(string firebaseToken)
     {
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", firebaseToken);
         var response = await _httpClient.PostAsync("auth/sync-user", null);
-        var result = await HandleResponseAsync<UserResponseDto>(response);
-        if (result.Success)
-        {
-            SetAuthToken(firebaseToken);
-            await SecureStorage.Default.SetAsync("auth_token", firebaseToken);
-        }
-        return result;
+        return await HandleResponseAsync<UserResponseDto>(response);
+    }
+
+    public async Task<ApiResponse<UserResponseDto>> ActivateInviteAsync(ActivateInviteDto dto)
+    {
+        var response = await _httpClient.PostAsJsonAsync("auth/activate", dto);
+        return await HandleResponseAsync<UserResponseDto>(response);
+    }
+
+    public async Task<ApiResponse<UserResponseDto>> GetCurrentUserAsync()
+    {
+        var response = await _httpClient.GetAsync("me");
+        return await HandleResponseAsync<UserResponseDto>(response);
     }
 
     // --- Dashboard ---
@@ -167,6 +166,32 @@ public class ApiService : IApiService
         return await HandleResponseAsync(response);
     }
 
+    // --- Invites ---
+
+    public async Task<ApiResponse<AppInviteCodeResponseDto>> GenerateMemberInviteAsync(
+        int memberId,
+        CreateAppInviteDto request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var response = await _httpClient.PostAsJsonAsync(
+            $"members/{memberId}/app-invite",
+            request,
+            _jsonOptions);
+        return await HandleResponseAsync<AppInviteCodeResponseDto>(response);
+    }
+
+    public async Task<ApiResponse<AppInviteResponseDto>> GetMemberInviteStatusAsync(int memberId)
+    {
+        var response = await _httpClient.GetAsync($"members/{memberId}/app-invite/status");
+        return await HandleResponseAsync<AppInviteResponseDto>(response);
+    }
+
+    public async Task<ApiResponse> RevokeMemberInviteAsync(int memberId)
+    {
+        var response = await _httpClient.DeleteAsync($"members/{memberId}/app-invite");
+        return await HandleResponseAsync(response);
+    }
+
     // --- Attendance ---
 
     public async Task<ApiResponse<AttendanceDto>> CheckInAsync(string qrCode)
@@ -185,6 +210,49 @@ public class ApiService : IApiService
     {
         var response = await _httpClient.GetAsync($"attendance/member/{memberId}");
         return await HandleResponseAsync<IEnumerable<AttendanceDto>>(response);
+    }
+
+    // --- Gym Goer Self-Service ---
+
+    public async Task<ApiResponse<GoerDashboardDto>> GetGoerDashboardAsync()
+    {
+        var response = await _httpClient.GetAsync("me/dashboard");
+        return await HandleResponseAsync<GoerDashboardDto>(response);
+    }
+
+    public async Task<ApiResponse<GoerDigitalCardDto>> GetGoerDigitalCardAsync()
+    {
+        var response = await _httpClient.GetAsync("me/digital-card");
+        return await HandleResponseAsync<GoerDigitalCardDto>(response);
+    }
+
+    public async Task<ApiResponse<AttendanceDto>> GetGoerCurrentAttendanceAsync()
+    {
+        var response = await _httpClient.GetAsync("me/attendance/current");
+        return await HandleResponseAsync<AttendanceDto>(response);
+    }
+
+    public async Task<ApiResponse<PagedResultDto<AttendanceDto>>> GetGoerAttendanceHistoryAsync(DateTime? from, DateTime? to, int page = 1, int pageSize = 10)
+    {
+        var query = $"me/attendance?page={page}&pageSize={pageSize}";
+        if (from.HasValue) query += $"&from={from.Value:yyyy-MM-dd}";
+        if (to.HasValue) query += $"&to={to.Value:yyyy-MM-dd}";
+
+        var response = await _httpClient.GetAsync(query);
+        return await HandleResponseAsync<PagedResultDto<AttendanceDto>>(response);
+    }
+
+    public async Task<ApiResponse<AttendanceDto>> GoerCheckOutAsync(Guid operationId)
+    {
+        var dto = new CheckoutRequestDto { OperationId = operationId };
+        var response = await _httpClient.PostAsJsonAsync("me/attendance/checkout", dto);
+        return await HandleResponseAsync<AttendanceDto>(response);
+    }
+
+    public async Task<ApiResponse<GoerProgressDto>> GetGoerProgressAsync(string month)
+    {
+        var response = await _httpClient.GetAsync($"me/progress?month={month}");
+        return await HandleResponseAsync<GoerProgressDto>(response);
     }
 
     // --- Payments ---
@@ -382,6 +450,28 @@ public class ApiService : IApiService
     public async Task<byte[]> ExportExpiringMembershipsCsvAsync(int nextDays = 7)
     {
         var response = await _httpClient.GetAsync($"reports/expiring-memberships/export?nextDays={nextDays}");
+        return response.IsSuccessStatusCode ? await response.Content.ReadAsByteArrayAsync() : Array.Empty<byte>();
+    }
+
+    // --- Owner Analytics ---
+
+    public async Task<ApiResponse<OwnerAttendanceSummaryDto>> GetOwnerAttendanceSummaryAsync(DateTime? from, DateTime? to, string bucket = "day")
+    {
+        var query = $"reports/attendance/summary?bucket={bucket}";
+        if (from.HasValue) query += $"&from={from.Value:yyyy-MM-dd}";
+        if (to.HasValue) query += $"&to={to.Value:yyyy-MM-dd}";
+
+        var response = await _httpClient.GetAsync(query);
+        return await HandleResponseAsync<OwnerAttendanceSummaryDto>(response);
+    }
+
+    public async Task<byte[]> ExportOwnerAttendanceSummaryCsvAsync(DateTime? from, DateTime? to, string bucket = "day")
+    {
+        var query = $"reports/attendance/summary/export?bucket={bucket}";
+        if (from.HasValue) query += $"&from={from.Value:yyyy-MM-dd}";
+        if (to.HasValue) query += $"&to={to.Value:yyyy-MM-dd}";
+
+        var response = await _httpClient.GetAsync(query);
         return response.IsSuccessStatusCode ? await response.Content.ReadAsByteArrayAsync() : Array.Empty<byte>();
     }
 }

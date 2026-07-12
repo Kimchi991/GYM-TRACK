@@ -1,10 +1,15 @@
-using System.Text;
+using System.Net;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Options;
 using GymTrackPro.API.Data;
+using GymTrackPro.API.Authorization;
+using GymTrackPro.API.Authentication;
+using GymTrackPro.API.Security;
+using Microsoft.AspNetCore.Authorization;
 using GymTrackPro.API.Middleware;
 using GymTrackPro.API.Repositories;
 using GymTrackPro.API.Services;
@@ -12,7 +17,6 @@ using GymTrackPro.Shared.Interfaces;
 using GymTrackPro.Shared.Events.Members;
 using GymTrackPro.Shared.Events.Payments;
 using GymTrackPro.Shared.Events.Membership;
-using GymTrackPro.Shared.Events.Authentication;
 using GymTrackPro.Shared.Events.Attendance;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,58 +30,191 @@ builder.Services.AddControllers()
 
 builder.Services.AddHttpContextAccessor();
 
+var isDevelopmentOrTesting = builder.Environment.IsDevelopment()
+    || builder.Environment.IsEnvironment("Testing");
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "ConnectionStrings:DefaultConnection must be supplied through environment or local secret configuration.");
+}
+
+var allowedHosts = builder.Configuration["AllowedHosts"];
+if (!isDevelopmentOrTesting && !ProductionAllowedHosts.IsValid(allowedHosts))
+{
+    throw new InvalidOperationException(
+        "Production AllowedHosts must contain only explicit, non-loopback API hosts without wildcards, schemes, ports, or paths.");
+}
+
+builder.Services
+    .AddOptions<FirebaseAuthenticationOptions>()
+    .Bind(builder.Configuration.GetSection(FirebaseAuthenticationOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddSingleton<IValidateOptions<FirebaseAuthenticationOptions>, FirebaseAuthenticationOptionsValidator>();
+
+builder.Services
+    .AddOptions<TrustedProxyOptions>()
+    .Bind(builder.Configuration.GetSection(TrustedProxyOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddSingleton<IValidateOptions<TrustedProxyOptions>, TrustedProxyOptionsValidator>();
+
+builder.Services
+    .AddOptions<PreAuthenticationRateLimitOptions>()
+    .Bind(builder.Configuration.GetSection(PreAuthenticationRateLimitOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddSingleton<
+    IValidateOptions<PreAuthenticationRateLimitOptions>,
+    PreAuthenticationRateLimitOptionsValidator>();
+
+var trustedProxySettings = builder.Configuration
+    .GetSection(TrustedProxyOptions.SectionName)
+    .Get<TrustedProxyOptions>() ?? new TrustedProxyOptions();
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
+        | ForwardedHeaders.XForwardedProto
+        | ForwardedHeaders.XForwardedHost;
+    options.ForwardLimit = trustedProxySettings.ForwardLimit;
+    options.RequireHeaderSymmetry = true;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+
+    foreach (var configuredProxy in trustedProxySettings.KnownProxies)
+    {
+        if (IPAddress.TryParse(configuredProxy, out var proxyAddress))
+        {
+            options.KnownProxies.Add(proxyAddress);
+        }
+    }
+});
+
 // Configure Rate Limiting
+builder.Services.AddSingleton<ActivationInviteHashShardLimiter>();
+builder.Services.AddSingleton<PreAuthenticationIpLimiter>();
 builder.Services.AddRateLimiter(options =>
 {
-    options.AddPolicy("Global", context =>
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = RequestRateLimitRejectionHandler.HandleAsync;
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
         RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            partitionKey: RequestRateLimitPartition.Create(context),
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 100,
-                Window = TimeSpan.FromMinutes(1)
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                AutoReplenishment = true
             }));
 
     options.AddPolicy("Auth", context =>
         RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            partitionKey: RequestRateLimitPartition.Create(context),
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 5,
-                Window = TimeSpan.FromMinutes(1)
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                AutoReplenishment = true
+            }));
+
+    options.AddPolicy("Activation", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: RequestRateLimitPartition.Create(context),
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                AutoReplenishment = true
             }));
 });
 
 // Configure EF Core with SQL Server
 builder.Services.AddDbContext<GymDbContext>(options =>
     options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
+        connectionString,
         sqlOptions => sqlOptions.EnableRetryOnFailure(
             maxRetryCount: 5,
             maxRetryDelay: TimeSpan.FromSeconds(30),
             errorNumbersToAdd: null)));
 
-// Configure JWT Authentication
+var firebaseSettings = builder.Configuration
+    .GetSection(FirebaseAuthenticationOptions.SectionName)
+    .Get<FirebaseAuthenticationOptions>() ?? new FirebaseAuthenticationOptions();
+
+// Firebase proves identity only. SQL-derived claims are added by the claims transformation.
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        options.Authority = "https://securetoken.google.com/fithub-cf45f";
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = false,
-            ValidateAudience = false,
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromMinutes(5)
-        };
+        FirebaseJwtConfiguration.Configure(options, firebaseSettings, builder.Environment);
         options.Events = new JwtBearerEvents
         {
+            OnTokenValidated = FirebaseJwtConfiguration.ValidateRequiredClaimsAsync,
             OnAuthenticationFailed = context =>
             {
-                Console.WriteLine($"\n[FIREBASE AUTH ERROR]: {context.Exception.Message}\n");
+                var logger = context.HttpContext.RequestServices
+                    .GetRequiredService<ILoggerFactory>()
+                    .CreateLogger("FirebaseAuthentication");
+                logger.LogWarning(
+                    "Firebase bearer authentication failed. CorrelationId: {CorrelationId}; ErrorType: {ErrorType}",
+                    context.HttpContext.TraceIdentifier,
+                    context.Exception.GetType().Name);
                 return Task.CompletedTask;
             }
         };
     });
+
+// Configure Authorization Policies
+builder.Services.AddScoped<IUidAppUserResolver, UidAppUserResolver>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Authentication.IClaimsTransformation, FirebaseAppClaimsTransformation>();
+builder.Services.AddSingleton<IAuthorizationHandler, AppAuthorizationHandler>();
+builder.Services.AddAuthorization(options =>
+{
+    var activeAppUserPolicy = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
+        .RequireAuthenticatedUser()
+        .AddRequirements(new ActiveAppUserRequirement())
+        .Build();
+
+    // Bare [Authorize] and controllers without explicit metadata cannot authorize an
+    // unknown Firebase identity. Onboarding explicitly opts into its narrower policy.
+    options.DefaultPolicy = activeAppUserPolicy;
+    options.FallbackPolicy = activeAppUserPolicy;
+
+    options.AddPolicy(Policies.FirebaseOnboarding, policy =>
+    {
+        policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
+        policy.RequireAuthenticatedUser();
+        policy.Requirements.Add(new FirebaseOnboardingRequirement());
+    });
+
+    options.AddPolicy(Policies.ActiveAppUser, activeAppUserPolicy);
+
+    options.AddPolicy(Policies.BackOffice, policy =>
+    {
+        policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
+        policy.RequireAuthenticatedUser();
+        policy.Requirements.Add(new BackOfficeRequirement());
+    });
+
+    options.AddPolicy(Policies.OwnerOnly, policy =>
+    {
+        policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
+        policy.RequireAuthenticatedUser();
+        policy.Requirements.Add(new OwnerOnlyRequirement());
+    });
+
+    options.AddPolicy(Policies.GymGoerSelf, policy =>
+    {
+        policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
+        policy.RequireAuthenticatedUser();
+        policy.Requirements.Add(new GymGoerSelfRequirement());
+    });
+});
 
 // Register Repositories
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -89,10 +226,14 @@ builder.Services.AddScoped<IAttendanceRepository, AttendanceRepository>();
 builder.Services.AddScoped<IWalkInVisitorRepository, WalkInVisitorRepository>();
 builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 builder.Services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();
+builder.Services.AddScoped<IAccountInviteRepository, AccountInviteRepository>();
 
 // Register Services
+builder.Services.AddScoped<IIdentityProvisioningStore, IdentityProvisioningStore>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+builder.Services.AddScoped<ICurrentUserContext, CurrentUserContext>();
 builder.Services.AddScoped<IMemberService, MemberService>();
+builder.Services.AddScoped<IMemberDeletionTransaction, MemberDeletionTransaction>();
 builder.Services.AddScoped<IMembershipPlanService, MembershipPlanService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
@@ -103,6 +244,10 @@ builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IReportsService, ReportsService>();
 builder.Services.AddScoped<ISystemSettingService, SystemSettingService>();
+builder.Services.AddScoped<IClockService, ClockService>();
+builder.Services.AddScoped<IGymGoerProjectionService, GymGoerProjectionService>();
+builder.Services.AddScoped<ITimezoneService, TimezoneService>();
+builder.Services.AddProjectionVersionInfrastructure();
 
 // Register Domain Event Dispatching System
 builder.Services.AddScoped<IDomainEventPublisher, InMemoryEventPublisher>();
@@ -111,7 +256,6 @@ builder.Services.AddScoped<IDomainEventHandler<PaymentReceivedEvent>, Notificati
 builder.Services.AddScoped<IDomainEventHandler<RefundProcessedEvent>, NotificationHandler>();
 builder.Services.AddScoped<IDomainEventHandler<MembershipPausedEvent>, NotificationHandler>();
 builder.Services.AddScoped<IDomainEventHandler<MembershipResumedEvent>, NotificationHandler>();
-builder.Services.AddScoped<IDomainEventHandler<PasswordResetRequestedEvent>, NotificationHandler>();
 builder.Services.AddScoped<IDomainEventHandler<MembershipExpiringEvent>, NotificationHandler>();
 builder.Services.AddScoped<IDomainEventHandler<CheckInFailedEvent>, NotificationHandler>();
 
@@ -128,6 +272,12 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+var trustedProxyOptions = app.Services.GetRequiredService<IOptions<TrustedProxyOptions>>().Value;
+if (trustedProxyOptions.Enabled)
+{
+    app.UseForwardedHeaders();
+}
+
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 
@@ -143,36 +293,21 @@ else
     app.UseHttpsRedirection();
 }
 
-app.UseRateLimiter();
+// Explicit routing guarantees endpoint authorization metadata is available to the claims
+// transformation before it decides whether an onboarding request requires SQL resolution.
+app.UseRouting();
 
+// Only the bounded per-IP admission control runs before bearer validation. The invite-code
+// shard is charged only after Firebase authentication and the endpoint Activation limiter
+// have admitted the request.
+app.UseMiddleware<PreAuthenticationRateLimitMiddleware>();
 app.UseAuthentication();
+app.UseRateLimiter();
+app.UseMiddleware<ActivationInviteRateLimitMiddleware>();
 app.UseAuthorization();
 
 app.UseStaticFiles();
 
 app.MapControllers();
-
-// Seed settings if table is empty
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<GymDbContext>();
-    if (!context.SystemSettings.Any())
-    {
-        var seedDate = new DateTime(2026, 7, 2, 0, 0, 0, DateTimeKind.Utc);
-        context.SystemSettings.AddRange(
-            new GymTrackPro.Shared.Entities.SystemSetting { SettingKey = "GymName", SettingValue = "GymTrackPro", GroupName = "General", Description = "Name of the gym facility.", LastModified = seedDate },
-            new GymTrackPro.Shared.Entities.SystemSetting { SettingKey = "ContactNumber", SettingValue = "+639170000000", GroupName = "General", Description = "Gym contact helpline phone number.", LastModified = seedDate },
-            new GymTrackPro.Shared.Entities.SystemSetting { SettingKey = "Currency", SettingValue = "PHP", GroupName = "General", Description = "Currency code used for financial billing transactions.", LastModified = seedDate },
-            new GymTrackPro.Shared.Entities.SystemSetting { SettingKey = "Timezone", SettingValue = "Asia/Manila", GroupName = "General", Description = "System local timezone identifier.", LastModified = seedDate },
-            new GymTrackPro.Shared.Entities.SystemSetting { SettingKey = "QRPrefix", SettingValue = "GTP-", GroupName = "Membership", Description = "Format prefix added to automatically generated member QR codes.", LastModified = seedDate },
-            new GymTrackPro.Shared.Entities.SystemSetting { SettingKey = "ReceiptPrefix", SettingValue = "REC-", GroupName = "Payments", Description = "Format prefix added to payment invoice transaction receipts.", LastModified = seedDate },
-            new GymTrackPro.Shared.Entities.SystemSetting { SettingKey = "MaxUploadSize", SettingValue = "5242880", GroupName = "Security", Description = "Maximum member photo upload limit size in bytes (e.g. 5MB = 5242880).", LastModified = seedDate },
-            new GymTrackPro.Shared.Entities.SystemSetting { SettingKey = "AllowedImageTypes", SettingValue = ".jpg,.jpeg,.png", GroupName = "Security", Description = "Comma-separated list of approved image file extensions.", LastModified = seedDate },
-            new GymTrackPro.Shared.Entities.SystemSetting { SettingKey = "PasswordPolicyRegex", SettingValue = @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$", GroupName = "Security", Description = "Regex pattern validating password strength rules.", LastModified = seedDate },
-            new GymTrackPro.Shared.Entities.SystemSetting { SettingKey = "ReminderDaysBeforeExpiration", SettingValue = "3", GroupName = "Membership", Description = "Days ahead of membership expiration to raise alerts or send reminders.", LastModified = seedDate }
-        );
-        context.SaveChanges();
-    }
-}
 
 app.Run();

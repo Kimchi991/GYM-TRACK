@@ -1,30 +1,28 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
+using GymTrackPro.API.Authentication;
 using GymTrackPro.API.Data;
+using GymTrackPro.Shared.Constants;
 using GymTrackPro.Shared.DTOs;
 using GymTrackPro.Shared.Entities;
 using GymTrackPro.Shared.Enums;
-using GymTrackPro.Shared.Interfaces;
-
 using GymTrackPro.Shared.Events.Payments;
+using GymTrackPro.Shared.Interfaces;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 
 namespace GymTrackPro.API.Services;
 
 public class PaymentService : IPaymentService
 {
     private readonly IPaymentRepository _paymentRepository;
-    private readonly ISubscriptionRepository _subscriptionRepository;
-    private readonly IMemberRepository _memberRepository;
     private readonly GymDbContext _context;
-    private readonly IAuditService _auditService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ICurrentUserContext _currentUser;
     private readonly ISystemSettingService _settingsService;
     private readonly IDomainEventPublisher _eventPublisher;
+    private readonly IClockService _clock;
+    private readonly ITimezoneService _timezoneService;
 
     public PaymentService(
         IPaymentRepository paymentRepository,
@@ -33,36 +31,29 @@ public class PaymentService : IPaymentService
         GymDbContext context,
         IAuditService auditService,
         IHttpContextAccessor httpContextAccessor,
+        ICurrentUserContext currentUser,
         ISystemSettingService settingsService,
-        IDomainEventPublisher eventPublisher)
+        IDomainEventPublisher eventPublisher,
+        IClockService clock,
+        ITimezoneService timezoneService)
     {
         _paymentRepository = paymentRepository;
-        _subscriptionRepository = subscriptionRepository;
-        _memberRepository = memberRepository;
+        _ = subscriptionRepository;
+        _ = memberRepository;
         _context = context;
-        _auditService = auditService;
+        _ = auditService;
         _httpContextAccessor = httpContextAccessor;
+        _currentUser = currentUser;
         _settingsService = settingsService;
         _eventPublisher = eventPublisher;
-    }
-
-    private int? GetCurrentUserId()
-    {
-        var claim = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        return int.TryParse(claim, out int userId) ? userId : null;
-    }
-
-    private string GetClientIpAddress()
-    {
-        return _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "Unknown";
+        _clock = clock;
+        _timezoneService = timezoneService;
     }
 
     public async Task<PaymentResponseDto?> GetByIdAsync(int id)
     {
         var payment = await _paymentRepository.GetByIdAsync(id);
-        if (payment == null) return null;
-
-        return MapToDto(payment);
+        return payment is null ? null : MapToDto(payment);
     }
 
     public async Task<IEnumerable<PaymentResponseDto>> GetByMemberIdAsync(int memberId)
@@ -71,180 +62,311 @@ public class PaymentService : IPaymentService
         return payments.Select(MapToDto);
     }
 
-    public async Task<PaymentResponseDto> ProcessPaymentAsync(CreatePaymentDto paymentDto)
+    public async Task<PaymentResponseDto> ProcessPaymentAsync(CreatePaymentDto request)
     {
-        // BR-05: Amounts cannot be negative
-        if (paymentDto.Amount < 0 || paymentDto.Discount < 0)
-        {
-            throw new ArgumentException("Payment amount and discount cannot be negative.");
-        }
+        ArgumentNullException.ThrowIfNull(request);
+        var actorUserId = GetRequiredCurrentUserId();
+        var nowUtc = GetUtcNow();
+        var currentGymDate = await _timezoneService.GetGymDateAsync(nowUtc);
+        ValidateAmounts(request.Amount, request.Discount);
+        var method = ParsePaymentMethod(request.PaymentMethod);
+        var status = ParsePaymentStatus(request.PaymentStatus);
+        var referenceNumber = NormalizeReference(method, request.ReferenceNumber);
+        var prefix = await _settingsService.GetValueAsync("ReceiptPrefix", "REC-");
+        var receiptNumber = GenerateReceiptNumber(prefix, nowUtc);
+        var key = new PaymentCreateKey(
+            request.MemberID,
+            request.SubscriptionID,
+            request.Amount,
+            request.Discount,
+            method,
+            status,
+            referenceNumber,
+            receiptNumber,
+            nowUtc);
 
-        var finalAmount = paymentDto.Amount - paymentDto.Discount;
-        if (finalAmount < 0)
-        {
-            throw new ArgumentException("Discount cannot exceed the base payment amount.");
-        }
-
-        // Verify member and subscription
-        var member = await _memberRepository.GetByIdAsync(paymentDto.MemberID);
-        if (member == null)
-        {
-            throw new KeyNotFoundException("Member not found.");
-        }
-
-        var sub = await _subscriptionRepository.GetByIdAsync(paymentDto.SubscriptionID);
-        if (sub == null)
-        {
-            throw new KeyNotFoundException("Subscription not found.");
-        }
-
-        // Parse Enums
-        if (!Enum.TryParse<PaymentMethod>(paymentDto.PaymentMethod, true, out var method))
-        {
-            throw new ArgumentException($"Invalid payment method: {paymentDto.PaymentMethod}");
-        }
-
-        if (!Enum.TryParse<PaymentStatus>(paymentDto.PaymentStatus, true, out var status))
-        {
-            throw new ArgumentException($"Invalid payment status: {paymentDto.PaymentStatus}");
-        }
-
-        // BR-03: Reference numbers are unique for online payments
-        if (method != PaymentMethod.Cash)
-        {
-            if (string.IsNullOrWhiteSpace(paymentDto.ReferenceNumber))
+        var result = await GymMembershipTransaction.ExecuteVerifiedAsync(
+            _context,
+            key,
+            async (operationKey, cancellationToken) =>
             {
-                throw new ArgumentException("Reference number is required for online payments.");
-            }
+                var member = await GymMembershipTransaction.LockMemberAsync(
+                    _context,
+                    operationKey.MemberId,
+                    cancellationToken);
+                var subscriptions = await GymMembershipTransaction.LockMemberSubscriptionsAsync(
+                    _context,
+                    operationKey.MemberId,
+                    cancellationToken);
+                var payments = await GymMembershipTransaction.LockMemberPaymentsAsync(
+                    _context,
+                    operationKey.MemberId,
+                    cancellationToken);
+                RequireActiveMember(member);
+                if (operationKey.ReferenceNumber is not null)
+                {
+                    var replay = FindReferenceReplay(
+                        operationKey,
+                        payments,
+                        subscriptions,
+                        member!);
+                    if (replay is not null)
+                    {
+                        return replay;
+                    }
+                }
 
-            var duplicateRef = await _context.Payments
-                .AnyAsync(p => p.ReferenceNumber == paymentDto.ReferenceNumber && !p.IsDeleted);
+                var subscription = subscriptions.SingleOrDefault(item =>
+                    item.SubscriptionID == operationKey.SubscriptionId);
+                if (subscription is null || subscription.MemberID != operationKey.MemberId)
+                {
+                    throw PaymentConflict("The subscription does not belong to the requested member.");
+                }
 
-            if (duplicateRef)
+                if (!IsNormalizedWindow(subscription))
+                {
+                    throw MembershipConflict("The subscription calendar window is not normalized.");
+                }
+
+                if (GymMembershipPolicy.ToCalendarDate(subscription.EndDate) < currentGymDate)
+                {
+                    throw PaymentConflict("An expired subscription window cannot be funded.");
+                }
+
+                var plan = await _context.MembershipPlans.SingleOrDefaultAsync(
+                    item => item.PlanID == subscription.PlanID,
+                    cancellationToken)
+                    ?? throw PaymentConflict("The subscription plan is unavailable.");
+                RequireFundablePlan(plan);
+                ValidatePlanPayment(
+                    operationKey.Amount,
+                    operationKey.Discount,
+                    plan.Price);
+                subscription.Plan = plan;
+
+                if (!string.Equals(
+                        subscription.Status,
+                        GymMembershipPolicy.PendingPayment,
+                        StringComparison.Ordinal))
+                {
+                    throw PaymentConflict(
+                        "Only a pending-payment subscription can receive a new funding attempt.");
+                }
+
+                if (operationKey.Status == PaymentStatus.Paid)
+                {
+                    if (payments.Any(payment => !payment.IsDeleted
+                        && payment.SubscriptionID == subscription.SubscriptionID
+                        && payment.PaymentStatus == PaymentStatus.Paid))
+                    {
+                        throw PaymentConflict("The subscription already has a successful payment.");
+                    }
+
+                    if (subscriptions.Any(other => other.SubscriptionID != subscription.SubscriptionID
+                        && GymMembershipPolicy.IsBlockingStatus(other.Status)
+                        && GymMembershipPolicy.Overlaps(
+                            other.StartDate,
+                            other.EndDate,
+                            subscription.StartDate,
+                            subscription.EndDate)))
+                    {
+                        throw MembershipConflict(
+                            "The subscription window overlaps another blocking subscription.");
+                    }
+                }
+
+                if (await _context.Payments.AsNoTracking().AnyAsync(
+                        payment => payment.ReceiptNumber == operationKey.ReceiptNumber,
+                        cancellationToken))
+                {
+                    throw PaymentConflict("The generated receipt number is already in use.");
+                }
+
+                if (operationKey.ReferenceNumber is not null
+                    && await _context.Payments.AsNoTracking().AnyAsync(
+                        payment => !payment.IsDeleted
+                            && payment.ReferenceNumber == operationKey.ReferenceNumber,
+                        cancellationToken))
+                {
+                    throw PaymentConflict("The payment reference number is already in use.");
+                }
+
+                var payment = new Payment
+                {
+                    MemberID = operationKey.MemberId,
+                    SubscriptionID = subscription.SubscriptionID,
+                    Amount = operationKey.Amount,
+                    Discount = operationKey.Discount,
+                    FinalAmount = operationKey.Amount - operationKey.Discount,
+                    PaymentMethod = operationKey.Method,
+                    PaymentStatus = operationKey.Status,
+                    ReceiptNumber = operationKey.ReceiptNumber,
+                    ReferenceNumber = operationKey.ReferenceNumber,
+                    DatePaid = operationKey.TimestampUtc,
+                    LastModified = operationKey.TimestampUtc,
+                    Member = member,
+                    Subscription = subscription
+                };
+                _context.Payments.Add(payment);
+                if (operationKey.Status == PaymentStatus.Paid)
+                {
+                    subscription.Status = GymMembershipPolicy.Active;
+                    subscription.LastModified = operationKey.TimestampUtc;
+                    AddAudit(
+                        actorUserId,
+                        "Subscription Activated",
+                        $"Subscription ID {subscription.SubscriptionID} activated by receipt {payment.ReceiptNumber}.",
+                        operationKey.TimestampUtc);
+                }
+
+                AddAudit(
+                    actorUserId,
+                    "Payment Completed",
+                    $"Payment for member ID {member!.MemberID} recorded with receipt {payment.ReceiptNumber}.",
+                    operationKey.TimestampUtc);
+                return new PaymentMutationResult(payment, member, WasReplay: false);
+            },
+            async (operationKey, cancellationToken) =>
             {
-                throw new ArgumentException("A payment transaction with this reference number already exists.");
-            }
-        }
+                var paymentCommitted = await _context.Payments.AsNoTracking().AnyAsync(
+                    payment => payment.ReceiptNumber == operationKey.ReceiptNumber
+                        && payment.MemberID == operationKey.MemberId
+                        && payment.SubscriptionID == operationKey.SubscriptionId
+                        && payment.Amount == operationKey.Amount
+                        && payment.Discount == operationKey.Discount
+                        && payment.PaymentMethod == operationKey.Method
+                        && payment.PaymentStatus == operationKey.Status
+                        && payment.DatePaid == operationKey.TimestampUtc,
+                    cancellationToken);
+                if (!paymentCommitted || operationKey.Status != PaymentStatus.Paid)
+                {
+                    return paymentCommitted;
+                }
 
-        // BR-02: Receipt numbers are unique (prefix retrieved dynamically from settings)
-        var receiptPrefix = await _settingsService.GetValueAsync("ReceiptPrefix", "REC-");
-        string receiptNumber = string.Empty;
-        bool uniqueReceipt = false;
-        var rand = new Random();
-        while (!uniqueReceipt)
-        {
-            receiptNumber = $"{receiptPrefix}{DateTime.UtcNow:yyMMddHHmmss}-{rand.Next(1000, 9999)}";
-            var exists = await _context.Payments.AnyAsync(p => p.ReceiptNumber == receiptNumber);
-            if (!exists) uniqueReceipt = true;
-        }
+                return await _context.Subscriptions.AsNoTracking().AnyAsync(
+                    subscription => subscription.SubscriptionID == operationKey.SubscriptionId
+                        && subscription.MemberID == operationKey.MemberId
+                        && subscription.Status == GymMembershipPolicy.Active
+                        && subscription.LastModified == operationKey.TimestampUtc,
+                    cancellationToken);
+            });
 
-        var payment = new Payment
-        {
-            MemberID = paymentDto.MemberID,
-            SubscriptionID = paymentDto.SubscriptionID,
-            Amount = paymentDto.Amount,
-            Discount = paymentDto.Discount,
-            FinalAmount = finalAmount,
-            PaymentMethod = method,
-            PaymentStatus = status,
-            ReceiptNumber = receiptNumber,
-            ReferenceNumber = paymentDto.ReferenceNumber,
-            DatePaid = DateTime.UtcNow,
-            LastModified = DateTime.UtcNow
-        };
-
-        // Save payment
-        await _paymentRepository.AddAsync(payment);
-
-        // BR-01: Update subscription status if payment is Paid
-        if (status == PaymentStatus.Paid)
-        {
-            sub.Status = "Active";
-            sub.LastModified = DateTime.UtcNow;
-            await _subscriptionRepository.UpdateAsync(sub);
-
-            await _auditService.LogActivityAsync(
-                GetCurrentUserId(),
-                "Subscription Activated",
-                $"Subscription ID: {sub.SubscriptionID} activated via successful payment {receiptNumber}.",
-                GetClientIpAddress()
-            );
-        }
-
-        // BR-06: Every payment generates audit logs
-        await _auditService.LogActivityAsync(
-            GetCurrentUserId(),
-            "Payment Completed",
-            $"Payment of {finalAmount:C} processed for member {member.FirstName} {member.LastName} (ID: {member.MemberID}). Receipt: {receiptNumber}.",
-            GetClientIpAddress()
-        );
-
-        // Publish Domain Event if payment is Paid
-        if (status == PaymentStatus.Paid)
+        if (status == PaymentStatus.Paid && !result.WasReplay)
         {
             await _eventPublisher.PublishAsync(new PaymentReceivedEvent
             {
-                PaymentId = payment.PaymentID,
-                MemberId = payment.MemberID,
-                MemberEmail = member.Email ?? string.Empty,
-                Amount = payment.FinalAmount,
-                ReceiptNumber = payment.ReceiptNumber
+                PaymentId = result.Payment.PaymentID,
+                MemberId = result.Payment.MemberID,
+                MemberEmail = result.Member.Email ?? string.Empty,
+                Amount = result.Payment.FinalAmount,
+                ReceiptNumber = result.Payment.ReceiptNumber
             });
         }
 
-        // Load navigations
-        payment.Member = member;
-        payment.Subscription = sub;
+        await EnsurePlanLoadedAsync(result.Payment);
 
-        return MapToDto(payment);
+        return MapToDto(result.Payment);
     }
 
     public async Task<PaymentResponseDto> RefundPaymentAsync(int id)
     {
-        var payment = await _paymentRepository.GetByIdAsync(id);
-        if (payment == null)
-        {
-            throw new KeyNotFoundException("Payment record not found.");
-        }
+        var actorUserId = GetRequiredCurrentUserId();
+        var nowUtc = GetUtcNow();
+        var identity = await _context.Payments
+            .AsNoTracking()
+            .Where(payment => payment.PaymentID == id)
+            .Select(payment => new
+            {
+                payment.MemberID,
+                payment.SubscriptionID
+            })
+            .SingleOrDefaultAsync()
+            ?? throw new KeyNotFoundException("Payment record not found.");
+        var key = new RefundKey(
+            id,
+            identity.MemberID,
+            identity.SubscriptionID,
+            nowUtc);
+        var result = await GymMembershipTransaction.ExecuteVerifiedAsync(
+            _context,
+            key,
+            async (operationKey, cancellationToken) =>
+            {
+                // Refund is an historical correction: the member may now be inactive
+                // or soft-deleted. We still lock the member first but do not re-qualify it.
+                var member = await GymMembershipTransaction.LockMemberAsync(
+                    _context,
+                    operationKey.MemberId,
+                    cancellationToken);
+                var subscriptions = await GymMembershipTransaction.LockMemberSubscriptionsAsync(
+                    _context,
+                    operationKey.MemberId,
+                    cancellationToken);
+                var payments = await GymMembershipTransaction.LockMemberPaymentsAsync(
+                    _context,
+                    operationKey.MemberId,
+                    cancellationToken);
+                var subscription = subscriptions.SingleOrDefault(item =>
+                    item.SubscriptionID == operationKey.SubscriptionId)
+                    ?? throw PaymentConflict("The associated subscription is unavailable.");
+                var payment = payments.SingleOrDefault(item =>
+                    item.PaymentID == operationKey.PaymentId)
+                    ?? throw new KeyNotFoundException("Payment record not found.");
+                if (payment.MemberID != operationKey.MemberId
+                    || payment.SubscriptionID != operationKey.SubscriptionId
+                    || payment.IsDeleted
+                    || payment.PaymentStatus != PaymentStatus.Paid)
+                {
+                    throw PaymentConflict("Only a paid, non-deleted payment can be refunded.");
+                }
 
-        // BR-07: Completed payments are immutable, can only be refunded
-        if (payment.PaymentStatus == PaymentStatus.Refunded)
-        {
-            throw new InvalidOperationException("This payment transaction is already refunded.");
-        }
+                if (subscription.MemberID != payment.MemberID)
+                {
+                    throw PaymentConflict("The payment and subscription member do not match.");
+                }
 
-        payment.PaymentStatus = PaymentStatus.Refunded;
-        payment.LastModified = DateTime.UtcNow;
+                payment.PaymentStatus = PaymentStatus.Refunded;
+                payment.LastModified = operationKey.TimestampUtc;
+                var hasOtherSuccessfulPayment = payments.Any(other => !other.IsDeleted
+                    && other.PaymentID != payment.PaymentID
+                    && other.SubscriptionID == payment.SubscriptionID
+                    && other.PaymentStatus == PaymentStatus.Paid);
+                if (!hasOtherSuccessfulPayment
+                    && GymMembershipPolicy.IsBlockingStatus(subscription.Status))
+                {
+                    subscription.Status = GymMembershipPolicy.Cancelled;
+                    subscription.LastModified = operationKey.TimestampUtc;
+                }
 
-        await _paymentRepository.UpdateAsync(payment);
+                AddAudit(
+                    actorUserId,
+                    "Payment Refunded",
+                    $"Payment ID {payment.PaymentID}, receipt {payment.ReceiptNumber}, refunded.",
+                    operationKey.TimestampUtc);
+                payment.Member = member;
+                payment.Subscription = subscription;
+                return new PaymentMutationResult(
+                    payment,
+                    member ?? new Member { MemberID = payment.MemberID },
+                    WasReplay: false);
+            },
+            (operationKey, cancellationToken) => _context.Payments
+                .AsNoTracking()
+                .AnyAsync(payment => payment.PaymentID == operationKey.PaymentId
+                    && payment.PaymentStatus == PaymentStatus.Refunded
+                    && payment.LastModified == operationKey.TimestampUtc,
+                    cancellationToken));
 
-        // Optionally, update the associated subscription status back to PendingPayment or Suspended/Cancelled
-        if (payment.Subscription != null)
-        {
-            payment.Subscription.Status = "Cancelled";
-            payment.Subscription.LastModified = DateTime.UtcNow;
-            await _subscriptionRepository.UpdateAsync(payment.Subscription);
-        }
-
-        // Log refund action
-        await _auditService.LogActivityAsync(
-            GetCurrentUserId(),
-            "Payment Refunded",
-            $"Payment ID: {id} (Receipt: {payment.ReceiptNumber}) has been refunded.",
-            GetClientIpAddress()
-        );
-
-        // Publish Domain Event
         await _eventPublisher.PublishAsync(new RefundProcessedEvent
         {
-            PaymentId = payment.PaymentID,
-            MemberId = payment.MemberID,
-            MemberEmail = payment.Member?.Email ?? string.Empty,
-            Amount = payment.FinalAmount,
-            ReceiptNumber = payment.ReceiptNumber
+            PaymentId = result.Payment.PaymentID,
+            MemberId = result.Payment.MemberID,
+            MemberEmail = result.Member.Email ?? string.Empty,
+            Amount = result.Payment.FinalAmount,
+            ReceiptNumber = result.Payment.ReceiptNumber
         });
-
-        return MapToDto(payment);
+        await EnsurePlanLoadedAsync(result.Payment);
+        return MapToDto(result.Payment);
     }
 
     public async Task<IEnumerable<PaymentResponseDto>> SearchPaymentsAsync(
@@ -255,39 +377,278 @@ public class PaymentService : IPaymentService
         string? receiptNumber)
     {
         var query = _context.Payments
-            .Include(p => p.Member)
-            .Include(p => p.Subscription)
-            .ThenInclude(s => s.Plan)
-            .Where(p => !p.IsDeleted);
-
+            .Include(payment => payment.Member)
+            .Include(payment => payment.Subscription)
+            .ThenInclude(subscription => subscription!.Plan)
+            .Where(payment => !payment.IsDeleted);
         if (date.HasValue)
         {
-            var dateOnly = date.Value.Date;
-            query = query.Where(p => p.DatePaid.Date == dateOnly);
+            var requestedDate = date.Value.Date;
+            query = query.Where(payment => payment.DatePaid.Date == requestedDate);
         }
 
-        if (!string.IsNullOrWhiteSpace(method) && Enum.TryParse<PaymentMethod>(method, true, out var pMethod))
+        if (!string.IsNullOrWhiteSpace(method))
         {
-            query = query.Where(p => p.PaymentMethod == pMethod);
+            if (!TryParseNamedEnum(method, out PaymentMethod paymentMethod))
+            {
+                throw InvalidPayment("The payment method filter is invalid.");
+            }
+
+            query = query.Where(payment => payment.PaymentMethod == paymentMethod);
         }
 
-        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<PaymentStatus>(status, true, out var pStatus))
+        if (!string.IsNullOrWhiteSpace(status))
         {
-            query = query.Where(p => p.PaymentStatus == pStatus);
+            if (!TryParseNamedEnum(status, out PaymentStatus paymentStatus))
+            {
+                throw InvalidPayment("The payment status filter is invalid.");
+            }
+
+            query = query.Where(payment => payment.PaymentStatus == paymentStatus);
         }
 
         if (memberId.HasValue)
         {
-            query = query.Where(p => p.MemberID == memberId.Value);
+            query = query.Where(payment => payment.MemberID == memberId.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(receiptNumber))
         {
-            query = query.Where(p => p.ReceiptNumber.Contains(receiptNumber));
+            query = query.Where(payment => payment.ReceiptNumber.Contains(receiptNumber));
         }
 
-        var results = await query.ToListAsync();
-        return results.Select(MapToDto);
+        return (await query.ToListAsync()).Select(MapToDto);
+    }
+
+    private static PaymentMutationResult? FindReferenceReplay(
+        PaymentCreateKey key,
+        IReadOnlyCollection<Payment> payments,
+        IReadOnlyCollection<Subscription> subscriptions,
+        Member member)
+    {
+        var matches = payments
+            .Where(item => !item.IsDeleted
+                && item.ReferenceNumber == key.ReferenceNumber)
+            .ToList();
+        if (matches.Count > 1)
+        {
+            throw PaymentConflict("The payment reference number is not unique.");
+        }
+
+        var payment = matches.SingleOrDefault();
+        if (payment is null)
+        {
+            return null;
+        }
+
+        if (payment.MemberID != key.MemberId
+            || payment.SubscriptionID != key.SubscriptionId
+            || payment.Amount != key.Amount
+            || payment.Discount != key.Discount
+            || payment.PaymentMethod != key.Method
+            || payment.PaymentStatus != key.Status)
+        {
+            throw PaymentConflict("The payment reference number belongs to another request.");
+        }
+
+        var subscription = subscriptions.SingleOrDefault(item =>
+            item.SubscriptionID == payment.SubscriptionID)
+            ?? throw PaymentConflict("The payment subscription is unavailable.");
+        payment.Member = member;
+        payment.Subscription = subscription;
+
+        return new PaymentMutationResult(
+            payment,
+            member,
+            WasReplay: true);
+    }
+
+    private static string GenerateReceiptNumber(string prefix, DateTime nowUtc)
+    {
+        const int entropyBytes = 12;
+        const int maximumPrefixLength = 13;
+        var normalizedPrefix = prefix?.Trim().Normalize(NormalizationForm.FormKC);
+        if (prefix is null
+            || prefix.Any(char.IsControl)
+            || string.IsNullOrWhiteSpace(normalizedPrefix)
+            || normalizedPrefix.Length > maximumPrefixLength
+            || normalizedPrefix.Any(char.IsControl))
+        {
+            throw InvalidPayment(
+                $"The receipt prefix must contain 1 to {maximumPrefixLength} non-control characters.");
+        }
+
+        var entropy = Convert.ToHexString(RandomNumberGenerator.GetBytes(entropyBytes));
+        return $"{normalizedPrefix}{nowUtc:yyMMddHHmmss}-{entropy}";
+    }
+
+    private void AddAudit(int actorUserId, string action, string details, DateTime timestampUtc)
+    {
+        _context.AuditLogs.Add(new AuditLog
+        {
+            UserID = actorUserId,
+            Action = action,
+            Details = details,
+            IPAddress = GetClientIpAddress(),
+            Timestamp = timestampUtc
+        });
+    }
+
+    private static bool IsNormalizedWindow(Subscription subscription)
+    {
+        return subscription.StartDate.TimeOfDay == TimeSpan.Zero
+            && subscription.EndDate.TimeOfDay == TimeSpan.Zero
+            && GymMembershipPolicy.ToCalendarDate(subscription.EndDate)
+                >= GymMembershipPolicy.ToCalendarDate(subscription.StartDate);
+    }
+
+    private async Task EnsurePlanLoadedAsync(Payment payment)
+    {
+        if (payment.Subscription is null)
+        {
+            payment.Subscription = await _context.Subscriptions
+                .AsNoTracking()
+                .SingleOrDefaultAsync(subscription =>
+                    subscription.SubscriptionID == payment.SubscriptionID);
+        }
+
+        if (payment.Subscription is not null && payment.Subscription.Plan is null)
+        {
+            payment.Subscription.Plan = await _context.MembershipPlans
+                .AsNoTracking()
+                .SingleOrDefaultAsync(plan => plan.PlanID == payment.Subscription.PlanID);
+        }
+    }
+
+    private static void RequireActiveMember(Member? member)
+    {
+        if (!GymMembershipPolicy.IsActiveMember(member))
+        {
+            throw new AppAccessException(
+                StatusCodes.Status409Conflict,
+                ErrorCodes.MemberInactive,
+                "An existing active member is required.");
+        }
+    }
+
+    private static void RequireFundablePlan(MembershipPlan plan)
+    {
+        if (!string.Equals(plan.Status, GymMembershipPolicy.PlanActive, StringComparison.Ordinal)
+            || plan.DurationDays < 1
+            || plan.Price <= 0)
+        {
+            throw MembershipConflict(
+                "An active membership plan with a positive duration and price is required.");
+        }
+    }
+
+    private static void ValidatePlanPayment(
+        decimal amount,
+        decimal discount,
+        decimal authoritativePrice)
+    {
+        if (amount != authoritativePrice
+            || discount < 0
+            || amount - discount <= 0)
+        {
+            throw InvalidPayment(
+                "The gross amount must equal the current plan price and the final amount must be positive.");
+        }
+    }
+
+    private static PaymentMethod ParsePaymentMethod(string value)
+    {
+        if (!TryParseNamedEnum(value, out PaymentMethod method))
+        {
+            throw InvalidPayment("The payment method is invalid.");
+        }
+
+        return method;
+    }
+
+    private static PaymentStatus ParsePaymentStatus(string value)
+    {
+        if (!TryParseNamedEnum(value, out PaymentStatus status))
+        {
+            throw InvalidPayment("The payment status is invalid.");
+        }
+
+        if (status is not (PaymentStatus.Paid or PaymentStatus.Pending))
+        {
+            throw InvalidPayment("Only Paid or Pending payment creation is supported.");
+        }
+
+        return status;
+    }
+
+    private static bool TryParseNamedEnum<TEnum>(string? value, out TEnum result)
+        where TEnum : struct, Enum
+    {
+        var normalized = value?.Trim();
+        if (string.IsNullOrWhiteSpace(normalized)
+            || !Enum.GetNames<TEnum>().Any(name =>
+                string.Equals(name, normalized, StringComparison.OrdinalIgnoreCase)))
+        {
+            result = default;
+            return false;
+        }
+
+        return Enum.TryParse(normalized, true, out result);
+    }
+
+    private static string? NormalizeReference(PaymentMethod method, string? referenceNumber)
+    {
+        var normalized = referenceNumber?.Trim().Normalize(NormalizationForm.FormKC);
+        if ((referenceNumber is not null && referenceNumber.Any(char.IsControl))
+            || normalized is { Length: > 100 }
+            || (normalized is not null && normalized.Any(char.IsControl)))
+        {
+            throw InvalidPayment("The payment reference number is invalid.");
+        }
+        if (method != PaymentMethod.Cash && string.IsNullOrWhiteSpace(normalized))
+        {
+            throw InvalidPayment("A reference number is required for non-cash payments.");
+        }
+
+        return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
+    }
+
+    private static void ValidateAmounts(decimal amount, decimal discount)
+    {
+        if (amount <= 0 || discount < 0 || discount > amount)
+        {
+            throw InvalidPayment("Payment amounts are invalid.");
+        }
+    }
+
+    private int GetRequiredCurrentUserId()
+    {
+        return _currentUser.UserId is > 0
+            ? _currentUser.UserId.Value
+            : throw new UnauthorizedAccessException("An active application user is required.");
+    }
+
+    private DateTime GetUtcNow()
+    {
+        var nowUtc = _clock.UtcNow;
+        if (nowUtc.Kind != DateTimeKind.Utc)
+        {
+            throw new InvalidOperationException("The application clock must return UTC values.");
+        }
+
+        return nowUtc;
+    }
+
+    private string GetClientIpAddress()
+    {
+        return _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+    }
+
+    private static DateTime AsUtc(DateTime value)
+    {
+        return value.Kind == DateTimeKind.Utc
+            ? value
+            : DateTime.SpecifyKind(value, DateTimeKind.Utc);
     }
 
     private static PaymentResponseDto MapToDto(Payment payment)
@@ -296,7 +657,9 @@ public class PaymentService : IPaymentService
         {
             PaymentID = payment.PaymentID,
             MemberID = payment.MemberID,
-            MemberName = payment.Member != null ? $"{payment.Member.FirstName} {payment.Member.LastName}" : "Unknown Member",
+            MemberName = payment.Member is null
+                ? "Unknown Member"
+                : $"{payment.Member.FirstName} {payment.Member.LastName}",
             SubscriptionID = payment.SubscriptionID,
             PlanName = payment.Subscription?.Plan?.PlanName ?? "Unknown Plan",
             Amount = payment.Amount,
@@ -306,8 +669,45 @@ public class PaymentService : IPaymentService
             PaymentStatus = payment.PaymentStatus.ToString(),
             ReceiptNumber = payment.ReceiptNumber,
             ReferenceNumber = payment.ReferenceNumber,
-            DatePaid = payment.DatePaid,
-            LastModified = payment.LastModified
+            DatePaid = AsUtc(payment.DatePaid),
+            LastModified = AsUtc(payment.LastModified)
         };
     }
+
+    private static AppAccessException InvalidPayment(string message) => new(
+        StatusCodes.Status400BadRequest,
+        ErrorCodes.PaymentInvalid,
+        message);
+
+    private static AppAccessException PaymentConflict(string message) => new(
+        StatusCodes.Status409Conflict,
+        ErrorCodes.PaymentConflict,
+        message);
+
+    private static AppAccessException MembershipConflict(string message) => new(
+        StatusCodes.Status409Conflict,
+        ErrorCodes.MembershipConflict,
+        message);
+
+    private sealed record PaymentCreateKey(
+        int MemberId,
+        int SubscriptionId,
+        decimal Amount,
+        decimal Discount,
+        PaymentMethod Method,
+        PaymentStatus Status,
+        string? ReferenceNumber,
+        string ReceiptNumber,
+        DateTime TimestampUtc);
+
+    private sealed record RefundKey(
+        int PaymentId,
+        int MemberId,
+        int SubscriptionId,
+        DateTime TimestampUtc);
+
+    private sealed record PaymentMutationResult(
+        Payment Payment,
+        Member Member,
+        bool WasReplay);
 }

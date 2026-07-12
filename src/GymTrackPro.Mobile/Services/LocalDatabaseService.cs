@@ -1,41 +1,80 @@
-using System;
-using System.IO;
-using System.Threading.Tasks;
-using SQLite;
 using GymTrackPro.Mobile.Models;
+using Microsoft.Extensions.Logging;
+using SQLite;
 
 namespace GymTrackPro.Mobile.Services;
 
-public class LocalDatabaseService : ILocalDatabaseService
+public sealed class LocalDatabaseService : ILocalDatabaseService
 {
-    private SQLiteAsyncConnection? _connection;
+    private readonly object _connectionGate = new();
     private readonly string _databasePath;
+    private readonly ILogger<LocalDatabaseService> _logger;
+    private SQLiteAsyncConnection? _connection;
 
-    public LocalDatabaseService()
+    public LocalDatabaseService(ILogger<LocalDatabaseService> logger)
     {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _databasePath = Path.Combine(FileSystem.AppDataDirectory, "GymTrackPro.db3");
     }
 
     public SQLiteAsyncConnection GetConnection()
     {
-        if (_connection == null)
+        lock (_connectionGate)
         {
-            _connection = new SQLiteAsyncConnection(_databasePath, 
-                SQLiteOpenFlags.ReadWrite | 
-                SQLiteOpenFlags.Create | 
-                SQLiteOpenFlags.SharedCache);
+            if (_connection is not null)
+            {
+                return _connection;
+            }
+
+            try
+            {
+                var databaseExists = File.Exists(_databasePath);
+
+                // The database lives in the OS app-private sandbox and this singleton
+                // is its sole opener. sqlite-net cannot transfer the synchronous handle
+                // validated below into SQLiteAsyncConnection, so same-UID replacement
+                // between validation and pool open is an accepted P3 threat assumption.
+                SqliteDatabaseGuard.ValidateExistingDatabase(_databasePath);
+
+                var flags = SQLiteOpenFlags.ReadWrite | SQLiteOpenFlags.SharedCache;
+                if (!databaseExists)
+                {
+                    flags |= SQLiteOpenFlags.Create;
+                }
+
+                _connection = new SQLiteAsyncConnection(_databasePath, flags);
+                return _connection;
+            }
+            catch (LocalDatabaseCompatibilityException exception)
+            {
+                _logger.LogCritical(
+                    exception,
+                    "The local database was preserved because it is unreadable or incompatible with this app version.");
+                throw;
+            }
         }
-        return _connection;
     }
 
     public async Task InitializeAsync()
     {
-        var db = GetConnection();
-        
-        // Create local tables
-        await db.CreateTableAsync<SyncQueue>();
-        await db.CreateTableAsync<LocalMember>();
-        
-        // TODO: Scaffold other local caching tables (LocalSubscription, LocalAttendance, etc.) in Phase 5
+        var database = GetConnection();
+
+        try
+        {
+            // These are the pre-existing operational tables. Gym Goer cache tables and
+            // per-account AES-GCM envelopes are intentionally deferred to WP5.
+            await database.CreateTableAsync<SyncQueue>().ConfigureAwait(false);
+            await database.CreateTableAsync<LocalMember>().ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is SQLiteException or IOException or UnauthorizedAccessException)
+        {
+            var compatibilityException = new LocalDatabaseCompatibilityException(
+                "The local database could not be safely initialized. Its files were preserved for recovery.",
+                exception);
+            _logger.LogCritical(
+                compatibilityException,
+                "Local database initialization failed without deleting or recreating existing data.");
+            throw compatibilityException;
+        }
     }
 }

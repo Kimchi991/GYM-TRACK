@@ -39,14 +39,54 @@
 
 		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
 		<WindowsPackageType>None</WindowsPackageType>
-		<NoWarn>$(NoWarn);NU1903</NoWarn>
-
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 	</PropertyGroup>
+
+	<!-- Debug may use loopback/emulator HTTP. Release has no fallback and must be
+	     supplied an exact MonsterASP HTTPS URL and expected host by the publish job. -->
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+		<GymTrackProApiBaseUrl>http://localhost:5221/api/v1/</GymTrackProApiBaseUrl>
+		<GymTrackProApiExpectedHost>localhost</GymTrackProApiExpectedHost>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug' and $([System.String]::Copy('$(TargetFramework)').Contains('-android'))">
+		<GymTrackProApiBaseUrl>http://10.0.2.2:5221/api/v1/</GymTrackProApiBaseUrl>
+		<GymTrackProApiExpectedHost>10.0.2.2</GymTrackProApiExpectedHost>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="$([System.String]::Copy('$(TargetFramework)').Contains('-android'))">
+		<AndroidManifestPlaceholders>usesCleartextTraffic=false</AndroidManifestPlaceholders>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug' and $([System.String]::Copy('$(TargetFramework)').Contains('-android'))">
+		<AndroidManifestPlaceholders>usesCleartextTraffic=true</AndroidManifestPlaceholders>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>GymTrackPro.ApiBaseUrl</_Parameter1>
+			<_Parameter2>$(GymTrackProApiBaseUrl)</_Parameter2>
+		</AssemblyAttribute>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>GymTrackPro.ApiExpectedHost</_Parameter1>
+			<_Parameter2>$(GymTrackProApiExpectedHost)</_Parameter2>
+		</AssemblyAttribute>
+	</ItemGroup>
+
+	<Target Name="ValidateReleaseApiEndpoint" BeforeTargets="PrepareForBuild" Condition="'$(Configuration)' == 'Release'">
+		<Error Condition="'$(GymTrackProApiBaseUrl)' == ''"
+			Text="Release requires -p:GymTrackProApiBaseUrl=https://EXPECTED_HOST/api/v1/." />
+		<Error Condition="'$(GymTrackProApiExpectedHost)' == ''"
+			Text="Release requires -p:GymTrackProApiExpectedHost=EXPECTED_HOST." />
+		<Error Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(GymTrackProApiExpectedHost)', '^(?i:localhost|127\.0\.0\.1|0\.0\.0\.0|10\.0\.2\.2|\[::1\]|::1)$'))"
+			Text="Release API host cannot be localhost, loopback, or the Android emulator host." />
+		<Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(GymTrackProApiExpectedHost)', '^[A-Za-z0-9.-]+$'))"
+			Text="Release API expected host must be a DNS name or IPv4 address without a scheme, port, path, query, or fragment." />
+		<Error Condition="'$(GymTrackProApiBaseUrl)' != 'https://$(GymTrackProApiExpectedHost)/api/v1/'"
+			Text="Release API URL must exactly match https://$(GymTrackProApiExpectedHost)/api/v1/; HTTP, localhost, alternate hosts, ports, redirects, queries, and fragments are forbidden." />
+	</Target>
 
 	<ItemGroup>
 		<!-- App Icon -->
@@ -68,13 +108,13 @@
 
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-		<PackageReference Include="FirebaseAuthentication.net" Version="3.7.2" />
+		<PackageReference Include="FirebaseAuthentication.net" Version="4.1.0" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
-		<PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
-		<PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.8" />
-		<PackageReference Include="ZXing.Net.Maui" Version="0.4.0" />
-		<PackageReference Include="ZXing.Net.Maui.Controls" Version="0.4.0" />
+		<PackageReference Include="sqlite-net-pcl" Version="1.11.284-beta" />
+		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+		<PackageReference Include="ZXing.Net.Maui" Version="0.10.3" />
+		<PackageReference Include="ZXing.Net.Maui.Controls" Version="0.10.3" />
 	</ItemGroup>
 
 	<ItemGroup>
