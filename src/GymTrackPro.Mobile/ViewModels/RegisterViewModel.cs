@@ -240,15 +240,19 @@ public partial class RegisterViewModel : BaseViewModel
         ErrorMessage = string.Empty;
         SuccessMessage = string.Empty;
 
+        // Prevent infinite loading — timeout after 15 seconds if Firebase token
+        // refresh or the API call hangs (network issues, dead semaphore, etc.).
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+
         try
         {
-            if (!await _firebaseAuthService.HasSessionAsync())
+            if (!await _firebaseAuthService.HasSessionAsync(timeoutCts.Token))
             {
                 ErrorMessage = "Sign in first, then return to activate your invite.";
                 return;
             }
 
-            if (!await _firebaseAuthService.IsEmailVerifiedAsync())
+            if (!await _firebaseAuthService.IsEmailVerifiedAsync(timeoutCts.Token))
             {
                 ErrorMessage = "The email is not verified yet. Open the Firebase email link, then try again.";
                 return;
@@ -270,6 +274,10 @@ public partial class RegisterViewModel : BaseViewModel
 
             SuccessMessage = "Account activated successfully.";
             await RouteAuthenticatedUserAsync(response.Data.Role);
+        }
+        catch (OperationCanceledException)
+        {
+            ErrorMessage = "The activation request timed out. Check your internet connection and try again.";
         }
         catch (Exception exception)
         {
