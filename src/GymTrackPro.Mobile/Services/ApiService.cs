@@ -118,9 +118,9 @@ public class ApiService : IApiService
         return await HandleResponseAsync<UserResponseDto>(response);
     }
 
-    public async Task<ApiResponse<UserResponseDto>> ActivateInviteAsync(ActivateInviteDto dto)
+    public async Task<ApiResponse<UserResponseDto>> ActivateInviteAsync(ActivateInviteDto dto, CancellationToken cancellationToken = default)
     {
-        var response = await _httpClient.PostAsJsonAsync("auth/activate", dto);
+        var response = await _httpClient.PostAsJsonAsync("auth/activate", dto, cancellationToken);
         return await HandleResponseAsync<UserResponseDto>(response);
     }
 

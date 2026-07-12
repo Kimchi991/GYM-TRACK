@@ -42,7 +42,7 @@ public interface IApiService
 {
     // Authentication
     Task<ApiResponse<UserResponseDto>> SyncUserWithBackendAsync(string firebaseToken);
-    Task<ApiResponse<UserResponseDto>> ActivateInviteAsync(ActivateInviteDto dto);
+    Task<ApiResponse<UserResponseDto>> ActivateInviteAsync(ActivateInviteDto dto, CancellationToken cancellationToken = default);
     Task<ApiResponse<UserResponseDto>> GetCurrentUserAsync();
     Task<StartupIdentityLookupResult> GetCurrentUserForStartupAsync(
         CancellationToken cancellationToken = default);

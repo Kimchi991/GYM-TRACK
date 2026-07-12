@@ -262,7 +262,7 @@ public partial class RegisterViewModel : BaseViewModel
             {
                 InviteCode = InviteCode.Trim(),
                 OperationId = _activationOperationId
-            });
+            }, timeoutCts.Token);
 
             if (!response.Success || response.Data is null)
             {
