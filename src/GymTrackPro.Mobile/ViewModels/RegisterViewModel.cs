@@ -14,6 +14,7 @@ public partial class RegisterViewModel : BaseViewModel
     private readonly IFirebaseAuthService _firebaseAuthService;
     private readonly IApiService _apiService;
     private readonly Func<GoerAppShell> _goerShellFactory;
+    private readonly Func<AppShell> _appShellFactory;
     private readonly IRootNavigationService _rootNavigationService;
     private Guid _activationOperationId = Guid.NewGuid();
     private DateTimeOffset _resendAvailableAtUtc = DateTimeOffset.MinValue;
@@ -61,11 +62,13 @@ public partial class RegisterViewModel : BaseViewModel
         IFirebaseAuthService firebaseAuthService,
         IApiService apiService,
         Func<GoerAppShell> goerShellFactory,
+        Func<AppShell> appShellFactory,
         IRootNavigationService rootNavigationService)
     {
         _firebaseAuthService = firebaseAuthService;
         _apiService = apiService;
         _goerShellFactory = goerShellFactory;
+        _appShellFactory = appShellFactory;
         _rootNavigationService = rootNavigationService
             ?? throw new ArgumentNullException(nameof(rootNavigationService));
         Title = "Create Account";
@@ -204,10 +207,14 @@ public partial class RegisterViewModel : BaseViewModel
                 return;
             }
 
+            // Prevent infinite loading — timeout after 15 seconds if Firebase token
+            // refresh or the API call hangs (network issues, dead semaphore, etc.).
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+
             // Set the cooldown before the provider call so repeated failures cannot be
             // used to hammer the email endpoint with rapid taps.
             _resendAvailableAtUtc = DateTimeOffset.UtcNow.Add(ResendCooldown);
-            await _firebaseAuthService.SendEmailVerificationAsync();
+            await _firebaseAuthService.SendEmailVerificationAsync(timeoutCts.Token);
             SuccessMessage =
                 "Verification email requested. Check your inbox and spam folder before trying again.";
         }
@@ -303,6 +310,9 @@ public partial class RegisterViewModel : BaseViewModel
             return;
         }
 
-        await Shell.Current.GoToAsync("///dashboard");
+        if (!_rootNavigationService.TrySetRoot(_appShellFactory()))
+        {
+            ErrorMessage = "Account activated, but the staff dashboard could not be displayed.";
+        }
     }
 }

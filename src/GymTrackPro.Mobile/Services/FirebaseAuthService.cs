@@ -185,7 +185,8 @@ public sealed class FirebaseAuthService : IFirebaseAuthService
                 // FirebaseAuthentication.net has no cancellation-token overload. Once
                 // refresh begins, keep the single-flight gate until it completes so a
                 // cancelled caller cannot start a second refresh with an older token.
-                var tokenTask = user.GetIdTokenAsync(refresh);
+                // Wrap in Task.Run to prevent synchronous blocking on the UI thread.
+                var tokenTask = Task.Run(() => user.GetIdTokenAsync(refresh));
                 return await tokenTask.WaitAsync(cancellationToken).ConfigureAwait(false);
             }
             catch (FirebaseAuthException exception) when (IsTerminalSessionFailure(exception))

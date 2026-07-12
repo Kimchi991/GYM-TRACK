@@ -141,7 +141,8 @@ public partial class PaymentsViewModel : BaseViewModel
             var subDto = new CreateSubscriptionDto
             {
                 MemberID = SelectedMemberForPayment.MemberID,
-                PlanID = SelectedPlanForPayment.PlanID
+                PlanID = SelectedPlanForPayment.PlanID,
+                StartDate = DateTime.Today
             };
 
             var subResult = await _apiService.CreateSubscriptionAsync(subDto);
@@ -158,7 +159,8 @@ public partial class PaymentsViewModel : BaseViewModel
                 SubscriptionID = subResult.Data.SubscriptionID,
                 Amount = PaymentAmount,
                 Discount = PaymentDiscount,
-                PaymentMethod = PaymentMethod
+                PaymentMethod = PaymentMethod,
+                PaymentStatus = "Paid"
             };
 
             var payResult = await _apiService.ProcessPaymentAsync(payDto);

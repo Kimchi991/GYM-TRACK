@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GymTrackPro.Mobile.Services;
 using GymTrackPro.Shared.DTOs;
+using GymTrackPro.Shared.Enums;
 using Microsoft.Maui.Controls;
 
 namespace GymTrackPro.Mobile.ViewModels;
@@ -21,6 +22,9 @@ public partial class PlansViewModel : BaseViewModel
 
     [ObservableProperty]
     public partial bool ShowPlanForm { get; set; }
+
+    [ObservableProperty]
+    public partial bool CanManagePlans { get; set; }
 
     [ObservableProperty]
     public partial bool IsEditing { get; set; }
@@ -59,6 +63,10 @@ public partial class PlansViewModel : BaseViewModel
 
         try
         {
+            var identity = await _apiService.GetCurrentUserForStartupAsync();
+            CanManagePlans = identity.Status == StartupIdentityLookupStatus.Success
+                && identity.User?.Role == UserRole.Administrator;
+
             var result = await _apiService.GetPlansAsync();
             if (result.Success && result.Data != null)
             {

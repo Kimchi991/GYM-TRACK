@@ -119,6 +119,7 @@
 
                     <!-- Loading Indicator -->
                     <ActivityIndicator IsRunning="{Binding IsBusy}"
+                                       IsVisible="{Binding IsBusy}"
                                        Color="{StaticResource Primary}"
                                        HorizontalOptions="Center" />
                 </VerticalStackLayout>

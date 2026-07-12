@@ -14,6 +14,7 @@ public partial class LoginViewModel : BaseViewModel
     private readonly IFirebaseAuthService _firebaseAuthService;
     private readonly IAppLogoutService _logoutService;
     private readonly Func<GoerAppShell> _goerShellFactory;
+    private readonly Func<AppShell> _appShellFactory;
     private readonly IRootNavigationService _rootNavigationService;
 
     [ObservableProperty]
@@ -39,12 +40,14 @@ public partial class LoginViewModel : BaseViewModel
         IFirebaseAuthService firebaseAuthService,
         IAppLogoutService logoutService,
         Func<GoerAppShell> goerShellFactory,
+        Func<AppShell> appShellFactory,
         IRootNavigationService rootNavigationService)
     {
         _apiService = apiService;
         _firebaseAuthService = firebaseAuthService;
         _logoutService = logoutService;
         _goerShellFactory = goerShellFactory;
+        _appShellFactory = appShellFactory;
         _rootNavigationService = rootNavigationService
             ?? throw new ArgumentNullException(nameof(rootNavigationService));
         Title = "Login";
@@ -92,7 +95,10 @@ public partial class LoginViewModel : BaseViewModel
                 }
                 else
                 {
-                    await Shell.Current.GoToAsync("///dashboard");
+                    if (!_rootNavigationService.TrySetRoot(_appShellFactory()))
+                    {
+                        ErrorMessage = "Signed in, but the staff dashboard could not be displayed.";
+                    }
                 }
             }
             else
