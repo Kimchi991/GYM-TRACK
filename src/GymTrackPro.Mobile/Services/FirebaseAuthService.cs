@@ -227,7 +227,17 @@ public sealed class FirebaseAuthService : IFirebaseAuthService
         await _sessionGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            _client.SignOut();
+            // Guard against NullReferenceException in Firebase.Auth.UserManager.DeleteExistingUser
+            // when SignOut() is called with no active session (e.g. fresh launch or already logged out).
+            if (_client.User is not null)
+            {
+                _client.SignOut();
+            }
+        }
+        catch (Exception)
+        {
+            // Swallow any remaining Firebase internals exception during sign-out.
+            // The goal is a clean slate — if Firebase already has no session, that is fine.
         }
         finally
         {

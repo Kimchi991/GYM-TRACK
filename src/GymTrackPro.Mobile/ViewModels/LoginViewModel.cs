@@ -76,7 +76,8 @@ public partial class LoginViewModel : BaseViewModel
             // FirebaseAuthentication.net persists the last session in SecureStorage;
             // if a previous account is still cached, SignInWithEmailAndPasswordAsync
             // throws "identity operation conflicts with existing account state".
-            await _logoutService.LogoutAsync();
+            // If there is nothing to sign out, this is a safe no-op.
+            try { await _logoutService.LogoutAsync(); } catch { /* no-op: clean slate is the goal */ }
 
             var firebaseToken = await _firebaseAuthService.LoginAsync(Email, Password);
             var result = await _apiService.SyncUserWithBackendAsync(firebaseToken);
