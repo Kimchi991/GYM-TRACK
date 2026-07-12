@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="FirebaseAuthentication.net" Version="4.1.0" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
     <PackageReference Include="sqlite-net-pcl" Version="1.11.284-beta" />
@@ -39,6 +40,9 @@
     <Compile Include="..\GymTrackPro.Mobile\Services\FirebaseAuthSettings.cs" Link="Production\FirebaseAuthSettings.cs" />
     <Compile Include="..\GymTrackPro.Mobile\Services\IAuthenticationSession.cs" Link="Production\IAuthenticationSession.cs" />
     <Compile Include="..\GymTrackPro.Mobile\Services\IApiService.cs" Link="Production\IApiService.cs" />
+    <Compile Include="..\GymTrackPro.Mobile\Services\StaffInviteEmailCanonicalizer.cs" Link="Production\StaffInviteEmailCanonicalizer.cs" />
+    <Compile Include="..\GymTrackPro.Mobile\Services\IAppClipboardService.cs" Link="Production\IAppClipboardService.cs" />
+    <Compile Include="..\GymTrackPro.Mobile\Services\IAppDialogService.cs" Link="Production\IAppDialogService.cs" />
     <Compile Include="..\GymTrackPro.Mobile\Services\ILocalDatabaseService.cs" Link="Production\ILocalDatabaseService.cs" />
     <Compile Include="..\GymTrackPro.Mobile\Services\INetworkService.cs" Link="Production\INetworkService.cs" />
     <Compile Include="..\GymTrackPro.Mobile\Services\ISyncService.cs" Link="Production\ISyncService.cs" />
@@ -52,6 +56,8 @@
     <Compile Include="..\GymTrackPro.Mobile\Models\LocalAttendance.cs" Link="Production\LocalAttendance.cs" />
     <Compile Include="..\GymTrackPro.Mobile\Models\LocalGoerDashboardCache.cs" Link="Production\LocalGoerDashboardCache.cs" />
     <Compile Include="..\GymTrackPro.Mobile\Models\LocalMember.cs" Link="Production\LocalMember.cs" />
+    <Compile Include="..\GymTrackPro.Mobile\ViewModels\BaseViewModel.cs" Link="Production\BaseViewModel.cs" />
+    <Compile Include="..\GymTrackPro.Mobile\ViewModels\StaffProvisioningViewModel.cs" Link="Production\StaffProvisioningViewModel.cs" />
   </ItemGroup>
 
   <!-- Platform policy files are copied as fixtures so the platform-neutral test

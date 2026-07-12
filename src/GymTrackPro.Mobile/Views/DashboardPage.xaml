@@ -192,7 +192,7 @@
             <!-- Quick Actions -->
             <VerticalStackLayout Spacing="12">
                 <Label Text="Quick Actions" TextColor="{StaticResource TextPrimary}" FontSize="16" FontAttributes="Bold" />
-                <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" ColumnSpacing="12" RowSpacing="12">
+                <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto, Auto" ColumnSpacing="12" RowSpacing="12">
                     
                     <!-- Check-In Action (Row 0, Col 0) -->
                     <Border StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="10" HeightRequest="100">
@@ -237,6 +237,23 @@
                             <Label Text="Reports" TextColor="{StaticResource TextPrimary}" FontSize="12" FontAttributes="Bold" HorizontalOptions="Center" />
                         </VerticalStackLayout>
                     </Border>
+
+                    <!-- Owner-only Staff Provisioning (API enforces authorization) -->
+                    <Button Grid.Row="2"
+                            Grid.ColumnSpan="2"
+                            IsVisible="{Binding CanManageStaff}"
+                            Text="Add Receptionist&#10;Create a staff profile and one-time invite"
+                            Command="{Binding NavigateToStaffProvisioningCommand}"
+                            BackgroundColor="{StaticResource CardBackground}"
+                            BorderColor="{StaticResource BorderBrush}"
+                            BorderWidth="1"
+                            TextColor="{StaticResource TextPrimary}"
+                            FontAttributes="Bold"
+                            CornerRadius="12"
+                            Padding="14"
+                            MinimumHeightRequest="86"
+                            SemanticProperties.Description="Add Receptionist"
+                            SemanticProperties.Hint="Owner action. Opens the form for creating a Receptionist profile and one-time activation invite." />
                 </Grid>
             </VerticalStackLayout>
 

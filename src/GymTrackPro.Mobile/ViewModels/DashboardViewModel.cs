@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GymTrackPro.Mobile.Services;
 using GymTrackPro.Shared.DTOs;
+using GymTrackPro.Shared.Enums;
 
 namespace GymTrackPro.Mobile.ViewModels;
 
@@ -35,6 +36,9 @@ public partial class DashboardViewModel : BaseViewModel
     [ObservableProperty]
     public partial string ErrorMessage { get; set; } = string.Empty;
 
+    [ObservableProperty]
+    public partial bool CanManageStaff { get; set; }
+
     public DashboardViewModel(
         IApiService apiService,
         IAppLogoutService logoutService,
@@ -58,6 +62,10 @@ public partial class DashboardViewModel : BaseViewModel
 
         try
         {
+            var identity = await _apiService.GetCurrentUserForStartupAsync();
+            CanManageStaff = identity.Status == StartupIdentityLookupStatus.Success
+                && identity.User?.Role == UserRole.Administrator;
+
             var result = await _apiService.GetDashboardMetricsAsync();
             if (result.Success && result.Data != null)
             {
@@ -75,6 +83,7 @@ public partial class DashboardViewModel : BaseViewModel
         }
         catch (Exception ex)
         {
+            CanManageStaff = false;
             ErrorMessage = $"Error loading dashboard: {ex.Message}";
         }
         finally
@@ -113,5 +122,16 @@ public partial class DashboardViewModel : BaseViewModel
     private async Task NavigateToAsync(string route)
     {
         await Shell.Current.GoToAsync($"///{route}");
+    }
+
+    [RelayCommand]
+    private async Task NavigateToStaffProvisioningAsync()
+    {
+        if (!CanManageStaff)
+        {
+            return;
+        }
+
+        await Shell.Current.GoToAsync("staffprovisioning");
     }
 }

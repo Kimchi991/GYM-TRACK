@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="GymTrackPro.Mobile.Views.StaffProvisioningPage"
+             x:Name="PageRoot"
+             Title="Add Receptionist"
+             BackgroundColor="{StaticResource Background}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20,20,20,40" Spacing="18"
+                             MaximumWidthRequest="720"
+                             HorizontalOptions="Center">
+            <VerticalStackLayout Spacing="5">
+                <Label Text="Create a Receptionist Invite"
+                       TextColor="{StaticResource TextPrimary}"
+                       FontSize="24"
+                       FontAttributes="Bold"
+                       SemanticProperties.HeadingLevel="Level1" />
+                <Label Text="Owner access only. This creates the staff profile and a one-time activation invite; it does not create Firebase credentials."
+                       TextColor="{StaticResource TextSecondary}"
+                       FontSize="13" />
+            </VerticalStackLayout>
+
+            <Border StrokeShape="RoundRectangle 12"
+                    Stroke="{StaticResource DangerBrush}"
+                    BackgroundColor="{StaticResource CardBackground}"
+                    Padding="14"
+                    IsVisible="{Binding ErrorMessage, Converter={StaticResource NullableToBoolConverter}}">
+                <Label Text="{Binding ErrorMessage}"
+                       TextColor="{StaticResource Danger}"
+                       FontSize="13"
+                       SemanticProperties.Description="Staff provisioning error" />
+            </Border>
+
+            <Border StrokeShape="RoundRectangle 14"
+                    Stroke="{StaticResource BorderBrush}"
+                    BackgroundColor="{StaticResource CardBackground}"
+                    Padding="18"
+                    IsVisible="{Binding CanProvision}">
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="Staff details"
+                           TextColor="{StaticResource TextPrimary}"
+                           FontSize="17"
+                           FontAttributes="Bold"
+                           SemanticProperties.HeadingLevel="Level2" />
+
+                    <VerticalStackLayout Spacing="14">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="First name" TextColor="{StaticResource TextSecondary}" FontSize="12" />
+                            <Entry Text="{Binding FirstName}"
+                                   Placeholder="First name"
+                                   ReturnType="Next"
+                                   IsEnabled="{Binding IsBusy, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}"
+                                   SemanticProperties.Description="Receptionist first name" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Last name" TextColor="{StaticResource TextSecondary}" FontSize="12" />
+                            <Entry Text="{Binding LastName}"
+                                   Placeholder="Last name"
+                                   ReturnType="Next"
+                                   IsEnabled="{Binding IsBusy, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}"
+                                   SemanticProperties.Description="Receptionist last name" />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Recipient email" TextColor="{StaticResource TextSecondary}" FontSize="12" />
+                        <Entry Text="{Binding Email}"
+                               Placeholder="receptionist@example.com"
+                               Keyboard="Email"
+                               ReturnType="Next"
+                               IsEnabled="{Binding IsBusy, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}"
+                               SemanticProperties.Description="Exact email the receptionist will use for Firebase registration" />
+                        <Label Text="The receptionist must register and verify this same email before activating the invite."
+                               TextColor="{StaticResource Warning}"
+                               FontSize="11" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Invite purpose" TextColor="{StaticResource TextSecondary}" FontSize="12" />
+                        <Entry Text="{Binding Purpose}"
+                               Placeholder="Receptionist mobile app access"
+                               ReturnType="Done"
+                               IsEnabled="{Binding IsBusy, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}"
+                               SemanticProperties.Description="Short reason for issuing this receptionist invite" />
+                    </VerticalStackLayout>
+
+                    <Button Text="Create Receptionist Invite"
+                            Command="{Binding ProvisionStaffCommand}"
+                            IsEnabled="{Binding IsBusy, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}"
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="White"
+                            FontAttributes="Bold"
+                            CornerRadius="9"
+                            HeightRequest="50"
+                            SemanticProperties.Hint="Submits the staff profile once and generates a one-time invite" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border StrokeShape="RoundRectangle 14"
+                    Stroke="{StaticResource SuccessBrush}"
+                    BackgroundColor="{StaticResource CardBackground}"
+                    Padding="18"
+                    IsVisible="{Binding HasGeneratedInvite}">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Invite created"
+                           TextColor="{StaticResource Success}"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           SemanticProperties.HeadingLevel="Level2" />
+                    <Label Text="{Binding SuccessMessage}"
+                           TextColor="{StaticResource TextPrimary}"
+                           FontSize="13" />
+                    <Border StrokeShape="RoundRectangle 8"
+                            Stroke="{StaticResource BorderBrush}"
+                            BackgroundColor="{StaticResource Background}"
+                            Padding="12">
+                        <Label Text="{Binding InviteCode}"
+                               TextColor="{StaticResource Secondary}"
+                               FontSize="16"
+                               FontAttributes="Bold"
+                               LineBreakMode="CharacterWrap"
+                               SemanticProperties.Description="One-time receptionist activation invite code" />
+                    </Border>
+                    <Label Text="{Binding ExpiresAtText}"
+                           TextColor="{StaticResource TextSecondary}"
+                           FontSize="12" />
+                    <Label Text="{Binding RecipientInstruction}"
+                           TextColor="{StaticResource Warning}"
+                           FontSize="12" />
+                    <Button Text="Copy Invite Code"
+                            Command="{Binding CopyInviteCommand}"
+                            BackgroundColor="{StaticResource Secondary}"
+                            TextColor="#0F172A"
+                            FontAttributes="Bold"
+                            CornerRadius="9"
+                            HeightRequest="48"
+                            SemanticProperties.Hint="Copies the one-time invite code to the device clipboard" />
+                </VerticalStackLayout>
+            </Border>
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               Color="{StaticResource Primary}"
+                               HorizontalOptions="Center"
+                               SemanticProperties.Description="Creating receptionist invite" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

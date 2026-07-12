@@ -44,6 +44,7 @@ public sealed class OwnedEndpointAuthorizationTests
         yield return Case<NotificationsController>(nameof(NotificationsController.GetNotifications), Policies.BackOffice);
         yield return Case<NotificationsController>(nameof(NotificationsController.MarkAsRead), Policies.BackOffice);
         yield return Case<UsersController>(nameof(UsersController.CreateUserInvite), Policies.OwnerOnly);
+        yield return Case<UsersController>(nameof(UsersController.CreateStaff), Policies.OwnerOnly);
         yield return Case<UsersController>(nameof(UsersController.GetUserInviteStatus), Policies.OwnerOnly);
         yield return Case<UsersController>(nameof(UsersController.RevokeUserInvite), Policies.OwnerOnly);
         yield return Case<MeController>(nameof(MeController.GetCurrentProfile), Policies.ActiveAppUser);

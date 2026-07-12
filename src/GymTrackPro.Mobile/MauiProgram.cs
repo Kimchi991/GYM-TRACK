@@ -40,6 +40,7 @@ public static class MauiProgram
 		builder.Services.AddTransient<NotificationsViewModel>();
 		builder.Services.AddTransient<PlansViewModel>();
 		builder.Services.AddTransient<MemberDetailsViewModel>();
+		builder.Services.AddTransient<StaffProvisioningViewModel>();
 
 		// Register Views (Pages)
 		builder.Services.AddTransient<LoginPage>();
@@ -55,6 +56,7 @@ public static class MauiProgram
 		builder.Services.AddTransient<NotificationsPage>();
 		builder.Services.AddTransient<PlansPage>();
 		builder.Services.AddTransient<MemberDetailsPage>();
+		builder.Services.AddTransient<StaffProvisioningPage>();
 
 		// Register Gym Goer ViewModels and Views
 		builder.Services.AddTransient<GoerDashboardViewModel>();
@@ -83,6 +85,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IAppLogoutService, AppLogoutService>();
 		builder.Services.AddSingleton<IRootNavigationService, MauiRootNavigationService>();
 		builder.Services.AddSingleton<IAppDialogService, MauiAppDialogService>();
+		builder.Services.AddSingleton<IAppClipboardService, MauiAppClipboardService>();
 
 		// Register Firebase notification receiver services (Phase 10)
 

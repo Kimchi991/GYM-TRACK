@@ -278,6 +278,164 @@ public class ApiService : IApiService
         }
     }
 
+    private async Task<OperationalResourceResult<TResponse>> PostOperationalJsonAsync<TRequest, TResponse>(
+        string requestUri,
+        TRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var response = await _httpClient
+                .PostAsJsonAsync(requestUri, request, _jsonOptions, cancellationToken)
+                .ConfigureAwait(false);
+            var statusCode = response.StatusCode;
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorPayload = await response.Content
+                    .ReadAsStringAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                var (message, errorCode) = ParseOperationalError(errorPayload);
+
+                return new OperationalResourceResult<TResponse>(
+                    IsTransientUnavailable(statusCode)
+                        ? OperationalResourceStatus.Unavailable
+                        : OperationalResourceStatus.Rejected,
+                    HttpStatusCode: statusCode,
+                    Message: message,
+                    ErrorCode: errorCode);
+            }
+
+            try
+            {
+                var result = await response.Content
+                    .ReadFromJsonAsync<ApiResponse<TResponse>>(_jsonOptions, cancellationToken)
+                    .ConfigureAwait(false);
+                return result?.Success == true && result.Data is not null
+                    ? new OperationalResourceResult<TResponse>(
+                        OperationalResourceStatus.Success,
+                        result.Data,
+                        statusCode,
+                        result.Message,
+                        result.ErrorCode)
+                    : new OperationalResourceResult<TResponse>(
+                        OperationalResourceStatus.InvalidResponse,
+                        HttpStatusCode: statusCode,
+                        Message: "The server did not return the created staff invite.");
+            }
+            catch (JsonException)
+            {
+                return new OperationalResourceResult<TResponse>(
+                    OperationalResourceStatus.InvalidResponse,
+                    HttpStatusCode: statusCode,
+                    Message: "The server returned an invalid response.");
+            }
+        }
+        catch (Exception exception) when (IsTransportFailure(exception))
+        {
+            return new OperationalResourceResult<TResponse>(
+                OperationalResourceStatus.Unavailable,
+                Message: "The server could not be reached.");
+        }
+    }
+
+    private static (string? Message, string? ErrorCode) ParseOperationalError(
+        string payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            return (null, null);
+        }
+
+        try
+        {
+            var apiError = JsonSerializer.Deserialize<ApiResponse>(payload, _jsonOptions);
+            var apiMessage = apiError?.Errors is { Count: > 0 }
+                ? string.Join(Environment.NewLine, apiError.Errors)
+                : apiError?.Message;
+            if (!string.IsNullOrWhiteSpace(apiMessage)
+                || !string.IsNullOrWhiteSpace(apiError?.ErrorCode))
+            {
+                return (apiMessage, apiError?.ErrorCode);
+            }
+        }
+        catch (JsonException)
+        {
+            // Fall through to RFC 7807 parsing.
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(payload);
+            var root = document.RootElement;
+            var messages = new List<string>();
+            if (TryGetPropertyIgnoreCase(root, "errors", out var errors)
+                && errors.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var field in errors.EnumerateObject())
+                {
+                    if (field.Value.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var item in field.Value.EnumerateArray())
+                        {
+                            if (item.ValueKind == JsonValueKind.String
+                                && !string.IsNullOrWhiteSpace(item.GetString()))
+                            {
+                                messages.Add($"{field.Name}: {item.GetString()}");
+                            }
+                        }
+                    }
+                    else if (field.Value.ValueKind == JsonValueKind.String
+                        && !string.IsNullOrWhiteSpace(field.Value.GetString()))
+                    {
+                        messages.Add($"{field.Name}: {field.Value.GetString()}");
+                    }
+                }
+            }
+
+            if (messages.Count > 0)
+            {
+                return (string.Join(Environment.NewLine, messages), null);
+            }
+
+            if (TryGetPropertyIgnoreCase(root, "detail", out var detail)
+                && detail.ValueKind == JsonValueKind.String
+                && !string.IsNullOrWhiteSpace(detail.GetString()))
+            {
+                return (detail.GetString(), null);
+            }
+
+            if (TryGetPropertyIgnoreCase(root, "title", out var title)
+                && title.ValueKind == JsonValueKind.String)
+            {
+                return (title.GetString(), null);
+            }
+        }
+        catch (JsonException)
+        {
+            // A malformed body does not override the authoritative HTTP status.
+        }
+
+        return (null, null);
+    }
+
+    private static bool TryGetPropertyIgnoreCase(
+        JsonElement element,
+        string propertyName,
+        out JsonElement value)
+    {
+        foreach (var property in element.EnumerateObject())
+        {
+            if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+            {
+                value = property.Value;
+                return true;
+            }
+        }
+
+        value = default;
+        return false;
+    }
+
     private static bool IsTransientUnavailable(HttpStatusCode statusCode) =>
         statusCode is HttpStatusCode.RequestTimeout
             or HttpStatusCode.InternalServerError
@@ -316,6 +474,17 @@ public class ApiService : IApiService
     {
         var response = await _httpClient.PostAsJsonAsync("members", memberDto);
         return await HandleResponseAsync<MemberResponseDto>(response);
+    }
+
+    public Task<OperationalResourceResult<StaffInviteProvisioningResponseDto>> ProvisionStaffAsync(
+        CreateStaffInviteDto request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return PostOperationalJsonAsync<CreateStaffInviteDto, StaffInviteProvisioningResponseDto>(
+            "users/staff",
+            request,
+            cancellationToken);
     }
 
     public async Task<ApiResponse<MemberResponseDto>> UpdateMemberAsync(int id, UpdateMemberDto memberDto)

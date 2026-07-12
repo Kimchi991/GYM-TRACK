@@ -17,26 +17,31 @@ in [24_CapstoneImplementationAndDemoGuide.md](24_CapstoneImplementationAndDemoGu
 ## Verified source baseline before UAT
 
 - Server strict build: **0 errors / 0 warnings**
-- Full server tests: **652 passed / 652 total**
-- Mobile tests: **73 passed / 73 total**
+- Full server tests: **663 passed / 663 total**
+- Focused backend Staff/auth tests: **49 passed / 49 total**
+- Mobile tests: **86 passed / 86 total**
 - Android strict compile: **0 errors / 0 warnings**
 - EF pending-model check: **no pending model changes**
 - EF migration list: **through
   `20260712050837_AddAttendanceVoidingAndSource`**
 
 These automated results do not mark any manual checkbox below as passed.
-LocalDB execution rehearsal was environment-deferred. A fresh final idempotent
-script/hash, MonsterASP rehearsal, credential rotation, SQL TLS confirmation,
-physical-device/emulator UAT, and handoff to `feature/firebase-auth` remain
-pending.
+The operator reports both migrations applied/tracked on MonsterASP and the prior
+missing-column errors cleared. That remote status is not independently verified
+by these automated results. A fresh final idempotent script/hash, backup
+evidence, credential rotation, SQL TLS confirmation, physical-device/emulator
+UAT, final source commit, and merge to `feature/firebase-auth` remain pending.
 
 ## 1. Setup and migration
 
 - [ ] No secrets, tokens, connection strings, or personal data appear in tracked
   files or captured evidence.
 - [ ] The demo database is disposable or has a confirmed pre-rehearsal backup.
-- [ ] `20260711204834_StageFirebaseIdentityAndAccountInvites` is applied first.
-- [ ] `20260712050837_AddAttendanceVoidingAndSource` is applied second.
+- [ ] Read-only `__EFMigrationsHistory` verification shows
+  `20260711204834_StageFirebaseIdentityAndAccountInvites` before
+  `20260712050837_AddAttendanceVoidingAndSource`.
+- [ ] No migration SQL is reapplied and no schema, UID binding, or
+  `__EFMigrationsHistory` row is manually edited during normal UAT.
 - [ ] A fresh final attendance-inclusive idempotent script and SHA-256 were
   generated from the final source; no older or B1-only hash was reused.
 - [ ] Attendance safeguards are present after migration: restrictive foreign
@@ -46,32 +51,55 @@ pending.
 
 Evidence/result: __________________________________________
 
-## 2. Authentication, bootstrap, and routing
+## 2. Owner bootstrap and routing
 
 - [ ] The bootstrapped, verified Owner can sign in and receives Owner navigation.
-- [ ] A verified Staff account receives staff navigation and cannot access
-  Owner-only functions.
-- [ ] A user can sign up through Firebase email/password authentication.
-- [ ] The verification email and resend-verification flow work.
-- [ ] An unverified account cannot activate or enter operational screens.
-- [ ] A valid invite activates the intended member once and routes the user to
-  `GoerAppShell`.
-- [ ] Invalid, revoked, and already-used invites show meaningful failure messages
-  and grant no access.
-- [ ] A GymGoer cannot access Staff or Owner screens.
+- [ ] The existing Owner bypasses activation; no second Owner or Owner invite is
+  created.
 
 Evidence/result: __________________________________________
 
-## 3. Member and invite management
+## 3. Receptionist/Cashier provisioning and activation
 
-- [ ] Authorized Staff/Owner can create a synthetic member.
-- [ ] Staff can view the member's current app-invite status.
-- [ ] Staff can generate and revoke an invite using supported UI actions.
+- [ ] From the Owner UI, **Add Receptionist** creates one Receptionist profile and
+  one-time invite through the Owner-only application flow.
+- [ ] The Receptionist registers in Firebase using the exact profile/invite email;
+  no role-selection control is available.
+- [ ] The verification email and resend-verification flow work.
+- [ ] An unverified account cannot activate or enter operational screens.
+- [ ] The valid Staff invite activates once with role `Receptionist`.
+- [ ] The Receptionist reaches the shared back-office shell; no distinct Staff
+  shell is expected.
+- [ ] Receptionist operations work while an Owner-only action is denied.
+- [ ] A mismatched, revoked, or already-used Staff invite grants no access.
+- [ ] If the create response is deliberately interrupted, the tester checks for
+  an already-created profile before retrying and uses the Owner-only existing-user
+  revoke/reissue flow when needed. This recovery case is nonblocking if the
+  normal flow passes, but its result/limitation is recorded.
+
+Evidence/result: __________________________________________
+
+## 4. Member, GymGoer registration, and invite management
+
+- [ ] Authorized Staff/Owner creates a synthetic member before Firebase signup,
+  using the exact email the GymGoer will register.
+- [ ] Staff can view, generate, and revoke the member's invite using supported UI
+  actions.
+- [ ] The GymGoer registers through Firebase email/password with that exact email;
+  no role-selection control is available.
+- [ ] Email verification and resend work, and an unverified GymGoer cannot
+  activate or enter operational screens.
+- [ ] A valid Member invite activates once, grants `GymGoer`, and routes to
+  `GoerAppShell`.
+- [ ] Invalid, revoked, and already-used invites show meaningful failure messages
+  and grant no access.
+- [ ] An email mismatch is rejected without creating an application binding.
+- [ ] A GymGoer cannot access Staff or Owner screens.
 - [ ] Invite status is refreshed after activation or revocation.
 
 Evidence/result: __________________________________________
 
-## 4. Private profile and account isolation
+## 5. Private profile and account isolation
 
 - [ ] The signed-in user can load the permitted profile image through the
   authenticated MAUI API flow, with no public profile URI.
@@ -85,7 +113,7 @@ Evidence/result: __________________________________________
 
 Evidence/result: __________________________________________
 
-## 5. Gym-goer dashboard and history
+## 6. Gym-goer dashboard and history
 
 - [ ] Dashboard shows the correct membership status and expiry date.
 - [ ] Current attendance state is accurate.
@@ -97,7 +125,7 @@ Evidence/result: __________________________________________
 
 Evidence/result: __________________________________________
 
-## 6. Online and offline attendance
+## 7. Online and offline attendance
 
 - [ ] Online check-in creates one current attendance session.
 - [ ] Duplicate/invalid check-in is rejected without creating another session.
@@ -111,7 +139,7 @@ Evidence/result: __________________________________________
 
 Evidence/result: __________________________________________
 
-## 7. Staff attendance, payments, and membership lifecycle
+## 8. Staff attendance, payments, and membership lifecycle
 
 - [ ] Staff can locate a member and perform the supported attendance operation.
 - [ ] Invalid attendance transitions return a controlled message.
@@ -126,7 +154,7 @@ Evidence/result: __________________________________________
 
 Evidence/result: __________________________________________
 
-## 8. Owner analytics
+## 9. Owner analytics
 
 - [ ] Owner can open the attendance summary report.
 - [ ] Total visits, average duration, and date-grouped check-ins match the demo
@@ -135,6 +163,21 @@ Evidence/result: __________________________________________
 - [ ] CSV export contains the expected synthetic records and headings.
 
 Evidence/result: __________________________________________
+
+## 10. Application-layer defect evidence
+
+Do not change MonsterASP schema, Firebase UID bindings, or migration-history rows
+while triaging an application defect.
+
+- [ ] Source revision/build configuration: ______________________________
+- [ ] Device/emulator, OS, and network state: ___________________________
+- [ ] Application role and screen: _____________________________________
+- [ ] Reproduction steps and expected/actual result: ____________________
+- [ ] Sanitized exception/stack location: _______________________________
+- [ ] API route, HTTP status, safe error code, correlation ID: __________
+- [ ] Suspected layer: [ ] XAML  [ ] ViewModel  [ ] Navigation  [ ] DI
+  [ ] Controller  [ ] Service  [ ] Authorization
+- [ ] Fix/retest result or accepted limitation: _________________________
 
 ## Final UAT decision
 

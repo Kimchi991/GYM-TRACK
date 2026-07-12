@@ -2,7 +2,10 @@
 
 This directory contains the reviewed, idempotent SQL artifact for migration
 `20260711204834_StageFirebaseIdentityAndAccountInvites`. The script is a
-forward-only deployment artifact. It has not been executed against MonsterASP.
+forward-only deployment artifact. The operator reports that the B1 and
+attendance migrations were applied and tracked on MonsterASP; this documentation
+pass did not independently verify the remote database or prove that this exact
+tracked B1 artifact was the executed byte sequence.
 
 Reviewed tracked-script SHA-256:
 
@@ -118,13 +121,18 @@ HTTP result metadata, completion ordering, and nonblank ledger text.
 ### Current capstone verification evidence
 
 - Server strict build: 0 errors and 0 warnings.
-- Full server suite: 652 passed out of 652.
+- Full server suite: 663 passed out of 663.
+- Focused backend Staff/auth suite: 49 passed out of 49.
+- Mobile suite: 86 passed out of 86.
 - EF listed migrations through
   `20260712050837_AddAttendanceVoidingAndSource`.
 - `dotnet ef migrations has-pending-model-changes` reported no pending changes.
 - A disposable LocalDB execution rehearsal is environment-deferred because the
   available LocalDB environment could not create the isolated verification
-  database. No MonsterASP execution was performed.
+  database. No review agent executed against MonsterASP. The operator reports
+  both migrations applied/tracked and the prior missing-column application errors
+  cleared; attach read-only history/schema and smoke-test evidence before final
+  sign-off.
 
 The final attendance-inclusive idempotent SQL export and its SHA-256 remain
 pending. Generate them fresh from the final source after all migration edits are
@@ -132,14 +140,16 @@ complete. Do not reuse an earlier temporary export hash. The reviewed tracked
 B1-only hash near the top of this document proves only the B1 script and must not
 be presented as the hash of the combined B1-plus-attendance migration script.
 
-Before the MonsterASP rehearsal, rotate any database credential that has appeared
-in source, chat, history, screenshots, or shared evidence; store the replacement
-only in an untracked secret source. Confirm encrypted SQL transport/TLS with the
-provider. MonsterASP execution, post-migration smoke testing, and final handoff to
-`feature/firebase-auth` remain pending operator gates.
+Before final UAT, rotate any database credential that has appeared in source,
+chat, history, screenshots, or shared evidence; store the replacement only in an
+untracked secret source. Confirm encrypted SQL transport/TLS with the provider.
+Do not reapply migration SQL or edit `__EFMigrationsHistory` on the current
+MonsterASP database during normal UAT. Read-only remote verification,
+post-migration application smoke evidence, final source commit, and handoff from
+`solsolplan` to `feature/firebase-auth` remain pending operator gates.
 
 This local capstone sequence does not require the production catalog-fingerprint,
-write-freeze, immutable-artifact, or MonsterASP rehearsal steps above. Those are
-future deployment tasks. It still requires a disposable/local database backup
-before testing the migration, and the B1 identity migration must remain before
-the attendance migration.
+write-freeze, or immutable-artifact steps above, and it does not require a second
+MonsterASP migration execution for normal UAT. Those are future deployment tasks.
+It still requires a disposable/local database backup before testing the migration,
+and the B1 identity migration must remain before the attendance migration.

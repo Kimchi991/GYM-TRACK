@@ -65,6 +65,9 @@ public interface IApiService
     Task<ApiResponse<AppInviteCodeResponseDto>> GenerateMemberInviteAsync(
         int memberId,
         CreateAppInviteDto request);
+    Task<OperationalResourceResult<StaffInviteProvisioningResponseDto>> ProvisionStaffAsync(
+        CreateStaffInviteDto request,
+        CancellationToken cancellationToken = default);
     Task<ApiResponse<AppInviteResponseDto>> GetMemberInviteStatusAsync(int memberId);
     Task<ApiResponse> RevokeMemberInviteAsync(int memberId);
 

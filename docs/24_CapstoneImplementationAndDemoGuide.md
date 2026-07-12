@@ -18,15 +18,17 @@ The following results were reported from the reviewed capstone implementation:
 | Gate | Verified result |
 | --- | ---: |
 | Server strict build | 0 errors, 0 warnings |
-| Full server tests | 652 passed / 652 total |
-| Mobile tests | 73 passed / 73 total |
+| Full server tests | 663 passed / 663 total |
+| Focused backend staff/auth tests | 49 passed / 49 total |
+| Mobile tests | 86 passed / 86 total |
 | Android strict compile | 0 errors, 0 warnings |
 | EF pending-model check | No pending model changes |
 | EF migration list | Listed through `20260712050837_AddAttendanceVoidingAndSource` |
 
-These results establish a source-level baseline. They do not prove that the
-pending MonsterASP migration rehearsal or a physical-device demo has passed.
-Record those results in the evidence section when they are performed.
+These results establish a source-level baseline. They do not independently
+validate the remote MonsterASP database or prove that a physical-device demo has
+passed. The database status below is operator-reported and must be paired with
+the requested evidence before final sign-off.
 
 The authenticated MAUI gym-goer dashboard now retrieves the current member's
 profile image through the bearer-authenticated API client. It does not bind a
@@ -53,8 +55,10 @@ to the default profile presentation without blocking the dashboard.
 
 ## Capstone setup
 
-1. Check out the approved `feature/firebase-auth` capstone revision and confirm
-   that no unrelated EF migration generator or watcher is modifying the tree.
+1. Use `solsolplan` as the UAT source branch. Commit `9d78179` is the prior
+   reviewed baseline; the final source revision is **PENDING** because the new
+   Receptionist provisioning changes are not yet committed. Record the final
+   revision before UAT. The merge destination remains `feature/firebase-auth`.
 2. Configure the API with the intended Firebase project identifier and the
    MonsterASP demo connection string through an untracked secret source.
 3. Configure the mobile application with the capstone API base address and its
@@ -67,20 +71,27 @@ to the default profile presentation without blocking the dashboard.
    works. Confirm encrypted SQL transport with the provider; do not accept
    `Encrypt=False` as the final shared-demo configuration without a documented
    provider limitation and explicit capstone risk acceptance.
-6. Apply the capstone migrations to a disposable or backed-up demo database in
-   this order:
+6. For the current MonsterASP demo database, perform read-only verification that
+   these migrations are already present in `__EFMigrationsHistory`, in order:
    1. `20260711204834_StageFirebaseIdentityAndAccountInvites`
    2. `20260712050837_AddAttendanceVoidingAndSource`
+   Do not reapply their raw SQL, remove columns, or edit migration-history rows
+   during normal UAT. Apply migrations only when creating a fresh disposable or
+   restored database, after completing the documented backup and preflight.
 7. Seed or retain only synthetic demo data. Never use a real member's personal,
    payment, or attendance information.
-8. Complete the owner bootstrap with a designated verified Firebase account and
-   the matching SQL Administrator record. Keep the one-time token and database
-   secret out of command arguments, logs, screenshots, and tracked files.
+8. The one-time Owner bootstrap is **operator-reported complete**. Use the
+   existing verified Owner account. Do not create a second Owner and do not use
+   an invite for the Owner. Keep the Owner email, Firebase UID, tokens, and
+   database secrets out of documentation, logs, screenshots, and tracked files.
 
-### Migration rehearsal evidence
+### MonsterASP migration status and evidence
 
-This section is intentionally pending. Do not infer a successful MonsterASP
-rehearsal from unit tests or local migration generation.
+The operator reports that both migrations were applied to MonsterASP, the
+attendance migration was recorded in `__EFMigrationsHistory`, and the prior
+missing-column dashboard errors were cleared. This is the current UAT baseline,
+not an independent database validation by the review agents. Normal UAT must
+read-verify this state and must not repair, reapply, or rewrite it.
 
 Source-level EF verification completed successfully: EF listed both migrations
 through `20260712050837_AddAttendanceVoidingAndSource`, and the pending-model
@@ -89,20 +100,21 @@ attempted but is environment-deferred because the available LocalDB instance
 could not create the isolated verification database. This is not evidence of a
 MonsterASP rehearsal.
 
-The final combined idempotent SQL script and its SHA-256 are **PENDING**. The
-final temporary export could not be completed within the verification session's
-environment limit. Do not reuse an earlier generated hash or the separately
-documented B1-only script hash as evidence for the final attendance-inclusive
-script. Generate a fresh script from the final source, calculate its fresh hash,
-and review both before applying it to MonsterASP.
+The final combined idempotent SQL script and its SHA-256 remain **PENDING**.
+Do not reuse an earlier generated hash or the separately documented B1-only
+script hash as evidence for the final attendance-inclusive script. Generate and
+review a fresh artifact from the final committed source for archival/recovery
+evidence; do not execute it again against the already-migrated UAT database.
 
 - Final idempotent migration script and fresh SHA-256: **PENDING**
 - Target demo database identifier (non-secret alias only): **PENDING**
-- Rehearsal date/time and operator: **PENDING**
+- Remote execution date/time and operator: **PENDING**
 - Backup or disposable-database confirmation: **PENDING**
-- B1 migration result: **PENDING**
-- Attendance migration result: **PENDING**
-- Post-migration smoke-test result: **PENDING**
+- B1 migration result: **OPERATOR-REPORTED APPLIED/TRACKED**
+- Attendance migration result: **OPERATOR-REPORTED APPLIED/TRACKED**
+- Missing-column dashboard errors: **OPERATOR-REPORTED CLEARED**
+- Read-only history/schema verification: **PENDING**
+- Post-migration application smoke-test evidence: **PENDING**
 - Rollback/reset result, if exercised: **PENDING**
 
 The attendance migration source currently includes these reviewed safeguards:
@@ -122,50 +134,69 @@ The attendance migration source currently includes these reviewed safeguards:
 Use synthetic Owner, Staff, and Member identities. Capture the result of each
 step in [the UAT checklist](UAT_GymGoer_Checklist.md).
 
-1. **Owner and staff access**
+1. **Existing Owner access**
    - Sign in with the bootstrapped, email-verified Owner account and show Owner
      routing and authorized navigation.
-   - Sign out, sign in with an email-verified Staff account, and show that Staff
-     receives the expected staff shell without Owner-only access.
-2. **Member creation and invite**
+   - Confirm the Owner bypasses activation. Do not create another Owner and do
+     not issue or redeem an Owner invite.
+2. **Receptionist/Cashier provisioning and activation**
+   - As Owner, open **Add Receptionist** and create the Receptionist profile and
+     one-time invite through the supported UI. The underlying Owner-only route is
+     `POST /api/v1/users/staff`; the operation does not create Firebase
+     credentials.
+   - On the Receptionist device, register the exact email used for that profile,
+     complete Firebase email verification, and activate the invite once. There
+     is no user-selectable role; the invite grants the `Receptionist` role.
+   - Confirm the Receptionist reaches the shared back-office shell. There is no
+     separate Staff shell. Demonstrate that an Owner-only action is denied while
+     authorized Cashier/Staff operations remain available.
+   - If the create request's response is interrupted, do not blindly submit a
+     second Staff profile. First verify whether the profile/invite was committed;
+     if it was, revoke/reissue the invite through the Owner-only existing-user
+     invite operation. Treat this recovery scenario as nonblocking when the
+     normal successful flow passes, but record its evidence or limitation.
+3. **Member creation and invite**
    - As Owner or authorized Staff, create a synthetic member.
+   - Use the exact email that the GymGoer will register in Firebase.
    - Generate an app invite from the member details screen and show its current
      status. Keep the code visible only for the controlled demo.
-3. **Signup, verification, and activation**
+4. **GymGoer signup, verification, and activation**
    - On the gym-goer device, sign up with the invited member's email.
+   - Confirm the registration UI offers no role selection; the Member invite is
+     the only authority that grants the `GymGoer` role.
    - Show that an unverified account cannot complete operational access.
    - Demonstrate resend verification, verify the email, sign in again, and
      activate the invite once.
    - Show that invalid, revoked, or already-used invite codes fail with a useful
      message and do not grant access.
-4. **Role routing and profile privacy**
+5. **Role routing and profile privacy**
    - Confirm the activated GymGoer is routed to the gym-goer shell and cannot
      navigate to staff or Owner functions.
    - Load the member's own profile image through the authenticated experience.
      Confirm another gym-goer cannot retrieve that private image by changing an
      identifier or URL.
-5. **Gym-goer dashboard and attendance history**
+6. **Gym-goer dashboard and attendance history**
    - Show current membership status and expiry on the dashboard.
    - Show the current attendance state and attendance history, including the
      date/time and source data exposed by the UI.
-6. **Online check-in and check-out**
+7. **Online check-in and check-out**
    - Check in while online and show the updated current state.
    - Attempt the relevant duplicate or invalid transition and show that it is
      rejected without creating a second attendance session.
    - Check out and confirm the completed visit appears in history and the staff
      attendance view.
-7. **Offline queue and reconnect sync**
+8. **Offline queue and reconnect sync**
    - Disconnect the gym-goer device, initiate the supported attendance action,
      and show an explicit queued/pending state rather than a false success.
    - Reconnect, trigger or await sync, and show that the queued operation reaches
      the server once, leaves the queue only after acknowledgement, and refreshes
      current/history views without duplication.
-8. **Staff attendance operations**
+9. **Staff attendance operations**
    - From the Staff experience, perform the supported member lookup and
      attendance action.
    - Show the resulting attendance source and state from both staff and gym-goer
      views, including a controlled rejection for an invalid transition.
-9. **Payment and membership boundaries**
+10. **Payment and membership boundaries**
    - Record a valid payment or renewal and show the resulting membership dates
      and status.
    - Demonstrate controlled rejection of invalid amounts, wholly expired
@@ -174,7 +205,7 @@ step in [the UAT checklist](UAT_GymGoer_Checklist.md).
    - Pause an eligible active membership, show the paused state, then resume it.
      Show that an inactive, deleted, future-only, or otherwise ineligible
      subscription cannot be paused.
-10. **Logout and account isolation**
+11. **Logout and account isolation**
     - Sign out and confirm protected screens cannot be revisited.
     - Sign in as a different synthetic account and confirm the previous account's
       profile, dashboard, attendance, and queued-operation cache is not shown.
@@ -199,6 +230,28 @@ attendance story can be recreated consistently.
 - Clear only the test device's application data when resetting mobile state, then
   sign in and sync again. Never copy one account's cache into another account.
 
+## Application-layer defect triage
+
+The current MonsterASP schema is frozen during normal UAT. Investigate reported
+failures in MAUI/XAML, ViewModels, navigation, dependency injection, API
+controllers, services, validation, and authorization. Do not mutate schema,
+manually change Firebase UID bindings, or edit `__EFMigrationsHistory` while
+triaging an application defect.
+
+Record this evidence for every defect without including secrets or personal
+identifiers:
+
+- final source revision and build configuration;
+- device/emulator model, OS, and network state;
+- signed-in application role and screen;
+- exact reproduction steps and expected/actual behavior;
+- sanitized exception type, message, and stack trace;
+- API route, HTTP status, safe error code, and correlation ID;
+- screenshot/video or sanitized log location;
+- suspected layer: MAUI/XAML, ViewModel, navigation, DI, controller, service, or
+  authorization; and
+- disposition, retest result, and accepted capstone limitation, if any.
+
 ## Known limitations and future production work
 
 The following are documented future-hardening items, not claims about the current
@@ -220,21 +273,23 @@ requirements, not deferred infrastructure work.
 ## Final evidence and decision
 
 - UAT date/time and timezone: ______________________________
-- Source revision/commit: _________________________________
-- Branch: `feature/firebase-auth`
+- UAT source branch: `solsolplan`
+- Prior reviewed baseline: `9d78179`
+- Final source revision/commit: **PENDING** __________________
+- Merge destination: `feature/firebase-auth`
 - API build/test evidence location: ________________________
 - Mobile build/test evidence location: _____________________
 - Android device/emulator and OS: __________________________
 - Firebase project alias (no secrets): _____________________
 - MonsterASP database alias (no secrets): __________________
-- Migration rehearsal evidence location: __________________
+- Remote migration evidence location: _____________________
 - Screenshots/video location: ______________________________
 - Tester(s): ______________________________________________
 - Open defects and accepted limitations: ___________________
 - Final result: [ ] PASS  [ ] FAIL  [ ] PASS WITH NOTED LIMITATIONS
 - Capstone lead sign-off/date: _____________________________
 
-The branch field above is the required handoff destination, not proof that the
-current uncommitted integration tree has already been moved there. Branch
-handoff, MonsterASP migration rehearsal, credential rotation, and SQL TLS
-confirmation remain pending operator actions.
+The migrations and Owner binding are operator-reported complete on MonsterASP;
+their supporting evidence is still required. Final source commit, branch merge,
+credential rotation, SQL TLS confirmation, and physical-device UAT remain
+pending operator actions.

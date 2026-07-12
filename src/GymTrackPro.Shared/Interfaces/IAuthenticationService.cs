@@ -8,6 +8,9 @@ public interface IAuthenticationService
     Task<UserResponseDto> SyncUserAsync(string firebaseUid, string email);
     Task<UserResponseDto> GetCurrentUserAsync(int userId, string firebaseUid);
     Task<UserResponseDto> ActivateAppAsync(string firebaseUid, string email, ActivateInviteDto request);
+    Task<StaffInviteProvisioningResponseDto> CreateStaffWithInviteAsync(
+        int creatorUserId,
+        CreateStaffInviteDto dto);
     Task<AppInviteCodeResponseDto> CreateMemberInviteAsync(int memberId, int creatorUserId, CreateAppInviteDto dto);
     Task<AppInviteResponseDto> GetMemberInviteStatusAsync(int memberId);
     Task RevokeMemberInviteAsync(int memberId, int actorUserId);

@@ -23,7 +23,7 @@
                                FontSize="24"
                                FontAttributes="Bold"
                                HorizontalOptions="Center" />
-                        <Label Text="Firebase verifies your email; your gym invite grants app access."
+                        <Label Text="After verifying your email; your gym invite grants app access."
                                TextColor="{StaticResource TextSecondary}"
                                FontSize="14"
                                HorizontalOptions="Center" />
@@ -52,7 +52,7 @@
                             </Border>
                         </VerticalStackLayout>
 
-                        <Button Text="Create Firebase Account"
+                        <Button Text="Create FitHub Account"
                                 TextColor="White"
                                 BackgroundColor="{StaticResource Primary}"
                                 CornerRadius="8"
@@ -62,7 +62,7 @@
                     </VerticalStackLayout>
 
                     <VerticalStackLayout Spacing="12" IsVisible="{Binding ShowActivation}">
-                        <Label Text="After opening the Firebase verification email, enter the invite again and confirm activation. The invite is never stored on this device."
+                        <Label Text="After opening the verification email, enter the invite again and confirm activation. The invite is never stored on this device."
                                TextColor="{StaticResource TextSecondary}"
                                FontSize="13"
                                HorizontalTextAlignment="Center" />

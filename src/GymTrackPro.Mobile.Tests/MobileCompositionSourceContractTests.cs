@@ -164,6 +164,60 @@ public sealed class MobileCompositionSourceContractTests
     }
 
     [Fact]
+    public void Owner_staff_provisioning_page_is_di_composed_and_has_no_role_or_password_input()
+    {
+        var mobileRoot = GetMobileRoot();
+        var registrations = File.ReadAllText(Path.Combine(mobileRoot, "MauiProgram.cs"));
+        var shell = File.ReadAllText(Path.Combine(mobileRoot, "AppShell.xaml.cs"));
+        var dashboard = XDocument.Load(Path.Combine(mobileRoot, "Views", "DashboardPage.xaml"));
+        var page = XDocument.Load(Path.Combine(mobileRoot, "Views", "StaffProvisioningPage.xaml"));
+        var codeBehind = File.ReadAllText(Path.Combine(
+            mobileRoot,
+            "Views",
+            "StaffProvisioningPage.xaml.cs"));
+
+        Assert.Contains("AddTransient<StaffProvisioningViewModel>()", registrations, StringComparison.Ordinal);
+        Assert.Contains("AddTransient<StaffProvisioningPage>()", registrations, StringComparison.Ordinal);
+        Assert.Contains("AddSingleton<IAppClipboardService, MauiAppClipboardService>()", registrations, StringComparison.Ordinal);
+        Assert.Contains("Routing.RegisterRoute(\"staffprovisioning\"", shell, StringComparison.Ordinal);
+        var staffButton = dashboard.Descendants()
+            .Single(element => element.Name.LocalName == "Button"
+                && string.Equals(
+                    (string?)element.Attribute("Command"),
+                    "{Binding NavigateToStaffProvisioningCommand}",
+                    StringComparison.Ordinal));
+        Assert.Equal("{Binding CanManageStaff}", (string?)staffButton.Attribute("IsVisible"));
+        Assert.Equal("Add Receptionist", staffButton.Attributes().Single(attribute =>
+            attribute.Name.LocalName == "SemanticProperties.Description").Value);
+        Assert.False(string.IsNullOrWhiteSpace(staffButton.Attributes().Single(attribute =>
+            attribute.Name.LocalName == "SemanticProperties.Hint").Value));
+        Assert.Contains("StaffProvisioningPage(StaffProvisioningViewModel viewModel)", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("viewModel.Deactivate()", codeBehind, StringComparison.Ordinal);
+
+        var dashboardViewModel = File.ReadAllText(Path.Combine(
+            mobileRoot,
+            "ViewModels",
+            "DashboardViewModel.cs"));
+        var navigationStart = dashboardViewModel.IndexOf(
+            "NavigateToStaffProvisioningAsync",
+            StringComparison.Ordinal);
+        var navigation = dashboardViewModel[navigationStart..];
+        Assert.Contains("if (!CanManageStaff)", navigation, StringComparison.Ordinal);
+
+        var entries = page.Descendants()
+            .Where(element => element.Name.LocalName == "Entry")
+            .Select(element => (string?)element.Attribute("Text"))
+            .ToArray();
+        Assert.Contains("{Binding FirstName}", entries);
+        Assert.Contains("{Binding LastName}", entries);
+        Assert.Contains("{Binding Email}", entries);
+        Assert.Contains("{Binding Purpose}", entries);
+        Assert.DoesNotContain(entries, binding =>
+            binding?.Contains("Role", StringComparison.OrdinalIgnoreCase) == true
+            || binding?.Contains("Password", StringComparison.OrdinalIgnoreCase) == true);
+    }
+
+    [Fact]
     public void Goer_profile_picture_is_loaded_as_authenticated_bytes_with_default_fallback()
     {
         var mobileRoot = GetMobileRoot();

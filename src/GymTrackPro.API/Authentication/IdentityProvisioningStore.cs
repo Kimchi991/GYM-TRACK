@@ -1,5 +1,6 @@
 using System.Data;
 using System.Security.Cryptography;
+using System.Text;
 using GymTrackPro.API.Data;
 using GymTrackPro.Shared.Constants;
 using GymTrackPro.Shared.Entities;
@@ -11,6 +12,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace GymTrackPro.API.Authentication;
 
 public sealed record IdentityOperationContext(string CorrelationId, string IpAddress);
+
+public sealed record StaffInviteProvisioningResult(AppUserIdentity User, AccountInvite Invite);
 
 public interface IIdentityProvisioningStore
 {
@@ -36,6 +39,16 @@ public interface IIdentityProvisioningStore
     Task<AccountInvite> CreateOrReplaceStaffInviteAsync(
         int userId,
         int actorUserId,
+        byte[] tokenHash,
+        string purpose,
+        IdentityOperationContext operationContext,
+        CancellationToken cancellationToken = default);
+
+    Task<StaffInviteProvisioningResult> CreateStaffWithInviteAsync(
+        int actorUserId,
+        string firstName,
+        string lastName,
+        string email,
         byte[] tokenHash,
         string purpose,
         IdentityOperationContext operationContext,
@@ -272,6 +285,85 @@ public sealed class IdentityProvisioningStore : IIdentityProvisioningStore
                     operationContext.IpAddress);
                 return created;
             }, ct), cancellationToken));
+    }
+
+    public async Task<StaffInviteProvisioningResult> CreateStaffWithInviteAsync(
+        int actorUserId,
+        string firstName,
+        string lastName,
+        string email,
+        byte[] tokenHash,
+        string purpose,
+        IdentityOperationContext operationContext,
+        CancellationToken cancellationToken = default)
+    {
+        if (actorUserId <= 0
+            || tokenHash is null
+            || tokenHash.Length != InviteCodeCodec.HashBytes
+            || !EmailNormalization.TryCanonicalize(email, out var canonicalEmail, out var normalizedEmail))
+        {
+            throw ValidationFailed();
+        }
+
+        firstName = NormalizeStaffName(firstName);
+        lastName = NormalizeStaffName(lastName);
+        purpose = NormalizePurpose(purpose);
+        var username = CreateStaffUsername(normalizedEmail);
+
+        var persisted = await ExecuteMappedIdentityMutationAsync(() =>
+            ExecuteWithConcurrencyRetryAsync(async ct =>
+            await ExecuteSerializableAsync(async innerCt =>
+            {
+                await RequireActorAsync(actorUserId, ownerOnly: true, innerCt);
+                await EnsureEmailAvailableForUpdateAsync(normalizedEmail, allowedUserId: null, innerCt);
+                if (await HasUsernameForUpdateAsync(username, innerCt))
+                {
+                    throw IdentityConflict();
+                }
+
+                var now = _clock.UtcNow;
+                var user = new User
+                {
+                    FirebaseUid = null,
+                    MemberID = null,
+                    Username = username,
+                    Email = canonicalEmail,
+                    NormalizedEmail = normalizedEmail,
+                    PasswordHash = null,
+                    FirstName = firstName,
+                    LastName = lastName,
+                    Role = UserRole.Receptionist,
+                    IsActive = true,
+                    EmailVerified = false,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                };
+                _dbContext.Users.Add(user);
+
+                var invite = new AccountInvite
+                {
+                    TargetUser = user,
+                    TokenHash = tokenHash.ToArray(),
+                    NormalizedEmail = normalizedEmail,
+                    IntendedRole = UserRole.Receptionist,
+                    Purpose = purpose,
+                    CreatedByUserID = actorUserId,
+                    CreatedAtUtc = now,
+                    ExpiresAtUtc = now.AddHours(72)
+                };
+                _dbContext.AccountInvites.Add(invite);
+                AddAudit(
+                    actorUserId,
+                    "StaffProfileAndInviteCreated",
+                    $"Receptionist profile and app invite created; CorrelationId={SafeCorrelation(operationContext.CorrelationId)}.",
+                    operationContext.IpAddress);
+
+                return (User: user, Invite: invite);
+            }, ct), cancellationToken));
+
+        // Identity keys and relationship foreign keys are materialized by SaveChanges,
+        // which completes inside the transaction before this response is built.
+        return new StaffInviteProvisioningResult(ToIdentity(persisted.User), persisted.Invite);
     }
 
     public Task<AccountInvite?> GetLatestMemberInviteAsync(
@@ -1018,6 +1110,34 @@ public sealed class IdentityProvisioningStore : IIdentityProvisioningStore
         {
             throw ValidationFailed();
         }
+    }
+
+    private static string NormalizeStaffName(string? value)
+    {
+        var normalized = value?.Trim().Normalize(NormalizationForm.FormKC) ?? string.Empty;
+        if (normalized.Length is 0 or > 100 || normalized.Any(char.IsControl))
+        {
+            throw ValidationFailed();
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizePurpose(string? value)
+    {
+        var normalized = value?.Trim().Normalize(NormalizationForm.FormKC) ?? string.Empty;
+        if (normalized.Length is 0 or > 100 || normalized.Any(char.IsControl))
+        {
+            throw ValidationFailed();
+        }
+
+        return normalized;
+    }
+
+    private static string CreateStaffUsername(string normalizedEmail)
+    {
+        var digest = SHA256.HashData(Encoding.UTF8.GetBytes(normalizedEmail));
+        return $"staff-{Convert.ToHexString(digest.AsSpan(0, 20)).ToLowerInvariant()}";
     }
 
     private bool IsSqlServer => string.Equals(

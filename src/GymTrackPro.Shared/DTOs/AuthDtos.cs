@@ -53,3 +53,29 @@ public class CreateAppInviteDto
     [StringLength(100, MinimumLength = 1)]
     public string Purpose { get; set; } = string.Empty;
 }
+
+public sealed class CreateStaffInviteDto
+{
+    [Required]
+    [StringLength(100, MinimumLength = 1)]
+    public string FirstName { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(100, MinimumLength = 1)]
+    public string LastName { get; set; } = string.Empty;
+
+    [Required]
+    [EmailAddress]
+    [StringLength(255)]
+    public string Email { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(100, MinimumLength = 1)]
+    public string Purpose { get; set; } = string.Empty;
+}
+
+public sealed class StaffInviteProvisioningResponseDto
+{
+    public UserResponseDto User { get; set; } = new();
+    public AppInviteCodeResponseDto Invite { get; set; } = new();
+}

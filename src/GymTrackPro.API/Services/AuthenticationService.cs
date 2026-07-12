@@ -65,6 +65,43 @@ public class AuthenticationService : IAuthenticationService
         return user.ToResponse();
     }
 
+    public async Task<StaffInviteProvisioningResponseDto> CreateStaffWithInviteAsync(
+        int creatorUserId,
+        CreateStaffInviteDto dto)
+    {
+        if (dto is null)
+        {
+            throw new AppAccessException(
+                StatusCodes.Status400BadRequest,
+                "VALIDATION_ERROR",
+                "The request is invalid.");
+        }
+
+        var inviteCode = InviteCodeCodec.Generate();
+        _ = InviteCodeCodec.TryHash(inviteCode, out var tokenHash);
+        var result = await _identityStore.CreateStaffWithInviteAsync(
+            creatorUserId,
+            dto.FirstName,
+            dto.LastName,
+            dto.Email,
+            tokenHash,
+            dto.Purpose,
+            GetOperationContext(),
+            RequestAborted);
+        var userResponse = result.User.ToResponse();
+        userResponse.OnboardingState = Shared.Constants.ErrorCodes.AccountPendingActivation;
+        userResponse.Capabilities = Array.Empty<string>();
+        return new StaffInviteProvisioningResponseDto
+        {
+            User = userResponse,
+            Invite = new AppInviteCodeResponseDto
+            {
+                InviteCode = inviteCode,
+                Details = MapInvite(result.Invite)
+            }
+        };
+    }
+
     public async Task<AppInviteCodeResponseDto> CreateMemberInviteAsync(
         int memberId,
         int creatorUserId,

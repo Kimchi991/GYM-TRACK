@@ -21,6 +21,22 @@ public class UsersController : ControllerBase
         _currentUser = currentUser;
     }
 
+    [HttpPost("staff")]
+    [Authorize(Policy = Policies.OwnerOnly)]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    [ProducesResponseType(typeof(ApiResponse<StaffInviteProvisioningResponseDto>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> CreateStaff([FromBody] CreateStaffInviteDto dto)
+    {
+        var response = await _authService.CreateStaffWithInviteAsync(GetRequiredActorUserId(), dto);
+        return StatusCode(
+            StatusCodes.Status201Created,
+            ApiResponse<StaffInviteProvisioningResponseDto>.SuccessResponse(
+                response,
+                "Receptionist profile and invite created."));
+    }
+
     [HttpPost("{userId}/app-invite")]
     [Authorize(Policy = Policies.OwnerOnly)]
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]

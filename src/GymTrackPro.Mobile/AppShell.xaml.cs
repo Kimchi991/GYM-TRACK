@@ -46,6 +46,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("forgotpassword", typeof(ForgotPasswordPage));
         Routing.RegisterRoute("resetpassword", typeof(ResetPasswordPage));
         Routing.RegisterRoute("memberdetails", typeof(MemberDetailsPage));
+        Routing.RegisterRoute("staffprovisioning", typeof(StaffProvisioningPage));
         Routing.RegisterRoute("plans", typeof(PlansPage));
     }
 
