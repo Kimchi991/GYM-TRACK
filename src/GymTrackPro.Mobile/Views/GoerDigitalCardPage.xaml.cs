@@ -1,21 +1,15 @@
 using GymTrackPro.Mobile.ViewModels;
-using GymTrackPro.Mobile.Services;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace GymTrackPro.Mobile.Views;
 
 public partial class GoerDigitalCardPage : ContentPage
 {
-    private GoerDigitalCardViewModel _viewModel;
+    private readonly GoerDigitalCardViewModel _viewModel;
 
-    public GoerDigitalCardPage()
+    public GoerDigitalCardPage(GoerDigitalCardViewModel viewModel)
     {
         InitializeComponent();
-        
-        var apiService = Handler?.MauiContext?.Services.GetService<IApiService>() 
-            ?? Application.Current?.MainPage?.Handler?.MauiContext?.Services.GetService<IApiService>();
-            
-        _viewModel = new GoerDigitalCardViewModel(apiService);
+        _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         BindingContext = _viewModel;
     }
 

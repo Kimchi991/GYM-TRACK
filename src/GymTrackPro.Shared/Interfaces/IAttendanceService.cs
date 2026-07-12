@@ -21,6 +21,7 @@ public interface IAttendanceService
     Task CheckOutAsync(int attendanceID, CancellationToken cancellationToken = default);
 
     Task<AttendanceDto> CheckInAsync(CheckInRequestDto request, CancellationToken cancellationToken = default);
+    Task<AttendanceDto> CheckInCurrentMemberAsync(AttendanceOperationRequestDto request, CancellationToken cancellationToken = default);
     Task<AttendanceDto> CheckOutAsync(int attendanceID, CheckOutRequestDto request, CancellationToken cancellationToken = default);
     Task<AttendanceDto> CheckOutCurrentMemberAsync(CheckOutRequestDto request, CancellationToken cancellationToken = default);
     Task<AttendanceDto> CorrectCheckoutAsync(int attendanceID, CorrectCheckoutRequestDto request, CancellationToken cancellationToken = default);

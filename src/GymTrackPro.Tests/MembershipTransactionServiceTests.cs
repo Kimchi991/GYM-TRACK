@@ -24,17 +24,17 @@ public class MembershipTransactionServiceTests
         {
             MemberID = 1,
             PlanID = 1,
-            StartDate = new DateTime(2026, 7, 1)
+            StartDate = new DateTime(2026, 7, 12)
         });
         var overlap = await Assert.ThrowsAsync<AppAccessException>(() =>
             fixture.Subscriptions.SubscribeMemberAsync(new CreateSubscriptionDto
             {
                 MemberID = 1,
                 PlanID = 1,
-                StartDate = new DateTime(2026, 7, 30)
+                StartDate = new DateTime(2026, 8, 10)
             }));
 
-        Assert.Equal(new DateTime(2026, 7, 30), created.EndDate);
+        Assert.Equal(new DateTime(2026, 8, 10), created.EndDate);
         Assert.Equal(DateTimeKind.Unspecified, created.EndDate.Kind);
         Assert.Equal(GymMembershipPolicy.PendingPayment, created.Status);
         Assert.Equal(ErrorCodes.MembershipConflict, overlap.ErrorCode);
@@ -53,7 +53,7 @@ public class MembershipTransactionServiceTests
             {
                 MemberID = 1,
                 PlanID = 1,
-                StartDate = new DateTime(2026, 7, 1)
+                StartDate = new DateTime(2026, 7, 12)
             }));
 
         Assert.Equal(ErrorCodes.MemberInactive, exception.ErrorCode);
@@ -89,6 +89,52 @@ public class MembershipTransactionServiceTests
         fixture.Publisher.Verify(
             publisher => publisher.PublishAsync(It.IsAny<GymTrackPro.Shared.Events.Payments.PaymentReceivedEvent>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task Renewal_rebases_a_past_request_to_gym_today_and_grants_the_full_plan_duration()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+
+        var renewed = await fixture.Subscriptions.RenewSubscriptionAsync(new RenewSubscriptionDto
+        {
+            MemberID = 1,
+            PlanID = 1,
+            StartDate = new DateTime(2026, 6, 1),
+            Amount = 1000m,
+            Discount = 0m,
+            PaymentMethod = PaymentMethod.Cash.ToString()
+        });
+
+        Assert.Equal(new DateTime(2026, 7, 12), renewed.StartDate);
+        Assert.Equal(new DateTime(2026, 8, 10), renewed.EndDate);
+        Assert.Single(await fixture.Context.Payments.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Subscribe_rejects_a_past_start_but_accepts_gym_today()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+
+        var exception = await Assert.ThrowsAsync<AppAccessException>(() =>
+            fixture.Subscriptions.SubscribeMemberAsync(new CreateSubscriptionDto
+            {
+                MemberID = 1,
+                PlanID = 1,
+                StartDate = new DateTime(2026, 7, 11)
+            }));
+
+        Assert.Equal(ErrorCodes.MembershipDateInvalid, exception.ErrorCode);
+
+        var current = await fixture.Subscriptions.SubscribeMemberAsync(new CreateSubscriptionDto
+        {
+            MemberID = 1,
+            PlanID = 1,
+            StartDate = new DateTime(2026, 7, 12)
+        });
+
+        Assert.Equal(new DateTime(2026, 7, 12), current.StartDate);
+        Assert.Single(await fixture.Context.Subscriptions.ToListAsync());
     }
 
     [Fact]
@@ -151,6 +197,176 @@ public class MembershipTransactionServiceTests
     }
 
     [Fact]
+    public async Task Resume_after_nominal_end_extends_from_a_valid_in_coverage_pause_start()
+    {
+        var now = Utc(2026, 7, 25, 4, 0);
+        await using var fixture = await Fixture.CreateAsync(
+            nowUtc: now,
+            gymDate: new DateOnly(2026, 7, 25));
+        fixture.Context.Subscriptions.Add(Subscription(
+            10,
+            1,
+            new DateOnly(2026, 7, 1),
+            new DateOnly(2026, 7, 20),
+            GymMembershipPolicy.Paused));
+        fixture.Context.MembershipPauses.Add(new MembershipPause
+        {
+            SubscriptionID = 10,
+            PauseStartDate = Utc(2026, 7, 10, 4, 0),
+            Reason = "Medical leave",
+            DateCreated = Utc(2026, 7, 10, 4, 0)
+        });
+        await fixture.Context.SaveChangesAsync();
+
+        await fixture.Subscriptions.ResumeSubscriptionAsync(10);
+
+        var subscription = await fixture.Context.Subscriptions.SingleAsync();
+        Assert.Equal(GymMembershipPolicy.Active, subscription.Status);
+        Assert.Equal(new DateTime(2026, 8, 4), subscription.EndDate);
+        Assert.Equal(now, (await fixture.Context.MembershipPauses.SingleAsync()).PauseEndDate);
+    }
+
+    [Theory]
+    [InlineData(6, 30)]
+    [InlineData(7, 21)]
+    public async Task Resume_rejects_pause_start_outside_original_coverage(
+        int pauseMonth,
+        int pauseDay)
+    {
+        var now = Utc(2026, 7, 25, 4, 0);
+        await using var fixture = await Fixture.CreateAsync(
+            nowUtc: now,
+            gymDate: new DateOnly(2026, 7, 25));
+        fixture.Context.Subscriptions.Add(Subscription(
+            10,
+            1,
+            new DateOnly(2026, 7, 1),
+            new DateOnly(2026, 7, 20),
+            GymMembershipPolicy.Paused));
+        fixture.Context.MembershipPauses.Add(new MembershipPause
+        {
+            SubscriptionID = 10,
+            PauseStartDate = Utc(2026, pauseMonth, pauseDay, 4, 0),
+            Reason = "Invalid pause",
+            DateCreated = Utc(2026, pauseMonth, pauseDay, 4, 0)
+        });
+        await fixture.Context.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<AppAccessException>(() =>
+            fixture.Subscriptions.ResumeSubscriptionAsync(10));
+
+        Assert.Equal(ErrorCodes.MembershipConflict, exception.ErrorCode);
+        Assert.Equal(
+            GymMembershipPolicy.Paused,
+            (await fixture.Context.Subscriptions.SingleAsync()).Status);
+        Assert.Null((await fixture.Context.MembershipPauses.SingleAsync()).PauseEndDate);
+    }
+
+    [Fact]
+    public async Task Resume_rejects_a_future_pause_start_even_when_within_original_coverage()
+    {
+        var now = Utc(2026, 7, 25, 4, 0);
+        await using var fixture = await Fixture.CreateAsync(
+            nowUtc: now,
+            gymDate: new DateOnly(2026, 7, 25));
+        fixture.Context.Subscriptions.Add(Subscription(
+            10,
+            1,
+            new DateOnly(2026, 7, 1),
+            new DateOnly(2026, 8, 10),
+            GymMembershipPolicy.Paused));
+        fixture.Context.MembershipPauses.Add(new MembershipPause
+        {
+            SubscriptionID = 10,
+            PauseStartDate = Utc(2026, 7, 26, 4, 0),
+            Reason = "Future pause",
+            DateCreated = Utc(2026, 7, 26, 4, 0)
+        });
+        await fixture.Context.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<AppAccessException>(() =>
+            fixture.Subscriptions.ResumeSubscriptionAsync(10));
+
+        Assert.Equal(ErrorCodes.MembershipConflict, exception.ErrorCode);
+        Assert.Null((await fixture.Context.MembershipPauses.SingleAsync()).PauseEndDate);
+    }
+
+    [Fact]
+    public async Task Resume_rejects_multiple_open_pauses_without_mutating_them()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        fixture.Context.Subscriptions.Add(Subscription(
+            10,
+            1,
+            new DateOnly(2026, 7, 1),
+            new DateOnly(2026, 7, 30),
+            GymMembershipPolicy.Paused));
+        fixture.Context.MembershipPauses.AddRange(
+            new MembershipPause
+            {
+                SubscriptionID = 10,
+                PauseStartDate = Utc(2026, 7, 10, 4, 0),
+                Reason = "First pause",
+                DateCreated = Utc(2026, 7, 10, 4, 0)
+            },
+            new MembershipPause
+            {
+                SubscriptionID = 10,
+                PauseStartDate = Utc(2026, 7, 11, 4, 0),
+                Reason = "Second pause",
+                DateCreated = Utc(2026, 7, 11, 4, 0)
+            });
+        await fixture.Context.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<AppAccessException>(() =>
+            fixture.Subscriptions.ResumeSubscriptionAsync(10));
+
+        Assert.Equal(ErrorCodes.MembershipConflict, exception.ErrorCode);
+        Assert.All(
+            await fixture.Context.MembershipPauses.ToListAsync(),
+            pause => Assert.Null(pause.PauseEndDate));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Future_membership_cannot_be_paused_or_resumed(bool paused)
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        fixture.Context.Subscriptions.Add(Subscription(
+            10,
+            1,
+            new DateOnly(2026, 7, 13),
+            new DateOnly(2026, 8, 11),
+            paused ? GymMembershipPolicy.Paused : GymMembershipPolicy.Active));
+        if (paused)
+        {
+            fixture.Context.MembershipPauses.Add(new MembershipPause
+            {
+                SubscriptionID = 10,
+                PauseStartDate = fixture.Now,
+                Reason = "Scheduled leave",
+                DateCreated = fixture.Now
+            });
+        }
+
+        await fixture.Context.SaveChangesAsync();
+
+        var exception = paused
+            ? await Assert.ThrowsAsync<AppAccessException>(() =>
+                fixture.Subscriptions.ResumeSubscriptionAsync(10))
+            : await Assert.ThrowsAsync<AppAccessException>(() =>
+                fixture.Subscriptions.PauseSubscriptionAsync(10, "Scheduled leave"));
+
+        Assert.Equal(ErrorCodes.MembershipConflict, exception.ErrorCode);
+        var subscription = await fixture.Context.Subscriptions.SingleAsync();
+        Assert.Equal(
+            paused ? GymMembershipPolicy.Paused : GymMembershipPolicy.Active,
+            subscription.Status);
+        Assert.Equal(paused ? 1 : 0, await fixture.Context.MembershipPauses.CountAsync());
+    }
+
+    [Fact]
     public async Task Payment_member_subscription_mismatch_writes_zero_rows()
     {
         await using var fixture = await Fixture.CreateAsync();
@@ -178,8 +394,8 @@ public class MembershipTransactionServiceTests
         fixture.Context.Subscriptions.Add(Subscription(
             10,
             1,
-            new DateOnly(2026, 7, 1),
-            new DateOnly(2026, 7, 30),
+            new DateOnly(2026, 7, 12),
+            new DateOnly(2026, 8, 10),
             GymMembershipPolicy.PendingPayment));
         await fixture.Context.SaveChangesAsync();
         var request = PaidRequest(1, 10, "provider-reference-1");
@@ -195,6 +411,39 @@ public class MembershipTransactionServiceTests
         Assert.Equal(2, await fixture.Context.AuditLogs.CountAsync());
         fixture.Publisher.Verify(
             publisher => publisher.PublishAsync(It.IsAny<GymTrackPro.Shared.Events.Payments.PaymentReceivedEvent>()),
+            Times.Once);
+    }
+
+    [Theory]
+    [InlineData("Inactive", false)]
+    [InlineData("Active", true)]
+    public async Task Exact_provider_replay_returns_stored_success_after_member_eligibility_changes(
+        string memberStatus,
+        bool memberDeleted)
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        fixture.Context.Subscriptions.Add(Subscription(
+            10,
+            1,
+            new DateOnly(2026, 7, 12),
+            new DateOnly(2026, 8, 10),
+            GymMembershipPolicy.PendingPayment));
+        await fixture.Context.SaveChangesAsync();
+        var request = PaidRequest(1, 10, "eligibility-replay");
+        var first = await fixture.Payments.ProcessPaymentAsync(request);
+        var member = await fixture.Context.Members.SingleAsync();
+        member.Status = memberStatus;
+        member.IsDeleted = memberDeleted;
+        await fixture.Context.SaveChangesAsync();
+
+        var replay = await fixture.Payments.ProcessPaymentAsync(request);
+
+        Assert.Equal(first.PaymentID, replay.PaymentID);
+        Assert.Single(await fixture.Context.Payments.ToListAsync());
+        Assert.Equal(2, await fixture.Context.AuditLogs.CountAsync());
+        fixture.Publisher.Verify(
+            publisher => publisher.PublishAsync(
+                It.IsAny<GymTrackPro.Shared.Events.Payments.PaymentReceivedEvent>()),
             Times.Once);
     }
 
@@ -290,8 +539,8 @@ public class MembershipTransactionServiceTests
         fixture.Context.Subscriptions.Add(Subscription(
             10,
             1,
-            new DateOnly(2026, 7, 1),
-            new DateOnly(2026, 7, 30),
+            new DateOnly(2026, 7, 12),
+            new DateOnly(2026, 8, 10),
             GymMembershipPolicy.PendingPayment));
         await fixture.Context.SaveChangesAsync();
         var request = PaidRequest(1, 10, $"price-{amount}-{discount}");
@@ -379,8 +628,8 @@ public class MembershipTransactionServiceTests
         fixture.Context.Subscriptions.Add(Subscription(
             10,
             1,
-            new DateOnly(2026, 7, 1),
-            new DateOnly(2026, 7, 30),
+            new DateOnly(2026, 7, 12),
+            new DateOnly(2026, 8, 10),
             GymMembershipPolicy.PendingPayment));
         (await fixture.Context.MembershipPlans.SingleAsync()).Status = "Inactive";
         await fixture.Context.SaveChangesAsync();
@@ -419,7 +668,7 @@ public class MembershipTransactionServiceTests
     }
 
     [Fact]
-    public async Task Pending_payment_is_recorded_without_activating_entitlement()
+    public async Task Pending_payment_is_rejected_because_no_settlement_transition_exists()
     {
         await using var fixture = await Fixture.CreateAsync();
         fixture.Context.Subscriptions.Add(Subscription(
@@ -432,13 +681,15 @@ public class MembershipTransactionServiceTests
         var request = PaidRequest(1, 10, "pending-attempt");
         request.PaymentStatus = PaymentStatus.Pending.ToString();
 
-        var result = await fixture.Payments.ProcessPaymentAsync(request);
+        var exception = await Assert.ThrowsAsync<AppAccessException>(() =>
+            fixture.Payments.ProcessPaymentAsync(request));
 
-        Assert.Equal(PaymentStatus.Pending.ToString(), result.PaymentStatus);
+        Assert.Equal(ErrorCodes.PaymentInvalid, exception.ErrorCode);
         Assert.Equal(
             GymMembershipPolicy.PendingPayment,
             (await fixture.Context.Subscriptions.SingleAsync()).Status);
-        Assert.Single(await fixture.Context.AuditLogs.ToListAsync());
+        Assert.Empty(await fixture.Context.Payments.ToListAsync());
+        Assert.Empty(await fixture.Context.AuditLogs.ToListAsync());
         fixture.Publisher.Verify(
             publisher => publisher.PublishAsync(
                 It.IsAny<GymTrackPro.Shared.Events.Payments.PaymentReceivedEvent>()),
@@ -448,23 +699,24 @@ public class MembershipTransactionServiceTests
     [Theory]
     [InlineData(11, false)]
     [InlineData(12, true)]
-    public async Task Payment_uses_authoritative_gym_date_for_expired_or_current_day_windows(
-        int endDay,
+    [InlineData(13, true)]
+    public async Task Payment_requires_start_on_or_after_the_authoritative_gym_date(
+        int startDay,
         bool shouldSucceed)
     {
         await using var fixture = await Fixture.CreateAsync();
         fixture.Context.Subscriptions.Add(Subscription(
             10,
             1,
-            new DateOnly(2026, 7, 1),
-            new DateOnly(2026, 7, endDay),
+            new DateOnly(2026, 7, startDay),
+            new DateOnly(2026, 8, startDay == 13 ? 11 : 10),
             GymMembershipPolicy.PendingPayment));
         await fixture.Context.SaveChangesAsync();
 
         if (shouldSucceed)
         {
             var result = await fixture.Payments.ProcessPaymentAsync(
-                PaidRequest(1, 10, $"end-day-{endDay}"));
+                PaidRequest(1, 10, $"start-day-{startDay}"));
             Assert.Equal(PaymentStatus.Paid.ToString(), result.PaymentStatus);
             Assert.Equal(
                 GymMembershipPolicy.Active,
@@ -473,10 +725,40 @@ public class MembershipTransactionServiceTests
         else
         {
             var exception = await Assert.ThrowsAsync<AppAccessException>(() =>
-                fixture.Payments.ProcessPaymentAsync(PaidRequest(1, 10, $"end-day-{endDay}")));
+                fixture.Payments.ProcessPaymentAsync(PaidRequest(1, 10, $"start-day-{startDay}")));
             Assert.Equal(ErrorCodes.PaymentConflict, exception.ErrorCode);
             Assert.Empty(await fixture.Context.Payments.ToListAsync());
+            Assert.Equal(
+                new DateTime(2026, 7, startDay),
+                (await fixture.Context.Subscriptions.SingleAsync()).StartDate);
         }
+    }
+
+    [Theory]
+    [InlineData(9)]
+    [InlineData(11)]
+    public async Task Payment_rejects_pending_window_that_does_not_match_current_plan_duration(
+        int augustEndDay)
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        fixture.Context.Subscriptions.Add(Subscription(
+            10,
+            1,
+            new DateOnly(2026, 7, 12),
+            new DateOnly(2026, 8, augustEndDay),
+            GymMembershipPolicy.PendingPayment));
+        await fixture.Context.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<AppAccessException>(() =>
+            fixture.Payments.ProcessPaymentAsync(
+                PaidRequest(1, 10, $"duration-{augustEndDay}")));
+
+        Assert.Equal(ErrorCodes.MembershipConflict, exception.ErrorCode);
+        Assert.Empty(await fixture.Context.Payments.ToListAsync());
+        Assert.Empty(await fixture.Context.AuditLogs.ToListAsync());
+        Assert.Equal(
+            new DateTime(2026, 8, augustEndDay),
+            (await fixture.Context.Subscriptions.SingleAsync()).EndDate);
     }
 
     [Fact]
@@ -515,8 +797,8 @@ public class MembershipTransactionServiceTests
         fixture.Context.Subscriptions.Add(Subscription(
             10,
             1,
-            new DateOnly(2026, 7, 1),
             new DateOnly(2026, 7, 11),
+            new DateOnly(2026, 8, 9),
             GymMembershipPolicy.PendingPayment));
         await fixture.Context.SaveChangesAsync();
 
@@ -535,25 +817,24 @@ public class MembershipTransactionServiceTests
     }
 
     [Fact]
-    public async Task Renewal_rejects_a_wholly_expired_paid_window_when_no_blocker_can_schedule_it_forward()
+    public async Task Renewal_preserves_a_future_requested_start_and_full_plan_duration()
     {
         await using var fixture = await Fixture.CreateAsync();
 
-        var exception = await Assert.ThrowsAsync<AppAccessException>(() =>
-            fixture.Subscriptions.RenewSubscriptionAsync(new RenewSubscriptionDto
-            {
-                MemberID = 1,
-                PlanID = 1,
-                StartDate = new DateTime(2026, 6, 1),
-                Amount = 1000m,
-                Discount = 0m,
-                PaymentMethod = PaymentMethod.Cash.ToString()
-            }));
+        var result = await fixture.Subscriptions.RenewSubscriptionAsync(new RenewSubscriptionDto
+        {
+            MemberID = 1,
+            PlanID = 1,
+            StartDate = new DateTime(2026, 7, 20),
+            Amount = 1000m,
+            Discount = 0m,
+            PaymentMethod = PaymentMethod.Cash.ToString()
+        });
 
-        Assert.Equal(ErrorCodes.MembershipDateInvalid, exception.ErrorCode);
-        Assert.Empty(await fixture.Context.Subscriptions.ToListAsync());
-        Assert.Empty(await fixture.Context.Payments.ToListAsync());
-        Assert.Empty(await fixture.Context.AuditLogs.ToListAsync());
+        Assert.Equal(new DateTime(2026, 7, 20), result.StartDate);
+        Assert.Equal(new DateTime(2026, 8, 18), result.EndDate);
+        Assert.Single(await fixture.Context.Subscriptions.ToListAsync());
+        Assert.Single(await fixture.Context.Payments.ToListAsync());
     }
 
     [Theory]
@@ -924,6 +1205,9 @@ public class MembershipTransactionServiceTests
         Assert.True(
             process.IndexOf("FindReferenceReplay(", StringComparison.Ordinal)
                 > process.IndexOf("LockMemberPaymentsAsync", StringComparison.Ordinal));
+        Assert.True(
+            process.IndexOf("FindReferenceReplay(", StringComparison.Ordinal)
+                < process.IndexOf("RequireActiveMember(member)", StringComparison.Ordinal));
         Assert.DoesNotContain("LockPaymentAsync", refund, StringComparison.Ordinal);
         Assert.Contains("_context.Payments.AsNoTracking().AnyAsync", process, StringComparison.Ordinal);
 

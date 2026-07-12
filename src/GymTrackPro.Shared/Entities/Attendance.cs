@@ -9,6 +9,7 @@ public class Attendance
     public const string StaffQrSource = "StaffQr";
     public const string LegacyStaffQrSource = "LegacyStaffQr";
     public const string HistoricalImportSource = "HistoricalImport";
+    public const string SelfCheckInSource = "SelfCheckIn";
 
     [Key]
     public int AttendanceID { get; set; }

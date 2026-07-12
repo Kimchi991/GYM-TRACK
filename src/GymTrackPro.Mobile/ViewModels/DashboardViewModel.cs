@@ -10,7 +10,9 @@ namespace GymTrackPro.Mobile.ViewModels;
 public partial class DashboardViewModel : BaseViewModel
 {
     private readonly IApiService _apiService;
-    private readonly IFirebaseAuthService _authService;
+    private readonly IAppLogoutService _logoutService;
+    private readonly Func<AppShell> _appShellFactory;
+    private readonly IRootNavigationService _rootNavigationService;
 
     [ObservableProperty]
     public partial int CheckedInCount { get; set; }
@@ -33,10 +35,17 @@ public partial class DashboardViewModel : BaseViewModel
     [ObservableProperty]
     public partial string ErrorMessage { get; set; } = string.Empty;
 
-    public DashboardViewModel(IApiService apiService, IFirebaseAuthService authService)
+    public DashboardViewModel(
+        IApiService apiService,
+        IAppLogoutService logoutService,
+        Func<AppShell> appShellFactory,
+        IRootNavigationService rootNavigationService)
     {
-        _apiService = apiService;
-        _authService = authService;
+        _apiService = apiService ?? throw new ArgumentNullException(nameof(apiService));
+        _logoutService = logoutService ?? throw new ArgumentNullException(nameof(logoutService));
+        _appShellFactory = appShellFactory ?? throw new ArgumentNullException(nameof(appShellFactory));
+        _rootNavigationService = rootNavigationService
+            ?? throw new ArgumentNullException(nameof(rootNavigationService));
         Title = "Dashboard";
     }
 
@@ -85,8 +94,19 @@ public partial class DashboardViewModel : BaseViewModel
 
         if (!confirmed) return;
 
-        await _authService.LogoutAsync();
-        await Shell.Current.GoToAsync("///login");
+        var result = await _logoutService.LogoutAsync();
+        if (result.AccountDataCleanerRegistered && !result.AccountDataCleared)
+        {
+            await Shell.Current.DisplayAlertAsync(
+                "Signed Out",
+                "You were signed out, but some offline data could not be cleared.",
+                "OK");
+        }
+
+        if (!_rootNavigationService.TrySetRoot(_appShellFactory()))
+        {
+            ErrorMessage = "Signed out, but the login screen could not be displayed.";
+        }
     }
 
     [RelayCommand]

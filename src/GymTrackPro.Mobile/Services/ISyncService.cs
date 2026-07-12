@@ -4,6 +4,15 @@ namespace GymTrackPro.Mobile.Services;
 
 public interface ISyncService
 {
-    Task QueueSyncOperationAsync(string tableName, string recordId, string operation, string serializedData);
+    Task QueueAttendanceOperationAsync(
+        string accountUid,
+        AttendanceSyncAction action,
+        Guid operationId);
     Task SyncPendingOperationsAsync();
+}
+
+public enum AttendanceSyncAction
+{
+    CheckIn = 0,
+    CheckOut = 1
 }

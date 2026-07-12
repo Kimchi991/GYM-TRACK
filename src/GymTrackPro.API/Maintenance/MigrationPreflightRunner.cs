@@ -14,6 +14,8 @@ public sealed class MigrationPreflightRunner : IMigrationPreflightRunner
 {
     public const string B1MigrationId =
         "20260711204834_StageFirebaseIdentityAndAccountInvites";
+    public const string AttendanceMigrationId =
+        "20260712050837_AddAttendanceVoidingAndSource";
     public const string MigrationProductVersion = "10.0.9";
 
     private static readonly PreflightMigrationMetadata[] PreStageMigrationHistory =
@@ -24,9 +26,14 @@ public sealed class MigrationPreflightRunner : IMigrationPreflightRunner
         new("20260702013356_AddSystemSettings", MigrationProductVersion)
     };
 
-    private static readonly PreflightMigrationMetadata[] PostStageMigrationHistory =
+    private static readonly PreflightMigrationMetadata[] B1StageMigrationHistory =
         PreStageMigrationHistory
             .Append(new PreflightMigrationMetadata(B1MigrationId, MigrationProductVersion))
+            .ToArray();
+
+    private static readonly PreflightMigrationMetadata[] AttendanceStageMigrationHistory =
+        B1StageMigrationHistory
+            .Append(new PreflightMigrationMetadata(AttendanceMigrationId, MigrationProductVersion))
             .ToArray();
 
     private readonly IPreflightReadOnlyDataSource _dataSource;
@@ -51,9 +58,13 @@ public sealed class MigrationPreflightRunner : IMigrationPreflightRunner
         var baseSchemaReady = IsBaseSchemaReady(schema, postStage);
         var b1StagingPresent = HasAnyB1StagingMarker(schema);
         var b1SchemaReady = IsB1SchemaFingerprintReady(schema);
-        var expectedHistory = postStage ? PostStageMigrationHistory : PreStageMigrationHistory;
-        var historyReady = schema.HasExactMigrationHistory(expectedHistory);
+        var historyReady = postStage
+            ? schema.HasExactMigrationHistory(B1StageMigrationHistory)
+                || schema.HasExactMigrationHistory(AttendanceStageMigrationHistory)
+            : schema.HasExactMigrationHistory(PreStageMigrationHistory);
         var b1HistoryPresent = schema.HasMigration(B1MigrationId);
+        var attendanceHistoryPresent = schema.HasMigration(AttendanceMigrationId);
+        var finalAttendanceShapeReady = HasFinalAttendanceQueryShape(schema);
 
         Add(findings, MigrationPreflightCategories.BaseSchemaInvalid, baseSchemaReady ? 0 : 1);
         Add(findings, MigrationPreflightCategories.MigrationHistoryMismatch, historyReady ? 0 : 1);
@@ -70,7 +81,10 @@ public sealed class MigrationPreflightRunner : IMigrationPreflightRunner
         Add(
             findings,
             MigrationPreflightCategories.MigrationHistorySchemaMismatch,
-            b1HistoryPresent && !b1SchemaReady ? 1 : 0);
+            (b1HistoryPresent && !b1SchemaReady)
+                || (attendanceHistoryPresent && !finalAttendanceShapeReady)
+                    ? 1
+                    : 0);
 
         var hasUserEmail = schema.HasColumn("Users", "Email");
         var hasNormalizedEmail = schema.HasColumn("Users", "NormalizedEmail");
@@ -207,7 +221,11 @@ public sealed class MigrationPreflightRunner : IMigrationPreflightRunner
             findings,
             postStage,
             cancellationToken);
-        await AddAttendanceFindingsAsync(schema, findings, cancellationToken);
+        await AddAttendanceFindingsAsync(
+            schema,
+            findings,
+            attendanceHistoryPresent,
+            cancellationToken);
 
         Add(
             findings,
@@ -256,6 +274,7 @@ public sealed class MigrationPreflightRunner : IMigrationPreflightRunner
     private async Task AddAttendanceFindingsAsync(
         PreflightSchema schema,
         ICollection<MigrationPreflightFinding> findings,
+        bool attendanceHistoryPresent,
         CancellationToken cancellationToken)
     {
         var hasAttendanceBase = schema.HasColumns(
@@ -265,55 +284,54 @@ public sealed class MigrationPreflightRunner : IMigrationPreflightRunner
             "AttendanceDate",
             "CheckInTime",
             "CheckOutTime");
-        var hasIsVoided = schema.HasColumn("AttendanceLogs", "IsVoided");
-        var hasSupersededBy = schema.HasColumn("AttendanceLogs", "SupersededByAttendanceID");
-        var partialSupersessionShape = hasIsVoided != hasSupersededBy;
-        var supersessionShapeAbsent = !hasIsVoided && !hasSupersededBy;
+        var legacyDateShape = HasLegacyAttendanceDateShape(schema);
+        var finalQueryShape = HasFinalAttendanceQueryShape(schema);
+        var attendanceStateConsistent = attendanceHistoryPresent
+            ? finalQueryShape
+            : legacyDateShape;
         Add(
             findings,
             MigrationPreflightCategories.AttendanceSchemaReadinessUnknown,
-            partialSupersessionShape || supersessionShapeAbsent ? 1 : 0,
-            isBlocking: partialSupersessionShape);
+            attendanceStateConsistent ? 0 : 1);
 
         Add(
             findings,
             MigrationPreflightCategories.AttendanceDateTimeComponents,
-            hasAttendanceBase
+            hasAttendanceBase && legacyDateShape
                 ? await CountAsync(PreflightCountQuery.AttendanceDateTimeComponents, cancellationToken)
                 : 0);
 
-        var hasLocalDate = schema.HasColumn("AttendanceLogs", "AttendanceDateLocal");
         Add(
             findings,
             MigrationPreflightCategories.AttendanceLocalDatesMissing,
-            hasLocalDate
-                ? await CountAsync(PreflightCountQuery.AttendanceLocalDatesMissing, cancellationToken)
-                : hasAttendanceBase
-                    ? await CountAsync(PreflightCountQuery.AllAttendanceRows, cancellationToken)
-                    : 0,
-            isBlocking: hasLocalDate);
+            hasAttendanceBase && legacyDateShape
+                ? await CountAsync(PreflightCountQuery.AllAttendanceRows, cancellationToken)
+                : 0,
+            isBlocking: false);
         Add(
             findings,
             MigrationPreflightCategories.AttendanceLocalDateMismatches,
-            hasLocalDate && hasAttendanceBase
-                ? await CountAsync(PreflightCountQuery.AttendanceLocalDateMismatches, cancellationToken)
+            hasAttendanceBase && finalQueryShape
+                ? await CountAsync(
+                    PreflightCountQuery.AttendancePreservedDateMismatches,
+                    cancellationToken)
                 : 0);
         Add(
             findings,
             MigrationPreflightCategories.AttendanceLocalDateDuplicates,
-            hasLocalDate
-                ? await CountAsync(
-                    hasIsVoided
-                        ? PreflightCountQuery.AttendanceLocalDateActiveDuplicates
-                        : PreflightCountQuery.AttendanceLocalDateDuplicates,
-                    cancellationToken)
+            hasAttendanceBase && finalQueryShape
+                ? await CountAsync(PreflightCountQuery.AttendanceDateActiveDuplicates, cancellationToken)
+                : hasAttendanceBase && legacyDateShape
+                    ? await CountAsync(
+                        PreflightCountQuery.AttendanceLegacyDateDuplicates,
+                        cancellationToken)
                 : 0);
         Add(
             findings,
             MigrationPreflightCategories.MultipleOpenAttendanceSessions,
             hasAttendanceBase
                 ? await CountAsync(
-                    hasIsVoided
+                    finalQueryShape
                         ? PreflightCountQuery.MultipleOpenActiveAttendanceSessions
                         : PreflightCountQuery.MultipleOpenAttendanceSessions,
                     cancellationToken)
@@ -323,7 +341,7 @@ public sealed class MigrationPreflightRunner : IMigrationPreflightRunner
             MigrationPreflightCategories.CheckoutNotAfterCheckin,
             hasAttendanceBase
                 ? await CountAsync(
-                    hasIsVoided
+                    finalQueryShape
                         ? PreflightCountQuery.ActiveCheckoutNotAfterCheckin
                         : PreflightCountQuery.CheckoutNotAfterCheckin,
                     cancellationToken)
@@ -346,7 +364,7 @@ public sealed class MigrationPreflightRunner : IMigrationPreflightRunner
             MigrationPreflightCategories.OpenAttendanceForDeletedMembers,
             hasAttendanceBase && schema.HasColumns("Members", "MemberID", "IsDeleted")
                 ? await CountAsync(
-                    hasIsVoided
+                    finalQueryShape
                         ? PreflightCountQuery.OpenActiveAttendanceForDeletedMembers
                         : PreflightCountQuery.OpenAttendanceForDeletedMembers,
                     cancellationToken)
@@ -354,7 +372,7 @@ public sealed class MigrationPreflightRunner : IMigrationPreflightRunner
         Add(
             findings,
             MigrationPreflightCategories.InvalidAttendanceSupersession,
-            hasAttendanceBase && hasIsVoided && hasSupersededBy
+            hasAttendanceBase && finalQueryShape
                 ? await CountAsync(PreflightCountQuery.InvalidAttendanceSupersession, cancellationToken)
                 : 0);
     }
@@ -448,15 +466,8 @@ public sealed class MigrationPreflightRunner : IMigrationPreflightRunner
             identitySeed: 1,
             identityIncrement: 1)
         && HasExactColumn(schema, "AttendanceLogs", "MemberID", "int", 4, 10, 0, false)
-        && HasExactColumn(
-            schema,
-            "AttendanceLogs",
-            "AttendanceDate",
-            "datetime2",
-            8,
-            27,
-            7,
-            false)
+        && (HasLegacyAttendanceDateShape(schema)
+            || postStage && HasFinalAttendanceDateShape(schema))
         && HasExactColumn(
             schema,
             "AttendanceLogs",
@@ -501,6 +512,51 @@ public sealed class MigrationPreflightRunner : IMigrationPreflightRunner
             false,
             usesDatabaseDefaultCollation: true,
             isAnsiPadded: true);
+
+    private static bool HasLegacyAttendanceDateShape(PreflightSchema schema) =>
+        HasExactColumn(
+            schema,
+            "AttendanceLogs",
+            "AttendanceDate",
+            "datetime2",
+            8,
+            27,
+            7,
+            false)
+        && !schema.HasColumn("AttendanceLogs", "AttendanceDateLegacyDateTime");
+
+    private static bool HasFinalAttendanceDateShape(PreflightSchema schema) =>
+        HasExactColumn(
+            schema,
+            "AttendanceLogs",
+            "AttendanceDate",
+            "date",
+            3,
+            10,
+            0,
+            false)
+        && HasExactColumn(
+            schema,
+            "AttendanceLogs",
+            "AttendanceDateLegacyDateTime",
+            "datetime2",
+            8,
+            27,
+            7,
+            true);
+
+    private static bool HasFinalAttendanceQueryShape(PreflightSchema schema) =>
+        HasFinalAttendanceDateShape(schema)
+        && HasExactColumn(schema, "AttendanceLogs", "IsVoided", "bit", 1, 1, 0, false)
+        && HasExactColumn(
+            schema,
+            "AttendanceLogs",
+            "SupersededByAttendanceID",
+            "int",
+            4,
+            10,
+            0,
+            true);
 
     private static bool HasAnyB1StagingMarker(PreflightSchema schema) =>
         schema.HasColumn("Users", "FirebaseUid")

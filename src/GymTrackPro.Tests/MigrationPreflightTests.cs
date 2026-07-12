@@ -145,6 +145,11 @@ public sealed class MigrationPreflightTests
         Assert.False(postReport.HasBlockingFindings);
         Assert.Contains("PREFLIGHT_MODE=POST_STAGE", MigrationPreflightReportFormatter.Format(postReport));
 
+        var attendanceSource = ValidSource(CreatePostStageSchemaWithAttendanceStaging());
+        var attendanceReport = await new MigrationPreflightRunner(attendanceSource).RunAsync(
+            PreflightStageMode.PostStage);
+        Assert.False(attendanceReport.HasBlockingFindings);
+
         var wrongModeReport = await new MigrationPreflightRunner(ValidSource(CreateStagedSchema()))
             .RunAsync(PreflightStageMode.PreStage);
         Assert.Equal(1, Find(wrongModeReport, MigrationPreflightCategories.MigrationHistoryMismatch));
@@ -172,6 +177,71 @@ public sealed class MigrationPreflightTests
         Assert.Equal(1, Find(
             unexpectedHistoryReport,
             MigrationPreflightCategories.MigrationHistoryMismatch));
+
+        var unexpectedAttendanceHistory = CreateAttendanceStageHistory()
+            .Append(Migration("20260713000000_UnexpectedFutureMigration"))
+            .ToArray();
+        var unexpectedAttendanceReport = await new MigrationPreflightRunner(
+                ValidSource(CreatePostStageSchemaWithAttendanceHistory(
+                    unexpectedAttendanceHistory)))
+            .RunAsync(PreflightStageMode.PostStage);
+
+        Assert.Equal(1, Find(
+            unexpectedAttendanceReport,
+            MigrationPreflightCategories.MigrationHistoryMismatch));
+    }
+
+    [Fact]
+    public async Task Attendance_preflight_selects_only_queries_valid_for_the_recognized_stage()
+    {
+        var legacySource = ValidSource(CreateStagedSchema());
+        await new MigrationPreflightRunner(legacySource).RunAsync(PreflightStageMode.PostStage);
+
+        Assert.Contains(PreflightCountQuery.AttendanceDateTimeComponents, legacySource.ExecutedQueries);
+        Assert.Contains(PreflightCountQuery.AttendanceLegacyDateDuplicates, legacySource.ExecutedQueries);
+        Assert.DoesNotContain(
+            PreflightCountQuery.AttendancePreservedDateMismatches,
+            legacySource.ExecutedQueries);
+        Assert.DoesNotContain(
+            PreflightCountQuery.AttendanceDateActiveDuplicates,
+            legacySource.ExecutedQueries);
+
+        var finalSource = ValidSource(CreatePostStageSchemaWithAttendanceStaging());
+        await new MigrationPreflightRunner(finalSource).RunAsync(PreflightStageMode.PostStage);
+
+        Assert.DoesNotContain(PreflightCountQuery.AttendanceDateTimeComponents, finalSource.ExecutedQueries);
+        Assert.DoesNotContain(PreflightCountQuery.AttendanceLegacyDateDuplicates, finalSource.ExecutedQueries);
+        Assert.Contains(
+            PreflightCountQuery.AttendancePreservedDateMismatches,
+            finalSource.ExecutedQueries);
+        Assert.Contains(
+            PreflightCountQuery.AttendanceDateActiveDuplicates,
+            finalSource.ExecutedQueries);
+    }
+
+    [Fact]
+    public async Task Attendance_history_and_schema_shape_must_advance_together()
+    {
+        var finalHistoryWithLegacyShape = CreateStagedSchemaWithHistory(
+            CreateAttendanceStageHistory());
+        var finalHistoryReport = await new MigrationPreflightRunner(
+                ValidSource(finalHistoryWithLegacyShape))
+            .RunAsync(PreflightStageMode.PostStage);
+        Assert.Equal(1, Find(
+            finalHistoryReport,
+            MigrationPreflightCategories.MigrationHistorySchemaMismatch));
+        Assert.Equal(1, Find(
+            finalHistoryReport,
+            MigrationPreflightCategories.AttendanceSchemaReadinessUnknown));
+
+        var b1HistoryWithFinalShape = CreatePostStageSchemaWithAttendanceHistory(
+            CreatePostStageHistory());
+        var b1HistoryReport = await new MigrationPreflightRunner(
+                ValidSource(b1HistoryWithFinalShape))
+            .RunAsync(PreflightStageMode.PostStage);
+        Assert.Equal(1, Find(
+            b1HistoryReport,
+            MigrationPreflightCategories.AttendanceSchemaReadinessUnknown));
     }
 
     [Theory]
@@ -399,6 +469,8 @@ public sealed class MigrationPreflightTests
         source.Counts[PreflightCountQuery.AttendanceForDeletedMembers] = 5;
         source.Counts[PreflightCountQuery.OpenActiveAttendanceForDeletedMembers] = 1;
         source.Counts[PreflightCountQuery.InvalidAttendanceSupersession] = 6;
+        source.Counts[PreflightCountQuery.AttendancePreservedDateMismatches] = 7;
+        source.Counts[PreflightCountQuery.AttendanceDateActiveDuplicates] = 8;
 
         var report = await new MigrationPreflightRunner(source).RunAsync(
             PreflightStageMode.PostStage);
@@ -411,6 +483,8 @@ public sealed class MigrationPreflightTests
             finding.Category == MigrationPreflightCategories.AttendanceForDeletedMembers).IsBlocking);
         Assert.Equal(1, Find(report, MigrationPreflightCategories.OpenAttendanceForDeletedMembers));
         Assert.Equal(6, Find(report, MigrationPreflightCategories.InvalidAttendanceSupersession));
+        Assert.Equal(7, Find(report, MigrationPreflightCategories.AttendanceLocalDateMismatches));
+        Assert.Equal(8, Find(report, MigrationPreflightCategories.AttendanceLocalDateDuplicates));
     }
 
     [Fact]
@@ -746,6 +820,11 @@ public sealed class MigrationPreflightTests
     private static IReadOnlyList<PreflightMigrationMetadata> CreatePostStageHistory() =>
         CreatePreStageHistory()
             .Append(Migration(MigrationPreflightRunner.B1MigrationId))
+            .ToArray();
+
+    private static IReadOnlyList<PreflightMigrationMetadata> CreateAttendanceStageHistory() =>
+        CreatePostStageHistory()
+            .Append(Migration(MigrationPreflightRunner.AttendanceMigrationId))
             .ToArray();
 
     private static PreflightSchema CreateBrokenPostStageSchema(string fault)
@@ -1278,13 +1357,29 @@ public sealed class MigrationPreflightTests
     }
 
     private static PreflightSchema CreatePostStageSchemaWithAttendanceStaging()
+        => CreatePostStageSchemaWithAttendanceHistory(CreateAttendanceStageHistory());
+
+    private static PreflightSchema CreatePostStageSchemaWithAttendanceHistory(
+        IReadOnlyList<PreflightMigrationMetadata> migrations)
     {
         var columns = CreateStagedSchemaColumns()
-            .Append(Column("AttendanceLogs", "AttendanceDateLocal", "date", isNullable: true))
+            .Where(column => !(column.Table == "AttendanceLogs"
+                && column.Column == "AttendanceDate"))
+            .Append(Column("AttendanceLogs", "AttendanceDate", "date", isNullable: false))
+            .Append(Column(
+                "AttendanceLogs",
+                "AttendanceDateLegacyDateTime",
+                "datetime2",
+                isNullable: true))
             .Append(Column("AttendanceLogs", "IsVoided", "bit", isNullable: false))
             .Append(Column("AttendanceLogs", "SupersededByAttendanceID", "int", isNullable: true))
             .ToArray();
-        return CreateStagedSchemaWithColumns(columns);
+        return new PreflightSchema(
+            columns,
+            CreateStagedChecks(),
+            CreateStagedForeignKeys(),
+            CreateStagedIndexes(),
+            migrations);
     }
 
     private static FakePreflightDataSource ValidSource(PreflightSchema schema) => new(schema)

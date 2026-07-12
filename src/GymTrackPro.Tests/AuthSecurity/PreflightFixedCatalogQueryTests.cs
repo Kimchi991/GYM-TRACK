@@ -17,6 +17,37 @@ public sealed class PreflightFixedCatalogQueryTests
     }
 
     [Fact]
+    public void Attendance_queries_target_only_reviewed_legacy_or_final_columns()
+    {
+        var sql = SqlServerPreflightReadOnlyDataSource.GetAllowListedSqlForTesting();
+
+        Assert.DoesNotContain(sql, statement =>
+            statement.Contains("AttendanceDateLocal", StringComparison.Ordinal));
+        Assert.Contains(sql, statement =>
+            statement.Contains(
+                "CAST([AttendanceDate] AS date) AS [GymDate]",
+                StringComparison.Ordinal));
+        Assert.Contains(sql, statement =>
+            statement.Contains(
+                "CONVERT(date, [AttendanceDateLegacyDateTime]) <> [AttendanceDate]",
+                StringComparison.Ordinal));
+        Assert.Contains(sql, statement =>
+            statement.Contains(
+                "GROUP BY [MemberID], [AttendanceDate]",
+                StringComparison.Ordinal));
+        Assert.Contains(sql, statement =>
+            statement.Contains(
+                "[CheckOutTime] <= [CheckInTime]",
+                StringComparison.Ordinal)
+            && statement.Contains("[IsVoided] = 0", StringComparison.Ordinal));
+        Assert.Contains(sql, statement =>
+            statement.Contains(
+                "[s].[AttendanceDate] <> [a].[AttendanceDate]",
+                StringComparison.Ordinal)
+            && statement.Contains("[s].[IsVoided] = 1", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Column_catalog_query_exposes_security_and_storage_metadata_in_reader_order()
     {
         var sql = SqlServerPreflightReadOnlyDataSource.GetAllowListedSqlForTesting()

@@ -131,7 +131,9 @@ public class AttendanceService : IAttendanceService
     {
         return CheckInCoreAsync(
             new CheckInRequestDto { QrCode = qrCode, OperationId = Guid.NewGuid() },
+            null,
             Attendance.LegacyStaffQrSource,
+            AttendanceOperationType.StaffCheckIn,
             cancellationToken);
     }
 
@@ -152,7 +154,29 @@ public class AttendanceService : IAttendanceService
         CheckInRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        return CheckInCoreAsync(request, Attendance.StaffQrSource, cancellationToken);
+        return CheckInCoreAsync(
+            request,
+            null,
+            Attendance.StaffQrSource,
+            AttendanceOperationType.StaffCheckIn,
+            cancellationToken);
+    }
+
+    public Task<AttendanceDto> CheckInCurrentMemberAsync(
+        AttendanceOperationRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return CheckInCoreAsync(
+            new CheckInRequestDto
+            {
+                QrCode = "self",
+                OperationId = request.OperationId
+            },
+            RequireMemberId(),
+            Attendance.SelfCheckInSource,
+            AttendanceOperationType.GymGoerCheckIn,
+            cancellationToken);
     }
 
     public Task<AttendanceDto> CheckOutAsync(
@@ -569,23 +593,28 @@ public class AttendanceService : IAttendanceService
 
     private async Task<AttendanceDto> CheckInCoreAsync(
         CheckInRequestDto request,
+        int? scopedMemberId,
         string source,
+        AttendanceOperationType operationType,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         ValidateOperationId(request.OperationId);
-        var normalizedQrCode = NormalizeQrCode(request.QrCode);
+        var normalizedQrCode = request.QrCode == null ? string.Empty : NormalizeQrCode(request.QrCode);
         var actorUserId = RequireActorUserId();
         var nowUtc = GetUtcNow();
+
+        var targetDescriptor = scopedMemberId.HasValue ? "self=current" : $"qrHash={HashSensitiveInput(normalizedQrCode)}";
         var fingerprint = CreateFingerprint(
-            AttendanceOperationType.StaffCheckIn,
+            operationType,
             $"source={source}",
-            $"qrHash={HashSensitiveInput(normalizedQrCode)}");
+            targetDescriptor);
+
         var persistOperation = source != Attendance.LegacyStaffQrSource;
         var commitKey = new AttendanceOperationCommitKey(
             request.OperationId,
             actorUserId,
-            AttendanceOperationType.StaffCheckIn,
+            operationType,
             fingerprint);
 
         int? resolvedMemberId = null;
@@ -606,7 +635,7 @@ public class AttendanceService : IAttendanceService
                     {
                         return await ReplayAsync(
                             existingOperation,
-                            AttendanceOperationType.StaffCheckIn,
+                            operationType,
                             actorUserId,
                             fingerprint,
                             transactionToken);
@@ -620,14 +649,23 @@ public class AttendanceService : IAttendanceService
                     authoritativeTimeZoneId ?? string.Empty,
                     transactionToken);
 
-                var member = await _repository.GetActiveMemberByQrCodeAsync(
-                    normalizedQrCode,
-                    transactionToken);
-                if (member is null)
+                Member? member = null;
+                if (scopedMemberId.HasValue)
                 {
-                    throw NotFound(
-                        ErrorCodes.InvalidCheckInCode,
-                        "The check-in code is invalid.");
+                    await EnsureMemberAvailableAsync(scopedMemberId.Value, transactionToken);
+                    member = new Member { MemberID = scopedMemberId.Value }; // Temporary proxy, we only need the ID
+                }
+                else
+                {
+                    member = await _repository.GetActiveMemberByQrCodeAsync(
+                        normalizedQrCode,
+                        transactionToken);
+                    if (member is null)
+                    {
+                        throw NotFound(
+                            ErrorCodes.InvalidCheckInCode,
+                            "The check-in code is invalid.");
+                    }
                 }
 
                 resolvedMemberId = member.MemberID;
@@ -680,7 +718,7 @@ public class AttendanceService : IAttendanceService
                     _repository.AddOperation(CreateCompletedOperation(
                         request.OperationId,
                         actorUserId,
-                        AttendanceOperationType.StaffCheckIn,
+                        operationType,
                         fingerprint,
                         attendance.AttendanceID,
                         StatusCodes.Status201Created,
@@ -706,7 +744,7 @@ public class AttendanceService : IAttendanceService
                 ? await RecordFailedOperationOrReplayAsync(
                     request.OperationId,
                     actorUserId,
-                    AttendanceOperationType.StaffCheckIn,
+                    operationType,
                     fingerprint,
                     exception,
                     nowUtc,
@@ -739,7 +777,7 @@ public class AttendanceService : IAttendanceService
                 {
                     return await ReplayAsync(
                         existingOperation,
-                        AttendanceOperationType.StaffCheckIn,
+                        operationType,
                         actorUserId,
                         fingerprint,
                         cancellationToken);
@@ -784,7 +822,7 @@ public class AttendanceService : IAttendanceService
                 ? await RecordFailedOperationOrReplayAsync(
                     request.OperationId,
                     actorUserId,
-                    AttendanceOperationType.StaffCheckIn,
+                    operationType,
                     fingerprint,
                     terminalFailure,
                     nowUtc,

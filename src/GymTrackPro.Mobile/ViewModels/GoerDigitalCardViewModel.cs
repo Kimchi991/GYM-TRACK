@@ -10,13 +10,15 @@ namespace GymTrackPro.Mobile.ViewModels;
 public partial class GoerDigitalCardViewModel : BaseViewModel
 {
     private readonly IApiService _apiService;
+    private readonly IAppDialogService _dialogService;
 
     [ObservableProperty]
     public partial GoerDigitalCardDto CardData { get; set; } = new();
 
-    public GoerDigitalCardViewModel(IApiService apiService)
+    public GoerDigitalCardViewModel(IApiService apiService, IAppDialogService dialogService)
     {
-        _apiService = apiService;
+        _apiService = apiService ?? throw new ArgumentNullException(nameof(apiService));
+        _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
         Title = "Digital Card";
     }
 
@@ -35,12 +37,15 @@ public partial class GoerDigitalCardViewModel : BaseViewModel
             }
             else
             {
-                await Shell.Current.DisplayAlert("Error", response.Message ?? "Failed to load card", "OK");
+                await _dialogService.ShowAlertAsync(
+                    "Error",
+                    response.Message ?? "Failed to load card",
+                    "OK");
             }
         }
         catch (Exception ex)
         {
-            await Shell.Current.DisplayAlert("Error", ex.Message, "OK");
+            await _dialogService.ShowAlertAsync("Error", ex.Message, "OK");
         }
         finally
         {

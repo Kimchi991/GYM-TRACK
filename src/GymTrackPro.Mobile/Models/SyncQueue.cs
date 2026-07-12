@@ -10,6 +10,9 @@ public class SyncQueue
     public int Id { get; set; }
 
     [Indexed]
+    public string AccountUid { get; set; } = string.Empty;
+
+    [Indexed]
     public string TableName { get; set; } = string.Empty;
 
     [Indexed]

@@ -11,6 +11,9 @@ namespace GymTrackPro.Mobile.ViewModels;
 public partial class SettingsViewModel : BaseViewModel
 {
     private readonly IApiService _apiService;
+    private readonly IAppLogoutService _logoutService;
+    private readonly Func<AppShell> _appShellFactory;
+    private readonly IRootNavigationService _rootNavigationService;
 
     [ObservableProperty]
     public partial string ErrorMessage { get; set; } = string.Empty;
@@ -20,9 +23,17 @@ public partial class SettingsViewModel : BaseViewModel
 
     public ObservableCollection<SystemSettingDto> Settings { get; } = new();
 
-    public SettingsViewModel(IApiService apiService)
+    public SettingsViewModel(
+        IApiService apiService,
+        IAppLogoutService logoutService,
+        Func<AppShell> appShellFactory,
+        IRootNavigationService rootNavigationService)
     {
         _apiService = apiService;
+        _logoutService = logoutService;
+        _appShellFactory = appShellFactory ?? throw new ArgumentNullException(nameof(appShellFactory));
+        _rootNavigationService = rootNavigationService
+            ?? throw new ArgumentNullException(nameof(rootNavigationService));
         Title = "Settings";
     }
 
@@ -98,8 +109,19 @@ public partial class SettingsViewModel : BaseViewModel
         bool confirm = await Shell.Current.DisplayAlertAsync("Logout", "Are you sure you want to log out?", "Yes", "No");
         if (confirm)
         {
-            _apiService.ClearAuthToken();
-            await Shell.Current.GoToAsync("///login");
+            var result = await _logoutService.LogoutAsync();
+            if (result.AccountDataCleanerRegistered && !result.AccountDataCleared)
+            {
+                await Shell.Current.DisplayAlertAsync(
+                    "Signed Out",
+                    "You were signed out, but some offline data could not be cleared.",
+                    "OK");
+            }
+
+            if (!_rootNavigationService.TrySetRoot(_appShellFactory()))
+            {
+                ErrorMessage = "Signed out, but the login screen could not be displayed.";
+            }
         }
     }
 }

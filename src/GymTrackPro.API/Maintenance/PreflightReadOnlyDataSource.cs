@@ -23,10 +23,9 @@ public enum PreflightCountQuery
     InvalidUserRoleMemberLinks,
     AttendanceDateTimeComponents,
     AllAttendanceRows,
-    AttendanceLocalDatesMissing,
-    AttendanceLocalDateMismatches,
-    AttendanceLocalDateDuplicates,
-    AttendanceLocalDateActiveDuplicates,
+    AttendanceLegacyDateDuplicates,
+    AttendancePreservedDateMismatches,
+    AttendanceDateActiveDuplicates,
     MultipleOpenAttendanceSessions,
     MultipleOpenActiveAttendanceSessions,
     CheckoutNotAfterCheckin,
@@ -694,19 +693,18 @@ public sealed class SqlServerPreflightReadOnlyDataSource : IPreflightReadOnlyDat
                 "SELECT COUNT_BIG(*) FROM [AttendanceLogs] WHERE CAST([AttendanceDate] AS time) <> CAST('00:00:00' AS time)",
             [PreflightCountQuery.AllAttendanceRows] =
                 "SELECT COUNT_BIG(*) FROM [AttendanceLogs]",
-            [PreflightCountQuery.AttendanceLocalDatesMissing] =
-                "SELECT COUNT_BIG(*) FROM [AttendanceLogs] WHERE [AttendanceDateLocal] IS NULL",
-            [PreflightCountQuery.AttendanceLocalDateMismatches] =
-                "SELECT COUNT_BIG(*) FROM [AttendanceLogs] WHERE [AttendanceDateLocal] IS NOT NULL " +
-                "AND CAST([AttendanceDate] AS date) <> [AttendanceDateLocal]",
-            [PreflightCountQuery.AttendanceLocalDateDuplicates] =
-                "SELECT COUNT_BIG(*) FROM (SELECT [MemberID], [AttendanceDateLocal] FROM [AttendanceLogs] " +
-                "WHERE [AttendanceDateLocal] IS NOT NULL GROUP BY [MemberID], [AttendanceDateLocal] " +
+            [PreflightCountQuery.AttendanceLegacyDateDuplicates] =
+                "SELECT COUNT_BIG(*) FROM (SELECT [MemberID], CAST([AttendanceDate] AS date) AS [GymDate] " +
+                "FROM [AttendanceLogs] GROUP BY [MemberID], CAST([AttendanceDate] AS date) " +
                 "HAVING COUNT_BIG(*) > 1) AS [DuplicateGroups]",
-            [PreflightCountQuery.AttendanceLocalDateActiveDuplicates] =
-                "SELECT COUNT_BIG(*) FROM (SELECT [MemberID], [AttendanceDateLocal] FROM [AttendanceLogs] " +
-                "WHERE [AttendanceDateLocal] IS NOT NULL AND [IsVoided] = 0 " +
-                "GROUP BY [MemberID], [AttendanceDateLocal] HAVING COUNT_BIG(*) > 1) AS [DuplicateGroups]",
+            [PreflightCountQuery.AttendancePreservedDateMismatches] =
+                "SELECT COUNT_BIG(*) FROM [AttendanceLogs] " +
+                "WHERE [AttendanceDateLegacyDateTime] IS NOT NULL " +
+                "AND CONVERT(date, [AttendanceDateLegacyDateTime]) <> [AttendanceDate]",
+            [PreflightCountQuery.AttendanceDateActiveDuplicates] =
+                "SELECT COUNT_BIG(*) FROM (SELECT [MemberID], [AttendanceDate] FROM [AttendanceLogs] " +
+                "WHERE [IsVoided] = 0 GROUP BY [MemberID], [AttendanceDate] " +
+                "HAVING COUNT_BIG(*) > 1) AS [DuplicateGroups]",
             [PreflightCountQuery.MultipleOpenAttendanceSessions] =
                 "SELECT COUNT_BIG(*) FROM (SELECT [MemberID] FROM [AttendanceLogs] " +
                 "WHERE [CheckOutTime] IS NULL GROUP BY [MemberID] HAVING COUNT_BIG(*) > 1) AS [DuplicateGroups]",
@@ -739,6 +737,7 @@ public sealed class SqlServerPreflightReadOnlyDataSource : IPreflightReadOnlyDat
                 "ON [s].[AttendanceID] = [a].[SupersededByAttendanceID] " +
                 "WHERE [a].[SupersededByAttendanceID] IS NOT NULL AND ([s].[AttendanceID] IS NULL " +
                 "OR [a].[SupersededByAttendanceID] = [a].[AttendanceID] OR [s].[MemberID] <> [a].[MemberID] " +
+                "OR [s].[AttendanceDate] <> [a].[AttendanceDate] OR [s].[IsVoided] = 1 " +
                 "OR [a].[IsVoided] = 0)",
             [PreflightCountQuery.SubscriptionCalendarTimeComponents] =
                 "SELECT COUNT_BIG(*) FROM [Subscriptions] WHERE CAST([StartDate] AS time) <> CAST('00:00:00' AS time) " +

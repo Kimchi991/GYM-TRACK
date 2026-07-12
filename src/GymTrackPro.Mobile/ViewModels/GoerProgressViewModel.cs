@@ -10,13 +10,15 @@ namespace GymTrackPro.Mobile.ViewModels;
 public partial class GoerProgressViewModel : BaseViewModel
 {
     private readonly IApiService _apiService;
+    private readonly IAppDialogService _dialogService;
 
     [ObservableProperty]
     public partial GoerProgressDto ProgressData { get; set; } = new();
 
-    public GoerProgressViewModel(IApiService apiService)
+    public GoerProgressViewModel(IApiService apiService, IAppDialogService dialogService)
     {
-        _apiService = apiService;
+        _apiService = apiService ?? throw new ArgumentNullException(nameof(apiService));
+        _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
         Title = "My Progress";
     }
 
@@ -36,12 +38,15 @@ public partial class GoerProgressViewModel : BaseViewModel
             }
             else
             {
-                await Shell.Current.DisplayAlert("Error", response.Message ?? "Failed to load progress", "OK");
+                await _dialogService.ShowAlertAsync(
+                    "Error",
+                    response.Message ?? "Failed to load progress",
+                    "OK");
             }
         }
         catch (Exception ex)
         {
-            await Shell.Current.DisplayAlert("Error", ex.Message, "OK");
+            await _dialogService.ShowAlertAsync("Error", ex.Message, "OK");
         }
         finally
         {

@@ -1,30 +1,17 @@
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using GymTrackPro.Mobile.Services;
-
 namespace GymTrackPro.Mobile;
 
 public partial class App : Application
 {
-	private readonly ILocalDatabaseService _databaseService;
-	private readonly IApiService _apiService;
+	private readonly AppShell _appShell;
 
-	public App(ILocalDatabaseService databaseService, IApiService apiService)
+	public App(AppShell appShell)
 	{
 		InitializeComponent();
-		_databaseService = databaseService;
-		_apiService = apiService;
-
-		// Initialize local SQLite database and JWT auth token asynchronously on startup
-		Task.Run(async () =>
-		{
-			await _databaseService.InitializeAsync();
-			await _apiService.InitializeTokenAsync();
-		});
+		_appShell = appShell ?? throw new ArgumentNullException(nameof(appShell));
 	}
 
 	protected override Window CreateWindow(IActivationState? activationState)
 	{
-		return new Window(new AppShell());
+		return new Window(_appShell);
 	}
 }

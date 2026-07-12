@@ -13,6 +13,35 @@ public sealed class IdentityProvisioningStoreTests
     private static readonly IdentityOperationContext OperationContext = new("test-correlation", "127.0.0.1");
 
     [Fact]
+    public async Task Unknown_uid_sync_is_denied_without_creating_a_member_or_user()
+    {
+        await using var context = CreateContext();
+        SeedActorAndMember(context);
+        await context.SaveChangesAsync();
+        var originalMemberCount = await context.Members.CountAsync();
+        var originalUserCount = await context.Users.CountAsync();
+        var store = new IdentityProvisioningStore(
+            context,
+            new FixedClock(new DateTime(2026, 7, 12, 1, 0, 0, DateTimeKind.Utc)));
+
+        var exception = await Assert.ThrowsAsync<AppAccessException>(() =>
+            store.SyncLinkedUserAsync(
+                "unknown-firebase-uid",
+                "unknown@example.test",
+                OperationContext));
+
+        Assert.Equal(ErrorCodes.AccountPendingActivation, exception.ErrorCode);
+        Assert.Equal(originalMemberCount, await context.Members.CountAsync());
+        Assert.Equal(originalUserCount, await context.Users.CountAsync());
+        Assert.DoesNotContain(
+            await context.Users.ToListAsync(),
+            user => string.Equals(
+                user.FirebaseUid,
+                "unknown-firebase-uid",
+                StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Member_redemption_is_atomic_and_same_uid_response_loss_replay_is_idempotent()
     {
         var now = new DateTime(2026, 7, 12, 1, 0, 0, DateTimeKind.Utc);

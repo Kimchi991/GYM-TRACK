@@ -102,7 +102,6 @@ public class PaymentService : IPaymentService
                     _context,
                     operationKey.MemberId,
                     cancellationToken);
-                RequireActiveMember(member);
                 if (operationKey.ReferenceNumber is not null)
                 {
                     var replay = FindReferenceReplay(
@@ -116,6 +115,8 @@ public class PaymentService : IPaymentService
                     }
                 }
 
+                RequireActiveMember(member);
+
                 var subscription = subscriptions.SingleOrDefault(item =>
                     item.SubscriptionID == operationKey.SubscriptionId);
                 if (subscription is null || subscription.MemberID != operationKey.MemberId)
@@ -128,9 +129,10 @@ public class PaymentService : IPaymentService
                     throw MembershipConflict("The subscription calendar window is not normalized.");
                 }
 
-                if (GymMembershipPolicy.ToCalendarDate(subscription.EndDate) < currentGymDate)
+                if (GymMembershipPolicy.ToCalendarDate(subscription.StartDate) < currentGymDate)
                 {
-                    throw PaymentConflict("An expired subscription window cannot be funded.");
+                    throw PaymentConflict(
+                        "A pending subscription must start on or after the current gym date before it can be funded.");
                 }
 
                 var plan = await _context.MembershipPlans.SingleOrDefaultAsync(
@@ -138,6 +140,15 @@ public class PaymentService : IPaymentService
                     cancellationToken)
                     ?? throw PaymentConflict("The subscription plan is unavailable.");
                 RequireFundablePlan(plan);
+                var expectedEndDate = GymMembershipPolicy.CalculateInclusiveEnd(
+                    subscription.StartDate,
+                    plan.DurationDays);
+                if (subscription.EndDate != expectedEndDate)
+                {
+                    throw MembershipConflict(
+                        "The pending subscription window no longer matches the current plan duration.");
+                }
+
                 ValidatePlanPayment(
                     operationKey.Amount,
                     operationKey.Discount,
@@ -257,7 +268,7 @@ public class PaymentService : IPaymentService
             {
                 PaymentId = result.Payment.PaymentID,
                 MemberId = result.Payment.MemberID,
-                MemberEmail = result.Member.Email ?? string.Empty,
+                MemberEmail = result.Member?.Email ?? string.Empty,
                 Amount = result.Payment.FinalAmount,
                 ReceiptNumber = result.Payment.ReceiptNumber
             });
@@ -361,7 +372,7 @@ public class PaymentService : IPaymentService
         {
             PaymentId = result.Payment.PaymentID,
             MemberId = result.Payment.MemberID,
-            MemberEmail = result.Member.Email ?? string.Empty,
+            MemberEmail = result.Member?.Email ?? string.Empty,
             Amount = result.Payment.FinalAmount,
             ReceiptNumber = result.Payment.ReceiptNumber
         });
@@ -424,7 +435,7 @@ public class PaymentService : IPaymentService
         PaymentCreateKey key,
         IReadOnlyCollection<Payment> payments,
         IReadOnlyCollection<Subscription> subscriptions,
-        Member member)
+        Member? member)
     {
         var matches = payments
             .Where(item => !item.IsDeleted
@@ -454,7 +465,11 @@ public class PaymentService : IPaymentService
         var subscription = subscriptions.SingleOrDefault(item =>
             item.SubscriptionID == payment.SubscriptionID)
             ?? throw PaymentConflict("The payment subscription is unavailable.");
-        payment.Member = member;
+        if (member is not null)
+        {
+            payment.Member = member;
+        }
+
         payment.Subscription = subscription;
 
         return new PaymentMutationResult(
@@ -573,9 +588,10 @@ public class PaymentService : IPaymentService
             throw InvalidPayment("The payment status is invalid.");
         }
 
-        if (status is not (PaymentStatus.Paid or PaymentStatus.Pending))
+        if (status != PaymentStatus.Paid)
         {
-            throw InvalidPayment("Only Paid or Pending payment creation is supported.");
+            throw InvalidPayment(
+                "Only Paid payment creation is supported because pending settlement is not implemented.");
         }
 
         return status;
@@ -708,6 +724,6 @@ public class PaymentService : IPaymentService
 
     private sealed record PaymentMutationResult(
         Payment Payment,
-        Member Member,
+        Member? Member,
         bool WasReplay);
 }

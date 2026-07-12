@@ -21,6 +21,7 @@ public class MemberService : IMemberService
     private readonly ISystemSettingService _settingsService;
     private readonly IDomainEventPublisher _eventPublisher;
     private readonly IMemberDeletionTransaction _memberDeletionTransaction;
+    private readonly IProfilePictureStorage _profilePictureStorage;
 
     public MemberService(
         IMemberRepository memberRepository,
@@ -29,7 +30,8 @@ public class MemberService : IMemberService
         ICurrentUserContext currentUser,
         ISystemSettingService settingsService,
         IDomainEventPublisher eventPublisher,
-        IMemberDeletionTransaction memberDeletionTransaction)
+        IMemberDeletionTransaction memberDeletionTransaction,
+        IProfilePictureStorage profilePictureStorage)
     {
         _memberRepository = memberRepository;
         _auditService = auditService;
@@ -38,6 +40,7 @@ public class MemberService : IMemberService
         _settingsService = settingsService;
         _eventPublisher = eventPublisher;
         _memberDeletionTransaction = memberDeletionTransaction;
+        _profilePictureStorage = profilePictureStorage;
     }
 
     private int GetRequiredCurrentUserId() => _currentUser.UserId
@@ -48,52 +51,17 @@ public class MemberService : IMemberService
         return _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "Unknown";
     }
 
-    private string? SaveProfilePicture(string? base64Data, string? existingPath = null)
+    private async Task<string?> StoreProfilePictureAsync(string? base64Data)
     {
-        if (string.IsNullOrEmpty(base64Data))
-            return existingPath;
-
-        try
+        if (string.IsNullOrWhiteSpace(base64Data))
         {
-            var data = base64Data;
-            if (data.Contains(","))
-            {
-                data = data.Split(',')[1];
-            }
-
-            var bytes = Convert.FromBase64String(data);
-            var uploadsFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot", "uploads", "profiles");
-            if (!Directory.Exists(uploadsFolder))
-            {
-                Directory.CreateDirectory(uploadsFolder);
-            }
-
-            var fileName = $"{Guid.NewGuid()}.jpg";
-            var filePath = Path.Combine(uploadsFolder, fileName);
-            File.WriteAllBytes(filePath, bytes);
-
-            if (!string.IsNullOrEmpty(existingPath))
-            {
-                try
-                {
-                    if (ProfilePicturePathPolicy.TryResolveOwnedFile(
-                            AppDomain.CurrentDomain.BaseDirectory,
-                            existingPath,
-                            out var oldFilePath)
-                        && File.Exists(oldFilePath))
-                    {
-                        File.Delete(oldFilePath);
-                    }
-                }
-                catch { /* ignore deletion failures */ }
-            }
-
-            return $"/uploads/profiles/{fileName}";
+            return null;
         }
-        catch
-        {
-            return existingPath;
-        }
+
+        var configuredMaximum = await _settingsService.GetValueIntAsync(
+            "MaxUploadSize",
+            5242880);
+        return _profilePictureStorage.Store(base64Data, configuredMaximum);
     }
 
     public async Task<MemberResponseDto?> GetByIdAsync(int id)
@@ -129,30 +97,6 @@ public class MemberService : IMemberService
         };
     }
 
-    private async Task ValidateProfilePictureAsync(string? base64Data)
-    {
-        if (string.IsNullOrEmpty(base64Data)) return;
-        var data = base64Data;
-        if (data.Contains(","))
-        {
-            data = data.Split(',')[1];
-        }
-        byte[] bytes;
-        try
-        {
-            bytes = Convert.FromBase64String(data);
-        }
-        catch
-        {
-            throw new ArgumentException("Invalid profile picture Base64 format.");
-        }
-        var maxSize = await _settingsService.GetValueIntAsync("MaxUploadSize", 5242880);
-        if (bytes.Length > maxSize)
-        {
-            throw new ArgumentException($"Profile picture size exceeds maximum permitted limit of {maxSize} bytes.");
-        }
-    }
-
     public async Task<MemberResponseDto> CreateMemberAsync(CreateMemberDto createDto)
     {
         var actorUserId = GetRequiredCurrentUserId();
@@ -173,9 +117,6 @@ public class MemberService : IMemberService
             }
         }
 
-        // Validate Profile Picture size/format
-        await ValidateProfilePictureAsync(createDto.ProfilePictureBase64);
-
         // Generate unique QRCode check-in token dynamically from settings
         var qrPrefix = await _settingsService.GetValueAsync("QRPrefix", "GTP-");
         string qrCode;
@@ -186,8 +127,8 @@ public class MemberService : IMemberService
             if (existingQR == null) break;
         }
 
-        // Save profile picture if base64 data is present
-        var profilePicPath = SaveProfilePicture(createDto.ProfilePictureBase64);
+        // The storage component validates signature and size before writing outside wwwroot.
+        var profilePicPath = await StoreProfilePictureAsync(createDto.ProfilePictureBase64);
 
         var member = new Member
         {
@@ -207,7 +148,15 @@ public class MemberService : IMemberService
             IsDeleted = false
         };
 
-        await _memberRepository.AddAsync(member);
+        try
+        {
+            await _memberRepository.AddAsync(member);
+        }
+        catch
+        {
+            _profilePictureStorage.TryDelete(profilePicPath);
+            throw;
+        }
 
         // Audit Logging
         await _auditService.LogActivityAsync(actorUserId, "Member Created", $"Created member {member.FirstName} {member.LastName} (ID: {member.MemberID}).", GetClientIpAddress());
@@ -251,11 +200,10 @@ public class MemberService : IMemberService
             }
         }
 
-        // Validate Profile Picture size/format
-        await ValidateProfilePictureAsync(updateDto.ProfilePictureBase64);
-
-        // Save new profile picture if provided
-        var profilePicPath = SaveProfilePicture(updateDto.ProfilePictureBase64, member.ProfilePicture);
+        var previousProfilePicture = member.ProfilePicture;
+        var profilePicPath = string.IsNullOrWhiteSpace(updateDto.ProfilePictureBase64)
+            ? previousProfilePicture
+            : await StoreProfilePictureAsync(updateDto.ProfilePictureBase64);
 
         member.FirstName = updateDto.FirstName;
         member.LastName = updateDto.LastName;
@@ -269,7 +217,25 @@ public class MemberService : IMemberService
         member.Status = updateDto.Status;
         member.LastModified = DateTime.UtcNow;
 
-        await _memberRepository.UpdateAsync(member);
+        try
+        {
+            await _memberRepository.UpdateAsync(member);
+        }
+        catch
+        {
+            if (!string.Equals(profilePicPath, previousProfilePicture, StringComparison.Ordinal))
+            {
+                _profilePictureStorage.TryDelete(profilePicPath);
+                member.ProfilePicture = previousProfilePicture;
+            }
+            throw;
+        }
+
+        if (!string.Equals(profilePicPath, previousProfilePicture, StringComparison.Ordinal))
+        {
+            // Old private or legacy files are removed only after the member update commits.
+            _profilePictureStorage.TryDelete(previousProfilePicture);
+        }
 
         // Audit Logging
         await _auditService.LogActivityAsync(actorUserId, "Member Updated", $"Updated member profile for {member.FirstName} {member.LastName} (ID: {member.MemberID}).", GetClientIpAddress());
@@ -300,7 +266,9 @@ public class MemberService : IMemberService
             Email = member.Email,
             Address = member.Address,
             EmergencyContact = member.EmergencyContact,
-            ProfilePicture = member.ProfilePicture,
+            ProfilePicture = string.IsNullOrWhiteSpace(member.ProfilePicture)
+                ? null
+                : $"/api/v1/members/{member.MemberID}/profile-picture",
             QRCode = member.QRCode,
             Status = member.Status,
             DateRegistered = member.DateRegistered,

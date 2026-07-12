@@ -10,7 +10,14 @@
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="20" HorizontalOptions="Center">
             
-            <Frame BackgroundColor="#1E293B" CornerRadius="16" Padding="30" HasShadow="True" BorderColor="Transparent" WidthRequest="300">
+            <Border BackgroundColor="#1E293B"
+                    Padding="30"
+                    Stroke="Transparent"
+                    StrokeShape="RoundRectangle 16"
+                    WidthRequest="300">
+                <Border.Shadow>
+                    <Shadow Brush="Black" Offset="0,4" Radius="8" Opacity="0.25" />
+                </Border.Shadow>
                 <VerticalStackLayout Spacing="15" HorizontalOptions="Center">
                     <Label Text="Access Card" 
                            FontSize="22" 
@@ -42,7 +49,7 @@
                            TextColor="#94A3B8"
                            HorizontalOptions="Center" />
                 </VerticalStackLayout>
-            </Frame>
+            </Border>
 
             <Button Text="Refresh" Command="{Binding LoadDataCommand}" BackgroundColor="#3B82F6" TextColor="White" CornerRadius="8" WidthRequest="200" HorizontalOptions="Center" />
 

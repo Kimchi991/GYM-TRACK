@@ -89,6 +89,11 @@
 	</Target>
 
 	<ItemGroup>
+		<!-- Authentication uses FirebaseAuthentication.net and the Identity Toolkit REST
+		     API only. No native Google Services SDK is linked, so an unrelated local
+		     google-services.json must not become a build input or packaged artifact. -->
+		<None Remove="google-services.json" />
+
 		<!-- App Icon -->
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
 

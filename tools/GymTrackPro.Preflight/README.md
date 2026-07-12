@@ -78,10 +78,20 @@ normalized-email backfill has completed:
 dotnet $preflightEntrypoint --mode post-stage
 ```
 
-Post-stage mode requires the same four history rows plus exactly
-`20260711204834_StageFirebaseIdentityAndAccountInvites`, again at product version
-`10.0.9`, with no unknown or newer rows. It also requires the complete B1
-fingerprint. Every B1-sensitive column is matched on exact effective type,
+Post-stage mode accepts exactly two reviewed capstone history states, with every
+row at product version `10.0.9` and no unknown or newer row:
+
+1. the same four base rows plus
+   `20260711204834_StageFirebaseIdentityAndAccountInvites`; or
+2. those five rows plus
+   `20260712050837_AddAttendanceVoidingAndSource`.
+
+The first state requires legacy `AttendanceLogs.AttendanceDate` as non-null
+`datetime2`. The second requires `AttendanceDate` as non-null SQL `date`, the
+preserved `AttendanceDateLegacyDateTime` as nullable `datetime2`, and the
+void/supersession columns used by final-stage checks. A migration-history/schema
+state mismatch fails closed. Both states require the complete B1 fingerprint.
+Every B1-sensitive column is matched on exact effective type,
 maximum length, precision, scale, nullability, collation, rowversion and default
 shape; identity columns additionally require seed `1`, increment `1`, and no
 `NOT FOR REPLICATION`. Unexpected computed, persisted, row-GUID, FILESTREAM,
@@ -105,10 +115,14 @@ must be all null or all populated with a nonzero operation GUID); unresolved ope
 invites targeting missing/deleted Members; deleted Members with active Gym Goer
 users; invalid settings; and blocking attendance/subscription anomalies.
 
-Attendance analysis supports both the legacy shape and a later fully staged
-void/supersession shape. A partial void/supersession shape fails closed. Closed
-historical attendance for deleted Members is reported as informational evidence;
-an open, active row for a deleted Member is blocking.
+Attendance queries are selected only after one of those shapes is recognized.
+The legacy stage checks time components and duplicate calendar dates using only
+the legacy `AttendanceDate` column. The final stage groups active duplicates by
+the SQL `date` column and compares it with the preserved legacy value only when
+that value is present. It never queries the abandoned `AttendanceDateLocal`
+design. A partial or history-inconsistent shape fails closed. Closed historical
+attendance for deleted Members is reported as informational evidence; an open,
+active row for a deleted Member is blocking.
 
 ## Output and decisions
 

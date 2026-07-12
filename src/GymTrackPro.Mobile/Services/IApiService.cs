@@ -1,10 +1,42 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
 using GymTrackPro.Shared.DTOs;
 using GymTrackPro.Shared.Entities;
 
 namespace GymTrackPro.Mobile.Services;
+
+public sealed record ProfilePictureData(byte[] Bytes, string ContentType);
+
+public enum StartupIdentityLookupStatus
+{
+    Success,
+    Unavailable,
+    Rejected
+}
+
+public sealed record StartupIdentityLookupResult(
+    StartupIdentityLookupStatus Status,
+    UserResponseDto? User = null,
+    HttpStatusCode? HttpStatusCode = null,
+    string? ErrorCode = null);
+
+public enum OperationalResourceStatus
+{
+    Success,
+    Missing,
+    Unavailable,
+    Rejected,
+    InvalidResponse
+}
+
+public sealed record OperationalResourceResult<T>(
+    OperationalResourceStatus Status,
+    T? Data = default,
+    HttpStatusCode? HttpStatusCode = null,
+    string? Message = null,
+    string? ErrorCode = null);
 
 public interface IApiService
 {
@@ -12,6 +44,8 @@ public interface IApiService
     Task<ApiResponse<UserResponseDto>> SyncUserWithBackendAsync(string firebaseToken);
     Task<ApiResponse<UserResponseDto>> ActivateInviteAsync(ActivateInviteDto dto);
     Task<ApiResponse<UserResponseDto>> GetCurrentUserAsync();
+    Task<StartupIdentityLookupResult> GetCurrentUserForStartupAsync(
+        CancellationToken cancellationToken = default);
     void SetAuthToken(string token);
     string? GetAuthToken();
     void ClearAuthToken();
@@ -41,9 +75,24 @@ public interface IApiService
 
     // Gym Goer Self-Service
     Task<ApiResponse<GoerDashboardDto>> GetGoerDashboardAsync();
+    Task<OperationalResourceResult<GoerDashboardDto>> GetGoerDashboardForRefreshAsync(
+        CancellationToken cancellationToken = default);
     Task<ApiResponse<GoerDigitalCardDto>> GetGoerDigitalCardAsync();
-    Task<ApiResponse<AttendanceDto>> GetGoerCurrentAttendanceAsync();
-    Task<ApiResponse<PagedResultDto<AttendanceDto>>> GetGoerAttendanceHistoryAsync(DateTime? from, DateTime? to, int page = 1, int pageSize = 10);
+    Task<ProfilePictureData?> GetCurrentProfilePictureAsync(
+        CancellationToken cancellationToken = default);
+    Task<OperationalResourceResult<ProfilePictureData>> GetCurrentProfilePictureForRefreshAsync(
+        CancellationToken cancellationToken = default);
+    Task<ApiResponse<CurrentAttendanceStateDto>> GetGoerCurrentAttendanceAsync();
+    Task<OperationalResourceResult<CurrentAttendanceStateDto>> GetGoerCurrentAttendanceForRefreshAsync(
+        CancellationToken cancellationToken = default);
+    Task<ApiResponse<AttendanceHistoryPageDto>> GetGoerAttendanceHistoryAsync(DateOnly? fromGymDate, DateOnly? endExclusiveGymDate, int page = 1, int pageSize = 10);
+    Task<OperationalResourceResult<AttendanceHistoryPageDto>> GetGoerAttendanceHistoryForRefreshAsync(
+        DateOnly? fromGymDate,
+        DateOnly? endExclusiveGymDate,
+        int page = 1,
+        int pageSize = 10,
+        CancellationToken cancellationToken = default);
+    Task<ApiResponse<AttendanceDto>> GoerCheckInAsync(Guid operationId);
     Task<ApiResponse<AttendanceDto>> GoerCheckOutAsync(Guid operationId);
     Task<ApiResponse<GoerProgressDto>> GetGoerProgressAsync(string month);
 

@@ -15,6 +15,7 @@ public partial class MemberDetailsViewModel : BaseViewModel
 {
     private const string MemberAppInvitePurpose = "Member mobile app access";
     private readonly IApiService _apiService;
+    private readonly IAppDialogService _dialogService;
 
     [ObservableProperty]
     public partial MemberResponseDto? Member { get; set; }
@@ -80,9 +81,10 @@ public partial class MemberDetailsViewModel : BaseViewModel
     public ObservableCollection<AttendanceDto> AttendanceLogs { get; } = new();
     public ObservableCollection<PaymentResponseDto> PaymentLogs { get; } = new();
 
-    public MemberDetailsViewModel(IApiService apiService)
+    public MemberDetailsViewModel(IApiService apiService, IAppDialogService dialogService)
     {
-        _apiService = apiService;
+        _apiService = apiService ?? throw new ArgumentNullException(nameof(apiService));
+        _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
         Title = "Member Details";
     }
 
@@ -199,7 +201,11 @@ public partial class MemberDetailsViewModel : BaseViewModel
     {
         if (Member == null) return;
 
-        bool confirm = await Shell.Current.DisplayAlert("Revoke Invite", "Are you sure you want to revoke this invite?", "Yes", "No");
+        bool confirm = await _dialogService.ShowConfirmationAsync(
+            "Revoke Invite",
+            "Are you sure you want to revoke this invite?",
+            "Yes",
+            "No");
         if (!confirm) return;
 
         IsBusy = true;

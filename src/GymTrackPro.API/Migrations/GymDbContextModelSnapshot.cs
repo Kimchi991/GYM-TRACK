@@ -45,7 +45,8 @@ namespace GymTrackPro.API.Migrations
                     b.Property<string>("NormalizedEmail")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("nvarchar(255)")
+                        .UseCollation("Latin1_General_100_BIN2");
 
                     b.Property<string>("Purpose")
                         .IsRequired()
@@ -73,24 +74,51 @@ namespace GymTrackPro.API.Migrations
                     b.Property<byte[]>("TokenHash")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("varbinary(32)");
+                        .HasColumnType("binary(32)")
+                        .IsFixedLength();
 
                     b.Property<DateTime?>("UsedAtUtc")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UsedByFirebaseUid")
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("nvarchar(128)")
+                        .UseCollation("Latin1_General_100_BIN2");
 
                     b.HasKey("AccountInviteID");
 
                     b.HasIndex("CreatedByUserID");
 
+                    b.HasIndex("NormalizedEmail")
+                        .HasDatabaseName("IX_AccountInvites_NormalizedEmail");
+
+                    b.HasIndex("RedemptionOperationId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AccountInvites_RedemptionOperationId")
+                        .HasFilter("[RedemptionOperationId] IS NOT NULL");
+
                     b.HasIndex("TargetMemberID");
 
                     b.HasIndex("TargetUserID");
 
-                    b.ToTable("AccountInvites");
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AccountInvites_TokenHash");
+
+                    b.ToTable("AccountInvites", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AccountInvites_ExactlyOneTarget", "([TargetMemberID] IS NOT NULL AND [TargetUserID] IS NULL) OR ([TargetMemberID] IS NULL AND [TargetUserID] IS NOT NULL)");
+                            t.HasCheckConstraint("CK_AccountInvites_ExpiryAfterCreation", "[ExpiresAtUtc] > [CreatedAtUtc]");
+                            t.HasCheckConstraint("CK_AccountInvites_NormalizedEmailNotBlank", "LEN([NormalizedEmail]) > 0");
+                            t.HasCheckConstraint("CK_AccountInvites_PurposeNotBlank", "LEN(LTRIM(RTRIM([Purpose]))) > 0");
+                            t.HasCheckConstraint("CK_AccountInvites_RedemptionMetadata", "([UsedAtUtc] IS NULL AND [UsedByFirebaseUid] IS NULL AND [RedemptionOperationId] IS NULL) OR ([UsedAtUtc] IS NOT NULL AND [UsedByFirebaseUid] IS NOT NULL AND [RedemptionOperationId] IS NOT NULL AND [RedemptionOperationId] <> CAST('00000000-0000-0000-0000-000000000000' AS uniqueidentifier))");
+                            t.HasCheckConstraint("CK_AccountInvites_RevokedTimestampAfterCreation", "[RevokedAtUtc] IS NULL OR [RevokedAtUtc] >= [CreatedAtUtc]");
+                            t.HasCheckConstraint("CK_AccountInvites_TargetRole", "([TargetMemberID] IS NOT NULL AND [IntendedRole] = 2) OR ([TargetUserID] IS NOT NULL AND [IntendedRole] IN (0, 1))");
+                            t.HasCheckConstraint("CK_AccountInvites_UsedBeforeExpiry", "[UsedAtUtc] IS NULL OR [UsedAtUtc] < [ExpiresAtUtc]");
+                            t.HasCheckConstraint("CK_AccountInvites_UsedOrRevoked", "[UsedAtUtc] IS NULL OR [RevokedAtUtc] IS NULL");
+                            t.HasCheckConstraint("CK_AccountInvites_UsedTimestampAfterCreation", "[UsedAtUtc] IS NULL OR [UsedAtUtc] >= [CreatedAtUtc]");
+                            t.HasCheckConstraint("CK_AccountInvites_UsedUidNotBlank", "[UsedByFirebaseUid] IS NULL OR LEN([UsedByFirebaseUid]) > 0");
+                        });
                 });
 
             modelBuilder.Entity("GymTrackPro.Shared.Entities.Attendance", b =>
@@ -106,6 +134,9 @@ namespace GymTrackPro.API.Migrations
 
                     b.Property<DateOnly>("AttendanceDate")
                         .HasColumnType("date");
+
+                    b.Property<DateTime?>("AttendanceDateLegacyDateTime")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("CheckInTime")
                         .HasColumnType("datetime2");
@@ -149,13 +180,36 @@ namespace GymTrackPro.API.Migrations
 
                     b.HasIndex("ActorUserID");
 
-                    b.HasIndex("MemberID");
+                    b.HasIndex("AttendanceDate")
+                        .HasDatabaseName("IX_AttendanceLogs_AttendanceDate");
+
+                    b.HasIndex("CheckInTime")
+                        .HasDatabaseName("IX_AttendanceLogs_CheckInTime");
+
+                    b.HasIndex("MemberID")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AttendanceLogs_Member_Open_NonVoided")
+                        .HasFilter("[CheckOutTime] IS NULL AND [IsVoided] = 0");
+
+                    b.HasIndex("MemberID", "AttendanceDate")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AttendanceLogs_Member_AttendanceDate_NonVoided")
+                        .HasFilter("[IsVoided] = 0");
+
+                    b.HasIndex("MemberID", "CheckInTime")
+                        .HasDatabaseName("IX_AttendanceLogs_MemberID_CheckInTime");
 
                     b.HasIndex("SupersededByAttendanceID");
 
                     b.HasIndex("VoidActorUserID");
 
-                    b.ToTable("AttendanceLogs");
+                    b.ToTable("AttendanceLogs", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AttendanceLogs_CheckoutAfterCheckin", "[IsVoided] = 1 OR [CheckOutTime] IS NULL OR [CheckOutTime] > [CheckInTime]");
+                            t.HasCheckConstraint("CK_AttendanceLogs_NoSelfSupersession", "[SupersededByAttendanceID] IS NULL OR [SupersededByAttendanceID] <> [AttendanceID]");
+                            t.HasCheckConstraint("CK_AttendanceLogs_SupersessionRequiresVoid", "[SupersededByAttendanceID] IS NULL OR [IsVoided] = 1");
+                            t.HasCheckConstraint("CK_AttendanceLogs_VoidMetadata", "([IsVoided] = 0 AND [VoidActorUserID] IS NULL AND [VoidedAtUtc] IS NULL AND [VoidReason] IS NULL) OR ([IsVoided] = 1 AND [VoidActorUserID] IS NOT NULL AND [VoidedAtUtc] IS NOT NULL AND LEN(LTRIM(RTRIM([VoidReason]))) > 0)");
+                        });
                 });
 
             modelBuilder.Entity("GymTrackPro.Shared.Entities.AttendanceAdjustment", b =>
@@ -213,7 +267,11 @@ namespace GymTrackPro.API.Migrations
                     b.HasIndex("OperationID")
                         .IsUnique();
 
-                    b.ToTable("AttendanceAdjustments");
+                    b.ToTable("AttendanceAdjustments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AttendanceAdjustments_Kind", "[Kind] IN (0, 1, 2)");
+                            t.HasCheckConstraint("CK_AttendanceAdjustments_ReasonNotBlank", "LEN(LTRIM(RTRIM([Reason]))) > 0");
+                        });
                 });
 
             modelBuilder.Entity("GymTrackPro.Shared.Entities.AttendanceOperation", b =>
@@ -245,7 +303,8 @@ namespace GymTrackPro.API.Migrations
                     b.Property<byte[]>("RequestFingerprint")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("varbinary(32)");
+                        .HasColumnType("binary(32)")
+                        .IsFixedLength();
 
                     b.Property<int>("State")
                         .HasColumnType("int");
@@ -259,7 +318,14 @@ namespace GymTrackPro.API.Migrations
 
                     b.HasIndex("TargetAttendanceID");
 
-                    b.ToTable("AttendanceOperations");
+                    b.ToTable("AttendanceOperations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AttendanceOperations_CompletionOrder", "[CompletedAtUtc] >= [CreatedAtUtc]");
+                            t.HasCheckConstraint("CK_AttendanceOperations_HttpStatusRange", "[OriginalHttpStatus] BETWEEN 100 AND 599");
+                            t.HasCheckConstraint("CK_AttendanceOperations_OperationType", "[OperationType] IN (0, 1, 2, 3, 4, 5)");
+                            t.HasCheckConstraint("CK_AttendanceOperations_ResultCodeNotBlank", "LEN(LTRIM(RTRIM([OriginalResultCode]))) > 0");
+                            t.HasCheckConstraint("CK_AttendanceOperations_State", "[State] IN (0, 1)");
+                        });
                 });
 
             modelBuilder.Entity("GymTrackPro.Shared.Entities.AuditLog", b =>
@@ -390,11 +456,16 @@ namespace GymTrackPro.API.Migrations
                         .HasColumnType("rowversion");
 
                     b.Property<long>("Version")
-                        .HasColumnType("bigint");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
 
                     b.HasKey("MemberID");
 
-                    b.ToTable("MemberProjectionVersions");
+                    b.ToTable("MemberProjectionVersions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_MemberProjectionVersions_VersionRange", "[Version] >= 0 AND [Version] <= 2199023255551");
+                        });
                 });
 
             modelBuilder.Entity("GymTrackPro.Shared.Entities.MembershipPause", b =>
@@ -710,6 +781,14 @@ namespace GymTrackPro.API.Migrations
                             GroupName = "Membership",
                             LastModified = new DateTime(2026, 7, 2, 0, 0, 0, 0, DateTimeKind.Utc),
                             SettingValue = "3"
+                        },
+                        new
+                        {
+                            SettingKey = "StaleSessionHours",
+                            Description = "Hours after which an open attendance session is considered stale.",
+                            GroupName = "Attendance",
+                            LastModified = new DateTime(2026, 7, 2, 0, 0, 0, 0, DateTimeKind.Utc),
+                            SettingValue = "16"
                         });
                 });
 
@@ -734,7 +813,8 @@ namespace GymTrackPro.API.Migrations
 
                     b.Property<string>("FirebaseUid")
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("nvarchar(128)")
+                        .UseCollation("Latin1_General_100_BIN2");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
@@ -757,7 +837,8 @@ namespace GymTrackPro.API.Migrations
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("nvarchar(255)")
+                        .UseCollation("Latin1_General_100_BIN2");
 
                     b.Property<string>("PasswordHash")
                         .HasMaxLength(255)
@@ -790,12 +871,31 @@ namespace GymTrackPro.API.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.HasIndex("MemberID");
+                    b.HasIndex("FirebaseUid")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Users_FirebaseUid")
+                        .HasFilter("[FirebaseUid] IS NOT NULL");
+
+                    b.HasIndex("MemberID")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Users_MemberID")
+                        .HasFilter("[MemberID] IS NOT NULL");
+
+                    b.HasIndex("NormalizedEmail")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Users_NormalizedEmail")
+                        .HasFilter("[NormalizedEmail] IS NOT NULL");
 
                     b.HasIndex("Username")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Users_FirebaseUidNotBlank", "[FirebaseUid] IS NULL OR LEN([FirebaseUid]) > 0");
+                            t.HasCheckConstraint("CK_Users_NormalizedEmailNotBlank", "[NormalizedEmail] IS NULL OR LEN([NormalizedEmail]) > 0");
+                            t.HasCheckConstraint("CK_Users_Role", "[Role] IN (0, 1, 2)");
+                            t.HasCheckConstraint("CK_Users_RoleMemberLink", "([Role] = 2 AND [MemberID] IS NOT NULL) OR ([Role] IN (0, 1) AND [MemberID] IS NULL)");
+                        });
                 });
 
             modelBuilder.Entity("GymTrackPro.Shared.Entities.WalkInVisitor", b =>
@@ -837,11 +937,13 @@ namespace GymTrackPro.API.Migrations
 
                     b.HasOne("GymTrackPro.Shared.Entities.Member", "TargetMember")
                         .WithMany()
-                        .HasForeignKey("TargetMemberID");
+                        .HasForeignKey("TargetMemberID")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("GymTrackPro.Shared.Entities.User", "TargetUser")
                         .WithMany()
-                        .HasForeignKey("TargetUserID");
+                        .HasForeignKey("TargetUserID")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("CreatedByUser");
 
@@ -854,21 +956,24 @@ namespace GymTrackPro.API.Migrations
                 {
                     b.HasOne("GymTrackPro.Shared.Entities.User", "ActorUser")
                         .WithMany()
-                        .HasForeignKey("ActorUserID");
+                        .HasForeignKey("ActorUserID")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("GymTrackPro.Shared.Entities.Member", "Member")
                         .WithMany()
                         .HasForeignKey("MemberID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("GymTrackPro.Shared.Entities.Attendance", "SupersededByAttendance")
                         .WithMany()
-                        .HasForeignKey("SupersededByAttendanceID");
+                        .HasForeignKey("SupersededByAttendanceID")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("GymTrackPro.Shared.Entities.User", "VoidActorUser")
                         .WithMany()
-                        .HasForeignKey("VoidActorUserID");
+                        .HasForeignKey("VoidActorUserID")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("ActorUser");
 
@@ -890,13 +995,13 @@ namespace GymTrackPro.API.Migrations
                     b.HasOne("GymTrackPro.Shared.Entities.Attendance", "Attendance")
                         .WithMany("Adjustments")
                         .HasForeignKey("AttendanceID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("GymTrackPro.Shared.Entities.AttendanceOperation", "Operation")
                         .WithOne("Adjustment")
                         .HasForeignKey("GymTrackPro.Shared.Entities.AttendanceAdjustment", "OperationID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("ActorUser");
@@ -916,7 +1021,8 @@ namespace GymTrackPro.API.Migrations
 
                     b.HasOne("GymTrackPro.Shared.Entities.Attendance", "TargetAttendance")
                         .WithMany("Operations")
-                        .HasForeignKey("TargetAttendanceID");
+                        .HasForeignKey("TargetAttendanceID")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("ActorUser");
 
@@ -935,8 +1041,8 @@ namespace GymTrackPro.API.Migrations
             modelBuilder.Entity("GymTrackPro.Shared.Entities.MemberProjectionVersion", b =>
                 {
                     b.HasOne("GymTrackPro.Shared.Entities.Member", "Member")
-                        .WithMany()
-                        .HasForeignKey("MemberID")
+                        .WithOne()
+                        .HasForeignKey("GymTrackPro.Shared.Entities.MemberProjectionVersion", "MemberID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -1006,8 +1112,9 @@ namespace GymTrackPro.API.Migrations
             modelBuilder.Entity("GymTrackPro.Shared.Entities.User", b =>
                 {
                     b.HasOne("GymTrackPro.Shared.Entities.Member", "Member")
-                        .WithMany()
-                        .HasForeignKey("MemberID");
+                        .WithOne()
+                        .HasForeignKey("GymTrackPro.Shared.Entities.User", "MemberID")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Member");
                 });

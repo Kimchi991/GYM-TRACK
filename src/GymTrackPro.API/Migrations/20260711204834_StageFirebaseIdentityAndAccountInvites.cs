@@ -190,35 +190,6 @@ namespace GymTrackPro.API.Migrations
                 column: "TargetMemberID");
 
             migrationBuilder.CreateIndex(
-                name: "UX_Users_FirebaseUid",
-                table: "Users",
-                column: "FirebaseUid",
-                unique: true,
-                filter: "[FirebaseUid] IS NOT NULL");
-
-            migrationBuilder.CreateIndex(
-                name: "UX_Users_MemberID",
-                table: "Users",
-                column: "MemberID",
-                unique: true,
-                filter: "[MemberID] IS NOT NULL");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AccountInvites_CreatedByUserID",
-                table: "AccountInvites",
-                column: "CreatedByUserID");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AccountInvites_NormalizedEmail",
-                table: "AccountInvites",
-                column: "NormalizedEmail");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AccountInvites_TargetMemberID",
-                table: "AccountInvites",
-                column: "TargetMemberID");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_AccountInvites_TargetUserID",
                 table: "AccountInvites",
                 column: "TargetUserID");

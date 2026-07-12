@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Text.RegularExpressions;
 using GymTrackPro.API.Data;
 using GymTrackPro.API.Migrations;
 using GymTrackPro.Shared.Entities;
@@ -254,6 +255,83 @@ public sealed class IdentitySchemaModelTests
             LegacyRedemptionMetadataConstraintName,
             script,
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IdentityMigrationSource_CreatesEveryNamedIndexExactlyOnce()
+    {
+        var root = TestWorkspace.FindRoot();
+        var migrationSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "GymTrackPro.API",
+            "Migrations",
+            "20260711204834_StageFirebaseIdentityAndAccountInvites.cs"));
+        var script = File.ReadAllText(Path.Combine(
+            root,
+            "docs",
+            "migrations",
+            "20260711204834_StageFirebaseIdentityAndAccountInvites.idempotent.sql"));
+
+        var migrationIndexNames = Regex.Matches(
+                migrationSource,
+                "CreateIndex\\s*\\(\\s*name:\\s*\"(?<name>[^\"]+)\"",
+                RegexOptions.CultureInvariant)
+            .Cast<Match>()
+            .Select(match => match.Groups["name"].Value)
+            .ToArray();
+
+        var migrationDropIndexNames = Regex.Matches(
+                migrationSource,
+                "DropIndex\\s*\\(\\s*name:\\s*\"(?<name>[^\"]+)\"",
+                RegexOptions.CultureInvariant)
+            .Cast<Match>()
+            .Select(match => match.Groups["name"].Value)
+            .ToArray();
+
+        Assert.NotEmpty(migrationIndexNames);
+        Assert.Equal(
+            migrationIndexNames.Length,
+            migrationIndexNames.Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(
+            migrationDropIndexNames.Length,
+            migrationDropIndexNames.Distinct(StringComparer.Ordinal).Count());
+
+        var expectedB1Indexes = new[]
+        {
+            "UX_Users_NormalizedEmail",
+            "UX_Users_FirebaseUid",
+            "UX_Users_MemberID",
+            "IX_AccountInvites_CreatedByUserID",
+            "IX_AccountInvites_NormalizedEmail",
+            "IX_AccountInvites_TargetMemberID",
+            "IX_AccountInvites_TargetUserID",
+            "UX_AccountInvites_RedemptionOperationId",
+            "UX_AccountInvites_TokenHash"
+        };
+
+        foreach (var indexName in expectedB1Indexes)
+        {
+            Assert.Single(migrationIndexNames, candidate => candidate == indexName);
+            var scriptIndexMatches = Regex.Matches(
+                    script,
+                    $"CREATE(?: UNIQUE)? INDEX \\[{Regex.Escape(indexName)}\\]",
+                    RegexOptions.CultureInvariant)
+                .Cast<Match>()
+                .ToArray();
+            Assert.Single(scriptIndexMatches);
+        }
+
+        foreach (var userIndexName in expectedB1Indexes.Where(name =>
+                     name.StartsWith("UX_Users_", StringComparison.Ordinal)))
+        {
+            Assert.Single(migrationDropIndexNames, candidate => candidate == userIndexName);
+        }
+
+        Assert.True(Regex.IsMatch(
+            migrationSource,
+            "DropTable\\s*\\(\\s*name:\\s*\"AccountInvites\"\\s*\\)",
+            RegexOptions.CultureInvariant));
     }
 
     private static GymDbContext CreateContext()

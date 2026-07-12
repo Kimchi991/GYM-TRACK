@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GymTrackPro.Mobile.Helpers;
 using GymTrackPro.Mobile.Services;
+using GymTrackPro.Shared.Constants;
 
 namespace GymTrackPro.Mobile.ViewModels;
 
@@ -11,6 +12,9 @@ public partial class LoginViewModel : BaseViewModel
 {
     private readonly IApiService _apiService;
     private readonly IFirebaseAuthService _firebaseAuthService;
+    private readonly IAppLogoutService _logoutService;
+    private readonly Func<GoerAppShell> _goerShellFactory;
+    private readonly IRootNavigationService _rootNavigationService;
 
     [ObservableProperty]
     public partial string Email { get; set; } = string.Empty;
@@ -30,10 +34,19 @@ public partial class LoginViewModel : BaseViewModel
         IsPasswordHidden = !IsPasswordHidden;
     }
 
-    public LoginViewModel(IApiService apiService, IFirebaseAuthService firebaseAuthService)
+    public LoginViewModel(
+        IApiService apiService,
+        IFirebaseAuthService firebaseAuthService,
+        IAppLogoutService logoutService,
+        Func<GoerAppShell> goerShellFactory,
+        IRootNavigationService rootNavigationService)
     {
         _apiService = apiService;
         _firebaseAuthService = firebaseAuthService;
+        _logoutService = logoutService;
+        _goerShellFactory = goerShellFactory;
+        _rootNavigationService = rootNavigationService
+            ?? throw new ArgumentNullException(nameof(rootNavigationService));
         Title = "Login";
     }
 
@@ -61,11 +74,14 @@ public partial class LoginViewModel : BaseViewModel
         {
             var firebaseToken = await _firebaseAuthService.LoginAsync(Email, Password);
             var result = await _apiService.SyncUserWithBackendAsync(firebaseToken);
-            if (result.Success)
+            if (result.Success && result.Data is not null)
             {
-                if (result.Data?.Role == GymTrackPro.Shared.Enums.UserRole.GymGoer)
+                if (result.Data.Role == GymTrackPro.Shared.Enums.UserRole.GymGoer)
                 {
-                    Application.Current.MainPage = new GoerAppShell();
+                    if (!_rootNavigationService.TrySetRoot(_goerShellFactory()))
+                    {
+                        ErrorMessage = "Signed in, but the member dashboard could not be displayed.";
+                    }
                 }
                 else
                 {
@@ -74,7 +90,17 @@ public partial class LoginViewModel : BaseViewModel
             }
             else
             {
-                ErrorMessage = result.Message;
+                ErrorMessage = string.IsNullOrWhiteSpace(result.Message)
+                    ? "The app could not verify this account."
+                    : result.Message;
+                if (IsPendingActivation(result.ErrorCode, result.Message))
+                {
+                    await Shell.Current.GoToAsync("register?mode=activate");
+                }
+                else
+                {
+                    await _logoutService.LogoutAsync();
+                }
             }
         }
         catch (Exception ex)
@@ -86,6 +112,14 @@ public partial class LoginViewModel : BaseViewModel
             IsBusy = false;
         }
     }
+
+    private static bool IsPendingActivation(string? errorCode, string? message) =>
+        string.Equals(
+            errorCode,
+            ErrorCodes.AccountPendingActivation,
+            StringComparison.Ordinal)
+        || (!string.IsNullOrWhiteSpace(message)
+            && message.Contains("pending activation", StringComparison.OrdinalIgnoreCase));
 
 
     [RelayCommand]

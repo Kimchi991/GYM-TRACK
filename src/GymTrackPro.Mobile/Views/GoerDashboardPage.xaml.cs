@@ -8,16 +8,10 @@ public partial class GoerDashboardPage : ContentPage
 {
     private GoerDashboardViewModel _viewModel;
 
-    public GoerDashboardPage()
+    public GoerDashboardPage(GoerDashboardViewModel viewModel)
     {
         InitializeComponent();
-        
-        var apiService = Handler?.MauiContext?.Services.GetService<IApiService>() 
-            ?? Application.Current?.MainPage?.Handler?.MauiContext?.Services.GetService<IApiService>();
-        var authService = Handler?.MauiContext?.Services.GetService<IFirebaseAuthService>()
-            ?? Application.Current?.MainPage?.Handler?.MauiContext?.Services.GetService<IFirebaseAuthService>();
-            
-        _viewModel = new GoerDashboardViewModel(apiService, authService);
+        _viewModel = viewModel;
         BindingContext = _viewModel;
     }
 

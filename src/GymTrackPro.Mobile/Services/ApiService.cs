@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -13,6 +14,7 @@ namespace GymTrackPro.Mobile.Services;
 
 public class ApiService : IApiService
 {
+    private const int MaximumProfilePictureBytes = 10 * 1024 * 1024;
     private readonly HttpClient _httpClient;
 
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
@@ -78,7 +80,9 @@ public class ApiService : IApiService
             return new ApiResponse<T>
             {
                 Success = false,
-                Message = errorResult?.Message ?? $"Request failed with status code {response.StatusCode}."
+                Message = errorResult?.Message ?? $"Request failed with status code {response.StatusCode}.",
+                ErrorCode = errorResult?.ErrorCode,
+                Errors = errorResult?.Errors ?? new List<string>()
             };
         }
         catch
@@ -125,6 +129,166 @@ public class ApiService : IApiService
         var response = await _httpClient.GetAsync("me");
         return await HandleResponseAsync<UserResponseDto>(response);
     }
+
+    public async Task<StartupIdentityLookupResult> GetCurrentUserForStartupAsync(
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var response = await _httpClient
+                .GetAsync("me", HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                .ConfigureAwait(false);
+            var statusCode = response.StatusCode;
+
+            if (response.IsSuccessStatusCode)
+            {
+                try
+                {
+                    var result = await response.Content
+                        .ReadFromJsonAsync<ApiResponse<UserResponseDto>>(
+                            _jsonOptions,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                    return result?.Success == true && result.Data is not null
+                        ? new StartupIdentityLookupResult(
+                            StartupIdentityLookupStatus.Success,
+                            result.Data,
+                            statusCode)
+                        : new StartupIdentityLookupResult(
+                            StartupIdentityLookupStatus.Rejected,
+                            HttpStatusCode: statusCode,
+                            ErrorCode: result?.ErrorCode);
+                }
+                catch (JsonException)
+                {
+                    // A malformed success response cannot prove an active app identity.
+                    return new StartupIdentityLookupResult(
+                        StartupIdentityLookupStatus.Rejected,
+                        HttpStatusCode: statusCode,
+                        ErrorCode: "INVALID_IDENTITY_RESPONSE");
+                }
+            }
+
+            if (statusCode is HttpStatusCode.RequestTimeout
+                or HttpStatusCode.InternalServerError
+                or HttpStatusCode.BadGateway
+                or HttpStatusCode.ServiceUnavailable
+                or HttpStatusCode.GatewayTimeout)
+            {
+                return new StartupIdentityLookupResult(
+                    StartupIdentityLookupStatus.Unavailable,
+                    HttpStatusCode: statusCode);
+            }
+
+            string? errorCode = null;
+            try
+            {
+                var error = await response.Content
+                    .ReadFromJsonAsync<ApiResponse>(_jsonOptions, cancellationToken)
+                    .ConfigureAwait(false);
+                errorCode = error?.ErrorCode;
+            }
+            catch (JsonException)
+            {
+                // HTTP authorization/business status remains authoritative.
+            }
+
+            // 401/403 and every non-transient business response fail closed. This
+            // includes inactive, deleted, or unlinked SQL application identities.
+            return new StartupIdentityLookupResult(
+                StartupIdentityLookupStatus.Rejected,
+                HttpStatusCode: statusCode,
+                ErrorCode: errorCode);
+        }
+        catch (Exception exception) when (exception is HttpRequestException
+            or TaskCanceledException
+            or TimeoutException)
+        {
+            return new StartupIdentityLookupResult(
+                StartupIdentityLookupStatus.Unavailable);
+        }
+    }
+
+    private async Task<OperationalResourceResult<T>> GetOperationalJsonAsync<T>(
+        string requestUri,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var response = await _httpClient
+                .GetAsync(requestUri, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                .ConfigureAwait(false);
+            var statusCode = response.StatusCode;
+            if (!response.IsSuccessStatusCode)
+            {
+                string? message = null;
+                string? errorCode = null;
+                try
+                {
+                    var error = await response.Content
+                        .ReadFromJsonAsync<ApiResponse>(_jsonOptions, cancellationToken)
+                        .ConfigureAwait(false);
+                    message = error?.Message;
+                    errorCode = error?.ErrorCode;
+                }
+                catch (JsonException)
+                {
+                    // The HTTP status remains authoritative for fail-closed handling.
+                }
+
+                return new OperationalResourceResult<T>(
+                    IsTransientUnavailable(statusCode)
+                        ? OperationalResourceStatus.Unavailable
+                        : OperationalResourceStatus.Rejected,
+                    HttpStatusCode: statusCode,
+                    Message: message,
+                    ErrorCode: errorCode);
+            }
+
+            try
+            {
+                var result = await response.Content
+                    .ReadFromJsonAsync<ApiResponse<T>>(_jsonOptions, cancellationToken)
+                    .ConfigureAwait(false);
+                return result?.Success == true && result.Data is not null
+                    ? new OperationalResourceResult<T>(
+                        OperationalResourceStatus.Success,
+                        result.Data,
+                        statusCode,
+                        result.Message,
+                        result.ErrorCode)
+                    : new OperationalResourceResult<T>(
+                        OperationalResourceStatus.Rejected,
+                        HttpStatusCode: statusCode,
+                        Message: result?.Message,
+                        ErrorCode: result?.ErrorCode);
+            }
+            catch (JsonException)
+            {
+                return new OperationalResourceResult<T>(
+                    OperationalResourceStatus.InvalidResponse,
+                    HttpStatusCode: statusCode,
+                    Message: "The server returned an invalid response.");
+            }
+        }
+        catch (Exception exception) when (IsTransportFailure(exception))
+        {
+            return new OperationalResourceResult<T>(
+                OperationalResourceStatus.Unavailable);
+        }
+    }
+
+    private static bool IsTransientUnavailable(HttpStatusCode statusCode) =>
+        statusCode is HttpStatusCode.RequestTimeout
+            or HttpStatusCode.InternalServerError
+            or HttpStatusCode.BadGateway
+            or HttpStatusCode.ServiceUnavailable
+            or HttpStatusCode.GatewayTimeout;
+
+    private static bool IsTransportFailure(Exception exception) =>
+        exception is HttpRequestException
+            or TaskCanceledException
+            or TimeoutException;
 
     // --- Dashboard ---
 
@@ -196,13 +360,22 @@ public class ApiService : IApiService
 
     public async Task<ApiResponse<AttendanceDto>> CheckInAsync(string qrCode)
     {
-        var response = await _httpClient.PostAsJsonAsync("attendance/checkin", qrCode);
+        var request = new CheckInRequestDto
+        {
+            QrCode = qrCode,
+            OperationId = Guid.NewGuid()
+        };
+        var response = await _httpClient.PostAsJsonAsync("attendance/check-in", request, _jsonOptions);
         return await HandleResponseAsync<AttendanceDto>(response);
     }
 
     public async Task<ApiResponse> CheckOutAsync(int attendanceId)
     {
-        var response = await _httpClient.PostAsync($"attendance/{attendanceId}/checkout", null);
+        var request = new CheckOutRequestDto { OperationId = Guid.NewGuid() };
+        var response = await _httpClient.PostAsJsonAsync(
+            $"attendance/{attendanceId}/check-out",
+            request,
+            _jsonOptions);
         return await HandleResponseAsync(response);
     }
 
@@ -220,32 +393,172 @@ public class ApiService : IApiService
         return await HandleResponseAsync<GoerDashboardDto>(response);
     }
 
+    public Task<OperationalResourceResult<GoerDashboardDto>> GetGoerDashboardForRefreshAsync(
+        CancellationToken cancellationToken = default) =>
+        GetOperationalJsonAsync<GoerDashboardDto>("me/dashboard", cancellationToken);
+
     public async Task<ApiResponse<GoerDigitalCardDto>> GetGoerDigitalCardAsync()
     {
         var response = await _httpClient.GetAsync("me/digital-card");
         return await HandleResponseAsync<GoerDigitalCardDto>(response);
     }
 
-    public async Task<ApiResponse<AttendanceDto>> GetGoerCurrentAttendanceAsync()
+    public async Task<ProfilePictureData?> GetCurrentProfilePictureAsync(
+        CancellationToken cancellationToken = default)
     {
-        var response = await _httpClient.GetAsync("me/attendance/current");
-        return await HandleResponseAsync<AttendanceDto>(response);
+        var result = await GetCurrentProfilePictureForRefreshAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return result.Status switch
+        {
+            OperationalResourceStatus.Success => result.Data,
+            OperationalResourceStatus.Missing => null,
+            OperationalResourceStatus.Unavailable =>
+                throw new HttpRequestException("The profile picture service is unavailable."),
+            OperationalResourceStatus.Rejected =>
+                throw new UnauthorizedAccessException("Profile picture access was rejected."),
+            _ => throw new InvalidDataException(
+                result.Message ?? "The profile picture response is invalid.")
+        };
     }
 
-    public async Task<ApiResponse<PagedResultDto<AttendanceDto>>> GetGoerAttendanceHistoryAsync(DateTime? from, DateTime? to, int page = 1, int pageSize = 10)
+    public async Task<OperationalResourceResult<ProfilePictureData>>
+        GetCurrentProfilePictureForRefreshAsync(
+            CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, "me/profile-picture");
+            request.Headers.CacheControl = new CacheControlHeaderValue
+            {
+                NoCache = true,
+                NoStore = true
+            };
+
+            using var response = await _httpClient
+                .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                .ConfigureAwait(false);
+            var statusCode = response.StatusCode;
+            if (statusCode == HttpStatusCode.NotFound)
+            {
+                return new OperationalResourceResult<ProfilePictureData>(
+                    OperationalResourceStatus.Missing,
+                    HttpStatusCode: statusCode);
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return new OperationalResourceResult<ProfilePictureData>(
+                    IsTransientUnavailable(statusCode)
+                        ? OperationalResourceStatus.Unavailable
+                        : OperationalResourceStatus.Rejected,
+                    HttpStatusCode: statusCode);
+            }
+
+            var contentType = response.Content.Headers.ContentType?.MediaType;
+            if (contentType is not ("image/jpeg" or "image/png"))
+            {
+                return new OperationalResourceResult<ProfilePictureData>(
+                    OperationalResourceStatus.InvalidResponse,
+                    HttpStatusCode: statusCode,
+                    Message: "The profile picture response is not a supported image.");
+            }
+
+            if (response.Content.Headers.ContentLength is > MaximumProfilePictureBytes)
+            {
+                return new OperationalResourceResult<ProfilePictureData>(
+                    OperationalResourceStatus.InvalidResponse,
+                    HttpStatusCode: statusCode,
+                    Message: "The profile picture response is too large.");
+            }
+
+            var bytes = await response.Content
+                .ReadAsByteArrayAsync(cancellationToken)
+                .ConfigureAwait(false);
+            if (bytes.Length is 0 or > MaximumProfilePictureBytes)
+            {
+                return new OperationalResourceResult<ProfilePictureData>(
+                    OperationalResourceStatus.InvalidResponse,
+                    HttpStatusCode: statusCode,
+                    Message: "The profile picture response has an invalid size.");
+            }
+
+            return new OperationalResourceResult<ProfilePictureData>(
+                OperationalResourceStatus.Success,
+                new ProfilePictureData(bytes, contentType),
+                statusCode);
+        }
+        catch (Exception exception) when (IsTransportFailure(exception))
+        {
+            return new OperationalResourceResult<ProfilePictureData>(
+                OperationalResourceStatus.Unavailable);
+        }
+    }
+
+    public async Task<ApiResponse<CurrentAttendanceStateDto>> GetGoerCurrentAttendanceAsync()
+    {
+        var response = await _httpClient.GetAsync("me/attendance/current");
+        return await HandleResponseAsync<CurrentAttendanceStateDto>(response);
+    }
+
+    public Task<OperationalResourceResult<CurrentAttendanceStateDto>>
+        GetGoerCurrentAttendanceForRefreshAsync(
+            CancellationToken cancellationToken = default) =>
+        GetOperationalJsonAsync<CurrentAttendanceStateDto>(
+            "me/attendance/current",
+            cancellationToken);
+
+    public async Task<ApiResponse<AttendanceHistoryPageDto>> GetGoerAttendanceHistoryAsync(
+        DateOnly? fromGymDate,
+        DateOnly? endExclusiveGymDate,
+        int page = 1,
+        int pageSize = 10)
+    {
+        var response = await _httpClient.GetAsync(BuildGoerAttendanceHistoryQuery(
+            fromGymDate,
+            endExclusiveGymDate,
+            page,
+            pageSize));
+        return await HandleResponseAsync<AttendanceHistoryPageDto>(response);
+    }
+
+    public Task<OperationalResourceResult<AttendanceHistoryPageDto>>
+        GetGoerAttendanceHistoryForRefreshAsync(
+            DateOnly? fromGymDate,
+            DateOnly? endExclusiveGymDate,
+            int page = 1,
+            int pageSize = 10,
+            CancellationToken cancellationToken = default) =>
+        GetOperationalJsonAsync<AttendanceHistoryPageDto>(
+            BuildGoerAttendanceHistoryQuery(
+                fromGymDate,
+                endExclusiveGymDate,
+                page,
+                pageSize),
+            cancellationToken);
+
+    private static string BuildGoerAttendanceHistoryQuery(
+        DateOnly? fromGymDate,
+        DateOnly? endExclusiveGymDate,
+        int page,
+        int pageSize)
     {
         var query = $"me/attendance?page={page}&pageSize={pageSize}";
-        if (from.HasValue) query += $"&from={from.Value:yyyy-MM-dd}";
-        if (to.HasValue) query += $"&to={to.Value:yyyy-MM-dd}";
+        if (fromGymDate.HasValue) query += $"&from={fromGymDate.Value:yyyy-MM-dd}";
+        if (endExclusiveGymDate.HasValue) query += $"&to={endExclusiveGymDate.Value:yyyy-MM-dd}";
+        return query;
+    }
 
-        var response = await _httpClient.GetAsync(query);
-        return await HandleResponseAsync<PagedResultDto<AttendanceDto>>(response);
+    public async Task<ApiResponse<AttendanceDto>> GoerCheckInAsync(Guid operationId)
+    {
+        var dto = new AttendanceOperationRequestDto { OperationId = operationId };
+        var response = await _httpClient.PostAsJsonAsync("me/attendance/check-in", dto, _jsonOptions);
+        return await HandleResponseAsync<AttendanceDto>(response);
     }
 
     public async Task<ApiResponse<AttendanceDto>> GoerCheckOutAsync(Guid operationId)
     {
-        var dto = new CheckoutRequestDto { OperationId = operationId };
-        var response = await _httpClient.PostAsJsonAsync("me/attendance/checkout", dto);
+        var dto = new CheckOutRequestDto { OperationId = operationId };
+        var response = await _httpClient.PostAsJsonAsync("me/attendance/checkout", dto, _jsonOptions);
         return await HandleResponseAsync<AttendanceDto>(response);
     }
 

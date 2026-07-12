@@ -71,9 +71,16 @@ public class SubscriptionService : ISubscriptionService
         ArgumentNullException.ThrowIfNull(request);
         var actorUserId = GetRequiredCurrentUserId();
         var nowUtc = GetUtcNow();
+        var currentGymDate = await _timezoneService.GetGymDateAsync(nowUtc);
         var startDate = GymMembershipPolicy.RequireCalendarInput(
             request.StartDate,
             nameof(request.StartDate));
+        if (GymMembershipPolicy.ToCalendarDate(startDate) < currentGymDate)
+        {
+            throw InvalidMembership(
+                "A pending subscription must start on or after the current gym date.");
+        }
+
         var planSnapshot = await _planRepository.GetByIdAsync(request.PlanID)
             ?? throw new KeyNotFoundException("Membership plan not found.");
         RequireActivePlan(planSnapshot);
@@ -188,9 +195,10 @@ public class SubscriptionService : ISubscriptionService
                 var subscription = subscriptions.SingleOrDefault(item =>
                     item.SubscriptionID == operationKey.SubscriptionId)
                     ?? throw new KeyNotFoundException("Subscription not found.");
-                if (GymMembershipPolicy.ToCalendarDate(subscription.EndDate) < currentGymDate)
+                if (!GymMembershipPolicy.Covers(subscription, currentGymDate))
                 {
-                    throw MembershipConflict("An expired membership window cannot be paused.");
+                    throw MembershipConflict(
+                        "Only a membership covering the current gym date can be paused.");
                 }
 
                 if (!string.Equals(subscription.Status, GymMembershipPolicy.Active, StringComparison.Ordinal))
@@ -266,25 +274,35 @@ public class SubscriptionService : ISubscriptionService
                 var subscription = subscriptions.SingleOrDefault(item =>
                     item.SubscriptionID == operationKey.SubscriptionId)
                     ?? throw new KeyNotFoundException("Subscription not found.");
-                if (GymMembershipPolicy.ToCalendarDate(subscription.EndDate) < currentGymDate)
-                {
-                    throw MembershipConflict("An expired membership window cannot be resumed.");
-                }
-
                 if (!string.Equals(subscription.Status, GymMembershipPolicy.Paused, StringComparison.Ordinal))
                 {
                     throw MembershipConflict("Only paused subscriptions can be resumed.");
                 }
 
-                var openPause = await _context.MembershipPauses
+                var openPauses = await _context.MembershipPauses
                     .Where(pause => pause.SubscriptionID == subscription.SubscriptionID
                         && pause.PauseEndDate == null)
-                    .OrderByDescending(pause => pause.PauseStartDate)
-                    .FirstOrDefaultAsync(cancellationToken)
-                    ?? throw MembershipConflict("The subscription has no open pause to resume.");
+                    .ToListAsync(cancellationToken);
+                if (openPauses.Count != 1)
+                {
+                    throw MembershipConflict(
+                        "The subscription must have exactly one open pause to resume.");
+                }
+
+                var openPause = openPauses[0];
                 var pauseStartUtc = AsUtc(openPause.PauseStartDate);
                 var pauseStartGymDate = DateOnly.FromDateTime(
                     TimeZoneInfo.ConvertTimeFromUtc(pauseStartUtc, timeZone));
+                var subscriptionStart = GymMembershipPolicy.ToCalendarDate(subscription.StartDate);
+                var subscriptionEnd = GymMembershipPolicy.ToCalendarDate(subscription.EndDate);
+                if (pauseStartGymDate < subscriptionStart
+                    || pauseStartGymDate > subscriptionEnd
+                    || pauseStartGymDate > currentGymDate)
+                {
+                    throw MembershipConflict(
+                        "The open pause start must be within the original membership coverage and cannot be in the future.");
+                }
+
                 var pausedDays = Math.Max(
                     1,
                     currentGymDate.DayNumber - pauseStartGymDate.DayNumber);
@@ -401,15 +419,11 @@ public class SubscriptionService : ISubscriptionService
 
                 var effectiveStart = CalculateRenewalStart(
                     subscriptions,
-                    operationKey.RequestedStart);
+                    operationKey.RequestedStart,
+                    currentGymDate);
                 var endDate = GymMembershipPolicy.CalculateInclusiveEnd(
                     effectiveStart,
                     plan.DurationDays);
-                if (GymMembershipPolicy.ToCalendarDate(endDate) < currentGymDate)
-                {
-                    throw InvalidMembership("A paid renewal window cannot be wholly expired.");
-                }
-
                 EnsureNoBlockingOverlap(subscriptions, effectiveStart, endDate);
                 if (await _context.Payments.AsNoTracking().AnyAsync(
                         payment => payment.ReceiptNumber == operationKey.ReceiptNumber,
@@ -574,26 +588,34 @@ public class SubscriptionService : ISubscriptionService
 
     private static DateTime CalculateRenewalStart(
         IEnumerable<Subscription> subscriptions,
-        DateTime requestedStart)
+        DateTime requestedStart,
+        DateOnly currentGymDate)
     {
+        var earliestPermittedStart = GymMembershipPolicy.ToStorageDate(currentGymDate);
         var latestBlockingEnd = subscriptions
             .Where(subscription => GymMembershipPolicy.IsBlockingStatus(subscription.Status))
             .Select(subscription => GymMembershipPolicy.NormalizeCalendarDate(subscription.EndDate))
             .DefaultIfEmpty(DateTime.MinValue)
             .Max();
-        if (latestBlockingEnd < requestedStart)
-        {
-            return requestedStart;
-        }
 
+        DateTime firstUnblockedStart;
         try
         {
-            return latestBlockingEnd.AddDays(1);
+            firstUnblockedStart = latestBlockingEnd == DateTime.MinValue
+                ? DateTime.MinValue
+                : latestBlockingEnd.AddDays(1);
         }
         catch (ArgumentOutOfRangeException)
         {
             throw InvalidMembership("The renewed membership exceeds the supported calendar range.");
         }
+
+        return new[]
+        {
+            requestedStart,
+            earliestPermittedStart,
+            firstUnblockedStart
+        }.Max();
     }
 
     private static void RequireActiveMember(Member? member)

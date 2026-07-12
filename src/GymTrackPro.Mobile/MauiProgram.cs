@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using GymTrackPro.Mobile.Services;
 using GymTrackPro.Mobile.ViewModels;
 using GymTrackPro.Mobile.Views;
@@ -55,12 +56,33 @@ public static class MauiProgram
 		builder.Services.AddTransient<PlansPage>();
 		builder.Services.AddTransient<MemberDetailsPage>();
 
+		// Register Gym Goer ViewModels and Views
+		builder.Services.AddTransient<GoerDashboardViewModel>();
+		builder.Services.AddTransient<GoerDigitalCardViewModel>();
+		builder.Services.AddTransient<GoerProgressViewModel>();
+		builder.Services.AddTransient<GoerDashboardPage>();
+		builder.Services.AddTransient<GoerDigitalCardPage>();
+		builder.Services.AddTransient<GoerProgressPage>();
+		builder.Services.AddTransient<GoerAppShell>();
+		builder.Services.AddTransient<AppShell>();
+		builder.Services.AddTransient<Func<GoerAppShell>>(services =>
+			() => services.GetRequiredService<GoerAppShell>());
+		builder.Services.AddTransient<Func<AppShell>>(services =>
+			() => services.GetRequiredService<AppShell>());
+
 		// Register SQLite local database connection & SyncQueue services
 		builder.Services.AddSingleton<ILocalDatabaseService, LocalDatabaseService>();
 		builder.Services.AddSingleton<INetworkService, NetworkService>();
 		builder.Services.AddSingleton<ISyncService, SyncService>();
 		builder.Services.AddSingleton<IApiService, ApiService>();
 		builder.Services.AddSingleton<IFirebaseAuthService, FirebaseAuthService>();
+		builder.Services.AddSingleton<IAccountLocalDataCleaner>(services =>
+			services.GetRequiredService<ILocalDatabaseService>() as IAccountLocalDataCleaner
+			?? throw new InvalidOperationException("The local database must implement account cleanup."));
+		builder.Services.AddSingleton<IAccountSessionInvalidator, AccountSessionInvalidator>();
+		builder.Services.AddSingleton<IAppLogoutService, AppLogoutService>();
+		builder.Services.AddSingleton<IRootNavigationService, MauiRootNavigationService>();
+		builder.Services.AddSingleton<IAppDialogService, MauiAppDialogService>();
 
 		// Register Firebase notification receiver services (Phase 10)
 

@@ -50,6 +50,15 @@ public class MeAttendanceController : ControllerBase
         return Ok(ApiResponse<CurrentAttendanceStateDto>.SuccessResponse(state));
     }
 
+    [HttpPost("check-in")]
+    public async Task<IActionResult> CheckInCurrentSession(
+        [FromBody] AttendanceOperationRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        var attendance = await _attendanceService.CheckInCurrentMemberAsync(request, cancellationToken);
+        return Ok(ApiResponse<AttendanceDto>.SuccessResponse(attendance, "Checked in successfully."));
+    }
+
     [HttpPost("checkout")]
     public async Task<IActionResult> CheckOutCurrentSession(
         [FromBody] CheckOutRequestDto request,

@@ -89,3 +89,57 @@ Compatible rollback artifacts ignore or safely read the retained setting.
 If a migration caused confirmed data corruption, stop writes and follow the
 approved backup-restore procedure; do not use an unreviewed down migration as a
 data-repair mechanism.
+
+## Capstone-local sequence
+
+For the capstone demo database, apply migrations in source order:
+
+1. `20260711204834_StageFirebaseIdentityAndAccountInvites`
+2. `20260712050837_AddAttendanceVoidingAndSource`
+
+The second migration is additive and staged. It renames the original
+`AttendanceLogs.AttendanceDate` datetime2 column to
+`AttendanceDateLegacyDateTime`, keeps it nullable for historical inspection,
+adds the new SQL `date` column, and backfills it with a date-only conversion.
+No timezone shift is performed because the legacy value represented a calendar
+date and was not proven to be a UTC instant. New attendance rows use the SQL
+`date` column; the preserved legacy column is intentionally left null for them.
+
+The attendance stage also changes the Member foreign key to `NO ACTION` so a
+Member deletion cannot cascade through attendance or its operation/adjustment
+audit history. Filtered unique indexes continue to enforce one active daily
+visit and one active open session, while nonunique date/check-in indexes support
+capstone reports. Checkout ordering applies to active rows only: retained voided
+history may contain a legacy checkout at or before check-in, but post-attendance
+preflight still blocks every non-void row whose checkout is not strictly after
+check-in. Operation and adjustment checks constrain the modeled enum ordinals,
+HTTP result metadata, completion ordering, and nonblank ledger text.
+
+### Current capstone verification evidence
+
+- Server strict build: 0 errors and 0 warnings.
+- Full server suite: 652 passed out of 652.
+- EF listed migrations through
+  `20260712050837_AddAttendanceVoidingAndSource`.
+- `dotnet ef migrations has-pending-model-changes` reported no pending changes.
+- A disposable LocalDB execution rehearsal is environment-deferred because the
+  available LocalDB environment could not create the isolated verification
+  database. No MonsterASP execution was performed.
+
+The final attendance-inclusive idempotent SQL export and its SHA-256 remain
+pending. Generate them fresh from the final source after all migration edits are
+complete. Do not reuse an earlier temporary export hash. The reviewed tracked
+B1-only hash near the top of this document proves only the B1 script and must not
+be presented as the hash of the combined B1-plus-attendance migration script.
+
+Before the MonsterASP rehearsal, rotate any database credential that has appeared
+in source, chat, history, screenshots, or shared evidence; store the replacement
+only in an untracked secret source. Confirm encrypted SQL transport/TLS with the
+provider. MonsterASP execution, post-migration smoke testing, and final handoff to
+`feature/firebase-auth` remain pending operator gates.
+
+This local capstone sequence does not require the production catalog-fingerprint,
+write-freeze, immutable-artifact, or MonsterASP rehearsal steps above. Those are
+future deployment tasks. It still requires a disposable/local database backup
+before testing the migration, and the B1 identity migration must remain before
+the attendance migration.

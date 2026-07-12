@@ -1,6 +1,14 @@
-# Production Hardening & Capstone Readiness Plan
+# Future Production Hardening Plan
 
-This document outlines the roadmap for transitioning GymTrackPro from a feature-complete system into a production-ready application suitable for capstone defense and small commercial deployments.
+This document is retained as a future commercial-hardening reference. Its
+production infrastructure, operational, and scale requirements are not blockers
+for the controlled academic capstone demo. Current capstone scope, setup,
+acceptance evidence, and known limitations are defined in
+[`24_CapstoneImplementationAndDemoGuide.md`](24_CapstoneImplementationAndDemoGuide.md).
+
+The roadmap below describes how GymTrackPro could progress beyond the capstone
+into a production-ready application suitable for real users and small commercial
+deployments.
 
 ---
 

@@ -233,6 +233,7 @@ builder.Services.AddScoped<IIdentityProvisioningStore, IdentityProvisioningStore
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<ICurrentUserContext, CurrentUserContext>();
 builder.Services.AddScoped<IMemberService, MemberService>();
+builder.Services.AddSingleton<IProfilePictureStorage, FileSystemProfilePictureStorage>();
 builder.Services.AddScoped<IMemberDeletionTransaction, MemberDeletionTransaction>();
 builder.Services.AddScoped<IMembershipPlanService, MembershipPlanService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
@@ -305,8 +306,6 @@ app.UseAuthentication();
 app.UseRateLimiter();
 app.UseMiddleware<ActivationInviteRateLimitMiddleware>();
 app.UseAuthorization();
-
-app.UseStaticFiles();
 
 app.MapControllers();
 

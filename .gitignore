@@ -61,3 +61,7 @@ appsettings.local.json
 .env
 .env.local
 google-services.json
+
+# Local one-off database helpers must never contain or stage cloud credentials.
+scratch/AddColumns.cs
+scratch/CheckUser.cs

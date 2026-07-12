@@ -8,14 +8,38 @@
 
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="20">
-            <!-- Header -->
-            <Label Text="Welcome back!" 
-                   FontSize="24" 
-                   FontAttributes="Bold" 
-                   TextColor="#F8FAFC" />
+            <!-- Header. The image bytes are fetched through the authenticated API;
+                 the UI never binds to the protected endpoint as a public URI. -->
+            <Grid ColumnDefinitions="72,*" ColumnSpacing="14">
+                <Border WidthRequest="64"
+                        HeightRequest="64"
+                        Padding="0"
+                        BackgroundColor="#334155"
+                        Stroke="#475569"
+                        StrokeShape="RoundRectangle 32">
+                    <Grid>
+                        <Label Text="GP"
+                               FontSize="20"
+                               FontAttributes="Bold"
+                               TextColor="#CBD5E1"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"
+                               IsVisible="{Binding ShowDefaultProfilePicture}" />
+                        <Image Source="{Binding ProfilePictureSource}"
+                               Aspect="AspectFill"
+                               IsVisible="{Binding HasProfilePicture}" />
+                    </Grid>
+                </Border>
+                <Label Grid.Column="1"
+                       Text="Welcome back!"
+                       FontSize="24"
+                       FontAttributes="Bold"
+                       TextColor="#F8FAFC"
+                       VerticalOptions="Center" />
+            </Grid>
 
             <!-- Subscription Status -->
-            <Frame BackgroundColor="#1E293B" CornerRadius="12" Padding="20" HasShadow="False" BorderColor="Transparent">
+            <Border BackgroundColor="#1E293B" Padding="20" Stroke="Transparent" StrokeShape="RoundRectangle 12">
                 <VerticalStackLayout Spacing="10">
                     <Label Text="Membership Status" FontSize="16" TextColor="#94A3B8" />
                     <Label Text="{Binding DashboardData.MembershipStatus, TargetNullValue='No Active Plan'}" 
@@ -23,9 +47,9 @@
                            FontAttributes="Bold" 
                            TextColor="#F8FAFC" />
                 </VerticalStackLayout>
-            </Frame>
+            </Border>
             
-            <Frame BackgroundColor="#1E293B" CornerRadius="12" Padding="20" HasShadow="False" BorderColor="Transparent">
+            <Border BackgroundColor="#1E293B" Padding="20" Stroke="Transparent" StrokeShape="RoundRectangle 12">
                 <VerticalStackLayout Spacing="10">
                     <Label Text="Current Streak" FontSize="16" TextColor="#94A3B8" />
                     <Label Text="{Binding DashboardData.CurrentStreak}" 
@@ -33,9 +57,9 @@
                            FontAttributes="Bold" 
                            TextColor="#10B981" />
                 </VerticalStackLayout>
-            </Frame>
+            </Border>
             
-            <Frame BackgroundColor="#1E293B" CornerRadius="12" Padding="20" HasShadow="False" BorderColor="Transparent">
+            <Border BackgroundColor="#1E293B" Padding="20" Stroke="Transparent" StrokeShape="RoundRectangle 12">
                 <VerticalStackLayout Spacing="10">
                     <Label Text="Total Visits" FontSize="16" TextColor="#94A3B8" />
                     <Label Text="{Binding DashboardData.VisitCount}" 
@@ -43,9 +67,118 @@
                            FontAttributes="Bold" 
                            TextColor="#3B82F6" />
                 </VerticalStackLayout>
-            </Frame>
+            </Border>
+
+            <Border BackgroundColor="#1E293B" Padding="20" Stroke="Transparent" StrokeShape="RoundRectangle 12">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Time Spent in Gym (Minutes)" FontSize="16" TextColor="#94A3B8" />
+                    <Label Text="{Binding DashboardData.CurrentMonthMinutes}"
+                           FontSize="20"
+                           FontAttributes="Bold"
+                           TextColor="#F59E0B" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border BackgroundColor="#1E293B" Padding="20" Stroke="Transparent" StrokeShape="RoundRectangle 12">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Milestone Badges" FontSize="16" TextColor="#94A3B8" />
+                    <CollectionView ItemsSource="{Binding DashboardData.UnlockedBadges}" HeightRequest="50">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Border BackgroundColor="#3B82F6" Padding="10" Margin="0,0,10,0" Stroke="Transparent" StrokeShape="RoundRectangle 8">
+                                    <Label Text="{Binding .}" TextColor="White" FontAttributes="Bold" VerticalOptions="Center" />
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Horizontal" />
+                        </CollectionView.ItemsLayout>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+            <Label Text="{Binding AttendanceStatusMessage}"
+                   TextColor="#93C5FD"
+                   IsVisible="{Binding AttendanceStatusMessage, Converter={StaticResource NullableToBoolConverter}}" />
+            <Label Text="{Binding AttendanceErrorMessage}"
+                   TextColor="#FCA5A5"
+                   IsVisible="{Binding AttendanceErrorMessage, Converter={StaticResource NullableToBoolConverter}}" />
+
+            <ActivityIndicator IsRunning="{Binding IsAttendanceLoading}"
+                               IsVisible="{Binding IsAttendanceLoading}"
+                               Color="#3B82F6" />
+
+            <Border BackgroundColor="#1E293B"
+                   Padding="20"
+                   Stroke="Transparent"
+                   StrokeShape="RoundRectangle 12"
+                   IsVisible="{Binding DashboardData.CurrentSession, Converter={StaticResource NullableToBoolConverter}}">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Current Session" FontSize="16" TextColor="#94A3B8" />
+                    <Label Text="Checked in"
+                           FontSize="20"
+                           FontAttributes="Bold"
+                           TextColor="#10B981" />
+                    <Label Text="{Binding DashboardData.CurrentSession.CheckInTime, StringFormat='Since {0:g}'}"
+                           TextColor="#CBD5E1" />
+                </VerticalStackLayout>
+            </Border>
+
+            <VerticalStackLayout Spacing="10">
+                <Label Text="Recent Attendance"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="#F8FAFC" />
+                <Label Text="No attendance history yet."
+                       TextColor="#94A3B8"
+                       IsVisible="{Binding IsAttendanceEmpty}" />
+                <CollectionView ItemsSource="{Binding RecentAttendance}"
+                                SelectionMode="None">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border BackgroundColor="#1E293B"
+                                   Padding="12"
+                                   Margin="0,0,0,8"
+                                   Stroke="Transparent"
+                                   StrokeShape="RoundRectangle 8">
+                                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                                    <Label Text="{Binding AttendanceDate, StringFormat='{0:MMM d, yyyy}'}"
+                                           FontAttributes="Bold"
+                                           TextColor="#F8FAFC" />
+                                    <Label Grid.Column="1"
+                                           Text="{Binding Source}"
+                                           TextColor="#94A3B8"
+                                           FontSize="12" />
+                                    <Label Grid.Row="1"
+                                           Text="{Binding CheckInTime, StringFormat='In: {0:t}'}"
+                                           TextColor="#CBD5E1" />
+                                    <Label Grid.Row="1"
+                                           Grid.Column="1"
+                                           Text="{Binding CheckOutTime, StringFormat='Out: {0:t}', TargetNullValue='Open'}"
+                                           TextColor="#CBD5E1" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
 
             <Button Text="Refresh" Command="{Binding LoadDataCommand}" BackgroundColor="#3B82F6" TextColor="White" CornerRadius="8" />
+
+            <!-- Self Check-in / out -->
+            <Button Text="Check In"
+                    Command="{Binding CheckInCommand}"
+                    IsVisible="{Binding DashboardData.CurrentSession, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}"
+                    BackgroundColor="#10B981"
+                    TextColor="White"
+                    CornerRadius="8" />
+
+            <Button Text="Check Out"
+                    Command="{Binding CheckOutCommand}"
+                    IsVisible="{Binding DashboardData.CurrentSession, Converter={StaticResource NullableToBoolConverter}}"
+                    BackgroundColor="#F59E0B"
+                    TextColor="White"
+                    CornerRadius="8" />
             
             <Button Text="Logout" Command="{Binding LogoutCommand}" BackgroundColor="Transparent" TextColor="#EF4444" Margin="0,20,0,0" />
         </VerticalStackLayout>

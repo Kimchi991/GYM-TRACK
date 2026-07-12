@@ -18,10 +18,24 @@ public sealed class FirebaseAuthService : IFirebaseAuthService
     private readonly IFirebaseAuthClient _client;
     private readonly HttpClient _identityToolkitClient;
     private readonly string _apiKey;
+    private readonly IAccountSessionInvalidator _sessionInvalidator;
     private readonly SemaphoreSlim _sessionGate = new(1, 1);
 
     public FirebaseAuthService()
-        : this(CreateFirebaseClient(), CreateIdentityToolkitClient(), FirebaseAuthSettings.ApiKey)
+        : this(
+            CreateFirebaseClient(),
+            CreateIdentityToolkitClient(),
+            FirebaseAuthSettings.ApiKey,
+            new AccountSessionInvalidator([]))
+    {
+    }
+
+    public FirebaseAuthService(IAccountSessionInvalidator sessionInvalidator)
+        : this(
+            CreateFirebaseClient(),
+            CreateIdentityToolkitClient(),
+            FirebaseAuthSettings.ApiKey,
+            sessionInvalidator)
     {
     }
 
@@ -33,6 +47,19 @@ public sealed class FirebaseAuthService : IFirebaseAuthService
         IFirebaseAuthClient client,
         HttpClient identityToolkitClient,
         string apiKey)
+        : this(
+            client,
+            identityToolkitClient,
+            apiKey,
+            new AccountSessionInvalidator([]))
+    {
+    }
+
+    public FirebaseAuthService(
+        IFirebaseAuthClient client,
+        HttpClient identityToolkitClient,
+        string apiKey,
+        IAccountSessionInvalidator sessionInvalidator)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _identityToolkitClient = identityToolkitClient ??
@@ -40,6 +67,8 @@ public sealed class FirebaseAuthService : IFirebaseAuthService
         _apiKey = string.IsNullOrWhiteSpace(apiKey)
             ? throw new ArgumentException("Firebase API key is required.", nameof(apiKey))
             : apiKey;
+        _sessionInvalidator = sessionInvalidator
+            ?? throw new ArgumentNullException(nameof(sessionInvalidator));
     }
 
     public string? CurrentUserId => _client.User?.Uid;
@@ -79,7 +108,17 @@ public sealed class FirebaseAuthService : IFirebaseAuthService
 
         // FirebaseAuthentication.net 4.1.0 does not expose sendOobCode, so the
         // documented Identity Toolkit endpoint is used for verification mail.
-        await SendEmailVerificationCoreAsync(idToken, CancellationToken.None).ConfigureAwait(false);
+        try
+        {
+            await SendEmailVerificationCoreAsync(idToken, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            // Account creation and verification delivery are separate Firebase calls.
+            // Preserve the authenticated session and expose only a typed, controlled
+            // recovery signal; never include the email, token, or provider response.
+            throw new FirebaseRegistrationVerificationPendingException(exception);
+        }
         return idToken;
     }
 
@@ -150,7 +189,20 @@ public sealed class FirebaseAuthService : IFirebaseAuthService
             }
             catch (FirebaseAuthException exception) when (IsTerminalSessionFailure(exception))
             {
-                _client.SignOut();
+                // Capture the account before sign-out removes it. The callback uses the
+                // Firebase client primitive directly because this method already owns
+                // _sessionGate; calling SignOutAsync here would deadlock recursively.
+                var firebaseUid = user.Uid;
+                await _sessionInvalidator
+                    .InvalidateAsync(
+                        firebaseUid,
+                        () =>
+                        {
+                            _client.SignOut();
+                            return Task.CompletedTask;
+                        },
+                        CancellationToken.None)
+                    .ConfigureAwait(false);
                 throw;
             }
         }

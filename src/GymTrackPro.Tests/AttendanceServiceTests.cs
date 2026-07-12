@@ -173,6 +173,36 @@ public class AttendanceServiceTests
     }
 
     [Fact]
+    public async Task Self_checkin_uses_authenticated_member_without_resolving_a_qr_code()
+    {
+        var harness = new Harness();
+        var request = new AttendanceOperationRequestDto { OperationId = Guid.NewGuid() };
+
+        var result = await harness.Service.CheckInCurrentMemberAsync(request);
+
+        Assert.Equal(harness.MemberId, result.MemberID);
+        Assert.Equal(Attendance.SelfCheckInSource, result.Source);
+        Assert.Equal(
+            AttendanceOperationType.GymGoerCheckIn,
+            harness.Operations[request.OperationId].OperationType);
+        harness.Repository.Verify(repository => repository.GetActiveMemberByQrCodeAsync(
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Self_checkin_rejects_an_empty_operation_id_before_writing()
+    {
+        var harness = new Harness();
+
+        var exception = await Assert.ThrowsAsync<AppAccessException>(() =>
+            harness.Service.CheckInCurrentMemberAsync(new AttendanceOperationRequestDto()));
+
+        Assert.Equal(ErrorCodes.InvalidOperationId, exception.ErrorCode);
+        harness.Repository.Verify(repository => repository.AddAttendance(It.IsAny<Attendance>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Legacy_checkin_emits_non_sensitive_usage_telemetry()
     {
         var harness = new Harness();

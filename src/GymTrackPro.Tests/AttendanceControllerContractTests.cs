@@ -63,12 +63,15 @@ public class AttendanceControllerContractTests
             .GetCustomAttribute<HttpGetAttribute>()!;
         var currentRoute = Method<MeAttendanceController>(nameof(MeAttendanceController.GetCurrentSession))
             .GetCustomAttribute<HttpGetAttribute>()!;
+        var checkInRoute = Method<MeAttendanceController>(nameof(MeAttendanceController.CheckInCurrentSession))
+            .GetCustomAttribute<HttpPostAttribute>()!;
         var checkoutRoute = Method<MeAttendanceController>(nameof(MeAttendanceController.CheckOutCurrentSession))
             .GetCustomAttribute<HttpPostAttribute>()!;
 
         Assert.Equal("api/v1/me/attendance", controllerRoute.Template);
         Assert.Null(historyRoute.Template);
         Assert.Equal("current", currentRoute.Template);
+        Assert.Equal("check-in", checkInRoute.Template);
         Assert.Equal("checkout", checkoutRoute.Template);
 
         var parameters = Method<MeAttendanceController>(nameof(MeAttendanceController.GetHistory))
@@ -81,6 +84,26 @@ public class AttendanceControllerContractTests
         Assert.Equal("from", graphParameters[0].GetCustomAttribute<FromQueryAttribute>()?.Name);
         Assert.Equal("to", graphParameters[1].GetCustomAttribute<FromQueryAttribute>()?.Name);
         Assert.Equal("bucket", graphParameters[2].GetCustomAttribute<FromQueryAttribute>()?.Name);
+    }
+
+    [Fact]
+    public async Task Self_checkin_accepts_operation_only_contract()
+    {
+        var operationId = Guid.NewGuid();
+        var service = new Mock<IAttendanceService>();
+        service.Setup(item => item.CheckInCurrentMemberAsync(
+                It.Is<AttendanceOperationRequestDto>(request => request.OperationId == operationId),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AttendanceDto { AttendanceID = 12, MemberID = 8 });
+        var controller = new MeAttendanceController(service.Object);
+
+        var action = await controller.CheckInCurrentSession(
+            new AttendanceOperationRequestDto { OperationId = operationId },
+            CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(action);
+        var response = Assert.IsType<ApiResponse<AttendanceDto>>(ok.Value);
+        Assert.Equal(12, response.Data!.AttendanceID);
     }
 
     [Fact]
