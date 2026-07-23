@@ -85,6 +85,14 @@ public class MemberDeletionTransaction : IMemberDeletionTransaction
                     user.UpdatedAt = now;
                 }
 
+                var trainerAssignments = await _dbContext.TrainerClients
+                    .Where(tc => tc.MemberID == memberId && tc.IsActive)
+                    .ToListAsync(transactionToken);
+                foreach (var tc in trainerAssignments)
+                {
+                    tc.IsActive = false;
+                }
+
                 _dbContext.AuditLogs.Add(new AuditLog
                 {
                     UserID = actorUserId,

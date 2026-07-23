@@ -42,7 +42,85 @@ public partial class GoerDashboardViewModel : BaseViewModel
     [ObservableProperty]
     public partial bool ShowDefaultProfilePicture { get; set; } = true;
 
+    [ObservableProperty]
+    public partial string QrCodeValue { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string CountdownMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool HasActivePlan { get; set; }
+
+    [ObservableProperty]
+    public partial string RoutineName { get; set; } = "No Assigned Workout";
+
+    [ObservableProperty]
+    public partial bool HasAssignedRoutine { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsWorkoutLogging { get; set; }
+
+    [ObservableProperty]
+    public partial string WorkoutLogStatusMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial int CurrentOccupancy { get; set; } = 0;
+
+    [ObservableProperty]
+    public partial int MaxCapacity { get; set; } = 50;
+
+    [ObservableProperty]
+    public partial string OccupancyStatus { get; set; } = "Low Crowd";
+
+    [ObservableProperty]
+    public partial double OccupancyRatio { get; set; } = 0.0;
+
+    [ObservableProperty]
+    public partial string OccupancyText { get; set; } = "0 / 50 Inside (Low Crowd)";
+
     public ObservableCollection<AttendanceDto> RecentAttendance { get; } = new();
+    public ObservableCollection<ExerciseModel> WorkoutExercises { get; } = new();
+
+    [RelayCommand]
+    public async Task CompleteWorkoutAsync()
+    {
+        if (!HasAssignedRoutine || WorkoutExercises.Count == 0 || IsWorkoutLogging)
+        {
+            return;
+        }
+
+        IsWorkoutLogging = true;
+        WorkoutLogStatusMessage = string.Empty;
+
+        try
+        {
+            var exercisesJson = System.Text.Json.JsonSerializer.Serialize(WorkoutExercises);
+            var dto = new PostWorkoutLogDto
+            {
+                RoutineName = RoutineName,
+                CompletedExercisesJson = exercisesJson,
+                Notes = $"Completed on {DateTime.Now:yyyy-MM-dd HH:mm}"
+            };
+
+            var response = await _apiService.LogWorkoutSessionAsync(dto);
+            if (response.Success)
+            {
+                WorkoutLogStatusMessage = "🎉 Workout logged successfully! Great progress!";
+            }
+            else
+            {
+                WorkoutLogStatusMessage = response.Message ?? "Failed to log workout session.";
+            }
+        }
+        catch (Exception ex)
+        {
+            WorkoutLogStatusMessage = $"Logging failed: {ex.Message}";
+        }
+        finally
+        {
+            IsWorkoutLogging = false;
+        }
+    }
 
     public GoerDashboardViewModel(
         IApiService apiService,
@@ -276,8 +354,91 @@ public partial class GoerDashboardViewModel : BaseViewModel
 
             DashboardData = dashboardResponse.Data!;
             DashboardData.CurrentSession = currentResponse.Data!.Session;
+            
+            CurrentOccupancy = DashboardData.CurrentOccupancy;
+            MaxCapacity = DashboardData.MaxCapacity > 0 ? DashboardData.MaxCapacity : 50;
+            OccupancyStatus = string.IsNullOrWhiteSpace(DashboardData.OccupancyStatus) ? "Low Crowd" : DashboardData.OccupancyStatus;
+            OccupancyRatio = Math.Min(1.0, (double)CurrentOccupancy / MaxCapacity);
+            OccupancyText = $"{CurrentOccupancy} / {MaxCapacity} Inside ({OccupancyStatus})";
+
             OnPropertyChanged(nameof(DashboardData));
             ReplaceRecentAttendance(historyResponse.Data!.Items);
+
+            // Option 1: Load Digital Card QR & Countdown
+            try
+            {
+                var cardResponse = await _apiService.GetGoerDigitalCardAsync();
+                if (cardResponse.Success && cardResponse.Data != null)
+                {
+                    QrCodeValue = cardResponse.Data.QrCodeValue;
+                    if (cardResponse.Data.ExpiryDate.HasValue)
+                    {
+                        var expiry = cardResponse.Data.ExpiryDate.Value;
+                        var today = DateTime.Today;
+                        var diff = (expiry.Date - today).Days;
+                        if (diff > 0)
+                        {
+                            CountdownMessage = $"{diff} day{(diff > 1 ? "s" : "")} remaining";
+                            HasActivePlan = true;
+                        }
+                        else if (diff == 0)
+                        {
+                            CountdownMessage = "Expires today!";
+                            HasActivePlan = true;
+                        }
+                        else
+                        {
+                            CountdownMessage = "Plan expired";
+                            HasActivePlan = false;
+                        }
+                    }
+                    else
+                    {
+                        CountdownMessage = "No expiry date";
+                        HasActivePlan = false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to load digital card: {ex.Message}");
+            }
+
+            // Option 2: Load Workout Routine
+            try
+            {
+                var routineResponse = await _apiService.GetGoerWorkoutRoutineAsync();
+                if (routineResponse.Success && routineResponse.Data != null)
+                {
+                    RoutineName = routineResponse.Data.RoutineName;
+                    WorkoutExercises.Clear();
+                    if (!string.IsNullOrWhiteSpace(routineResponse.Data.ExercisesJson) && routineResponse.Data.ExercisesJson != "[]")
+                    {
+                        var exercises = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.List<ExerciseModel>>(
+                            routineResponse.Data.ExercisesJson, 
+                            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                        if (exercises != null)
+                        {
+                            foreach (var ex in exercises)
+                            {
+                                WorkoutExercises.Add(ex);
+                            }
+                        }
+                    }
+                    HasAssignedRoutine = WorkoutExercises.Count > 0;
+                }
+                else
+                {
+                    RoutineName = "No Assigned Workout";
+                    HasAssignedRoutine = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                RoutineName = "No Assigned Workout";
+                HasAssignedRoutine = false;
+                System.Diagnostics.Debug.WriteLine($"Failed to load workout routine: {ex.Message}");
+            }
 
             AttendanceStatusMessage = string.Empty;
             await SaveCurrentCacheAsync(accountUid);
@@ -415,4 +576,12 @@ public partial class GoerDashboardViewModel : BaseViewModel
             ? accountUid
             : throw new InvalidOperationException("A Firebase session is required.");
     }
+}
+
+public class ExerciseModel
+{
+    public string Name { get; set; } = string.Empty;
+    public int Sets { get; set; }
+    public int Reps { get; set; }
+    public decimal Weight { get; set; }
 }

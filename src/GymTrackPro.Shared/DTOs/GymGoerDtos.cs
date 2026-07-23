@@ -18,6 +18,9 @@ public class GoerDashboardDto
     // Compatibility badge IDs; remove after 2027-01-12 in favor of Badges.
     public List<string> UnlockedBadges { get; set; } = new();
     public List<BadgeEligibilityDto> Badges { get; set; } = new();
+    public int CurrentOccupancy { get; set; }
+    public int MaxCapacity { get; set; } = 50;
+    public string OccupancyStatus { get; set; } = "Low Crowd";
     public string Timezone { get; set; } = string.Empty;
     public DateTime GeneratedAt { get; set; }
 }

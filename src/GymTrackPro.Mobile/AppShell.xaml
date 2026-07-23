@@ -37,7 +37,12 @@
             <ShellContent ContentTemplate="{DataTemplate views:PaymentsPage}" />
         </Tab>
 
+        <Tab Title="Trainer Hub" Route="trainer">
+            <ShellContent ContentTemplate="{DataTemplate views:TrainerDashboardPage}" />
+        </Tab>
+
         <Tab Title="More" Route="more">
+            <ShellContent Title="Registration Approvals" Route="applications" ContentTemplate="{DataTemplate views:ApplicationsPage}" />
             <ShellContent Title="Settings" Route="settings" ContentTemplate="{DataTemplate views:SettingsPage}" />
             <ShellContent Title="Membership Plans" Route="plans" ContentTemplate="{DataTemplate views:PlansPage}" />
             <ShellContent Title="Reports" Route="reports" ContentTemplate="{DataTemplate views:ReportsPage}" />

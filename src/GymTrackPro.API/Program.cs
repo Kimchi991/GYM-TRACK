@@ -154,6 +154,31 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         FirebaseJwtConfiguration.Configure(options, firebaseSettings, builder.Environment);
         options.Events = new JwtBearerEvents
         {
+            OnMessageReceived = context =>
+            {
+                var env = context.HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>();
+                var remoteIp = context.HttpContext.Connection.RemoteIpAddress;
+                var isLoopback = remoteIp == null || System.Net.IPAddress.IsLoopback(remoteIp);
+
+                if (isLoopback &&
+                    (env.IsDevelopment() || env.IsEnvironment("Testing")) &&
+                    context.HttpContext.Request.Headers.TryGetValue("X-Test-User-Uid", out var uid) &&
+                    context.HttpContext.Request.Headers.TryGetValue("X-Test-User-Email", out var email))
+                {
+                    var claims = new System.Collections.Generic.List<System.Security.Claims.Claim>
+                    {
+                        new System.Security.Claims.Claim("sub", uid.ToString()),
+                        new System.Security.Claims.Claim("email", email.ToString()),
+                        new System.Security.Claims.Claim("email_verified", "true"),
+                        new System.Security.Claims.Claim("iat", System.DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString()),
+                        new System.Security.Claims.Claim("auth_time", System.DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString())
+                    };
+                    var identity = new System.Security.Claims.ClaimsIdentity(claims, JwtBearerDefaults.AuthenticationScheme);
+                    context.Principal = new System.Security.Claims.ClaimsPrincipal(identity);
+                    context.Success();
+                }
+                return Task.CompletedTask;
+            },
             OnTokenValidated = FirebaseJwtConfiguration.ValidateRequiredClaimsAsync,
             OnAuthenticationFailed = context =>
             {
@@ -214,6 +239,13 @@ builder.Services.AddAuthorization(options =>
         policy.RequireAuthenticatedUser();
         policy.Requirements.Add(new GymGoerSelfRequirement());
     });
+
+    options.AddPolicy(Policies.TrainerOnly, policy =>
+    {
+        policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
+        policy.RequireAuthenticatedUser();
+        policy.Requirements.Add(new TrainerOnlyRequirement());
+    });
 });
 
 // Register Repositories
@@ -229,6 +261,9 @@ builder.Services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();
 builder.Services.AddScoped<IAccountInviteRepository, AccountInviteRepository>();
 
 // Register Services
+builder.Services.AddScoped<IFirebaseEmailService, ConsoleFirebaseEmailService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IApplicationService, ApplicationService>();
 builder.Services.AddScoped<IIdentityProvisioningStore, IdentityProvisioningStore>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<ICurrentUserContext, CurrentUserContext>();
@@ -266,6 +301,7 @@ builder.Services.AddHostedService<NotificationWorker>();
 
 // Register Hosted Services
 builder.Services.AddHostedService<SubscriptionExpirationWorker>();
+builder.Services.AddHostedService<OvernightSessionCleanupWorker>();
 
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

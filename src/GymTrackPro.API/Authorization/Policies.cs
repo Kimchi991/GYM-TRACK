@@ -11,6 +11,7 @@ public static class Policies
     public const string OwnerOnly = "OwnerOnly";
     public const string GymGoerSelf = "GymGoerSelf";
     public const string FirebaseOnboarding = "FirebaseOnboarding";
+    public const string TrainerOnly = "TrainerOnly";
 }
 
 public sealed class ActiveAppUserRequirement : IAuthorizationRequirement;
@@ -18,6 +19,7 @@ public sealed class BackOfficeRequirement : IAuthorizationRequirement;
 public sealed class OwnerOnlyRequirement : IAuthorizationRequirement;
 public sealed class GymGoerSelfRequirement : IAuthorizationRequirement;
 public sealed class FirebaseOnboardingRequirement : IAuthorizationRequirement;
+public sealed class TrainerOnlyRequirement : IAuthorizationRequirement;
 
 public sealed class AppAuthorizationHandler : IAuthorizationHandler
 {
@@ -47,7 +49,7 @@ public sealed class AppAuthorizationHandler : IAuthorizationHandler
             && memberId > 0;
         var hasConsistentRoleLink = role switch
         {
-            nameof(UserRole.Administrator) or nameof(UserRole.Receptionist) => !hasMemberId,
+            nameof(UserRole.Administrator) or nameof(UserRole.Receptionist) or nameof(UserRole.Trainer) => !hasMemberId,
             nameof(UserRole.GymGoer) => hasMemberId,
             _ => false
         };
@@ -61,37 +63,46 @@ public sealed class AppAuthorizationHandler : IAuthorizationHandler
                     break;
 
                 case ActiveAppUserRequirement
-                    when hasVerifiedFirebaseIdentity
-                        && hasResolvedAppIdentity
-                        && hasAppUserId
-                        && hasConsistentRoleLink:
+                     when hasVerifiedFirebaseIdentity
+                         && hasResolvedAppIdentity
+                         && hasAppUserId
+                         && hasConsistentRoleLink:
                     context.Succeed(requirement);
                     break;
 
                 case BackOfficeRequirement
-                    when hasVerifiedFirebaseIdentity
-                        && hasResolvedAppIdentity
-                        && hasAppUserId
-                        && !hasMemberId
-                        && role is nameof(UserRole.Administrator) or nameof(UserRole.Receptionist):
+                     when hasVerifiedFirebaseIdentity
+                         && hasResolvedAppIdentity
+                         && hasAppUserId
+                         && !hasMemberId
+                         && role is nameof(UserRole.Administrator) or nameof(UserRole.Receptionist) or nameof(UserRole.Trainer):
                     context.Succeed(requirement);
                     break;
 
                 case OwnerOnlyRequirement
-                    when hasVerifiedFirebaseIdentity
-                        && hasResolvedAppIdentity
-                        && hasAppUserId
-                        && !hasMemberId
-                        && role == nameof(UserRole.Administrator):
+                     when hasVerifiedFirebaseIdentity
+                         && hasResolvedAppIdentity
+                         && hasAppUserId
+                         && !hasMemberId
+                         && role == nameof(UserRole.Administrator):
                     context.Succeed(requirement);
                     break;
 
                 case GymGoerSelfRequirement
-                    when hasVerifiedFirebaseIdentity
-                        && hasResolvedAppIdentity
-                        && hasAppUserId
-                        && hasMemberId
-                        && role == nameof(UserRole.GymGoer):
+                     when hasVerifiedFirebaseIdentity
+                         && hasResolvedAppIdentity
+                         && hasAppUserId
+                         && hasMemberId
+                         && role == nameof(UserRole.GymGoer):
+                    context.Succeed(requirement);
+                    break;
+
+                case TrainerOnlyRequirement
+                     when hasVerifiedFirebaseIdentity
+                         && hasResolvedAppIdentity
+                         && hasAppUserId
+                         && !hasMemberId
+                         && role == nameof(UserRole.Trainer):
                     context.Succeed(requirement);
                     break;
             }

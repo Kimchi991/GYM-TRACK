@@ -138,6 +138,14 @@ public class SubscriptionExpirationWorker : BackgroundService
                             IPAddress = "System Background Service",
                             Timestamp = operationKey.TimestampUtc
                         });
+
+                        var trainerAssignments = await context.TrainerClients
+                            .Where(tc => tc.MemberID == subscription.MemberID && tc.IsActive)
+                            .ToListAsync(transactionToken);
+                        foreach (var tc in trainerAssignments)
+                        {
+                            tc.IsActive = false;
+                        }
                     }
 
                     return true;

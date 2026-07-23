@@ -81,6 +81,11 @@ public interface IApiService
     Task<OperationalResourceResult<GoerDashboardDto>> GetGoerDashboardForRefreshAsync(
         CancellationToken cancellationToken = default);
     Task<ApiResponse<GoerDigitalCardDto>> GetGoerDigitalCardAsync();
+    Task<ApiResponse<WorkoutRoutineResponseDto>> GetGoerWorkoutRoutineAsync();
+    Task<ApiResponse<WorkoutLogResponseDto>> LogWorkoutSessionAsync(PostWorkoutLogDto dto);
+    Task<ApiResponse<List<AssignedClientDto>>> GetTrainerClientsAsync();
+    Task<ApiResponse<WorkoutRoutineResponseDto>> PostTrainerRoutineAsync(PostRoutineDto dto);
+    Task<ApiResponse<List<WorkoutLogResponseDto>>> GetClientWorkoutLogsAsync(int memberId);
     Task<ProfilePictureData?> GetCurrentProfilePictureAsync(
         CancellationToken cancellationToken = default);
     Task<OperationalResourceResult<ProfilePictureData>> GetCurrentProfilePictureForRefreshAsync(
@@ -98,6 +103,11 @@ public interface IApiService
     Task<ApiResponse<AttendanceDto>> GoerCheckInAsync(Guid operationId);
     Task<ApiResponse<AttendanceDto>> GoerCheckOutAsync(Guid operationId);
     Task<ApiResponse<GoerProgressDto>> GetGoerProgressAsync(string month);
+
+    // Member Applications
+    Task<ApiResponse<ApplicationListItemDto>> SubmitApplicationAsync(SubmitApplicationDto dto);
+    Task<ApiResponse<IEnumerable<ApplicationListItemDto>>> GetPendingApplicationsAsync();
+    Task<ApiResponse<ApplicationListItemDto>> VerifyApplicationAsync(int id, VerifyApplicationDto dto);
 
     // Payments
     Task<ApiResponse<PaymentResponseDto>> ProcessPaymentAsync(CreatePaymentDto paymentDto);

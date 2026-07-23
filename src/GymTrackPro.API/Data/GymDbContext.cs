@@ -24,6 +24,10 @@ public class GymDbContext : DbContext
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+    public DbSet<MemberApplication> MemberApplications => Set<MemberApplication>();
+    public DbSet<TrainerClient> TrainerClients => Set<TrainerClient>();
+    public DbSet<WorkoutRoutine> WorkoutRoutines => Set<WorkoutRoutine>();
+    public DbSet<WorkoutLog> WorkoutLogs => Set<WorkoutLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -73,10 +77,10 @@ public class GymDbContext : DbContext
                 table.HasCheckConstraint(
                     "CK_Users_NormalizedEmailNotBlank",
                     "[NormalizedEmail] IS NULL OR LEN([NormalizedEmail]) > 0");
-                table.HasCheckConstraint("CK_Users_Role", "[Role] IN (0, 1, 2)");
+                table.HasCheckConstraint("CK_Users_Role", "[Role] IN (0, 1, 2, 3)");
                 table.HasCheckConstraint(
                     "CK_Users_RoleMemberLink",
-                    "([Role] = 2 AND [MemberID] IS NOT NULL) OR ([Role] IN (0, 1) AND [MemberID] IS NULL)");
+                    "([Role] = 2 AND [MemberID] IS NOT NULL) OR ([Role] IN (0, 1, 3) AND [MemberID] IS NULL)");
             });
 
         modelBuilder.Entity<Member>()
@@ -379,6 +383,36 @@ public class GymDbContext : DbContext
                 table.HasCheckConstraint(
                     "CK_AttendanceOperations_CompletionOrder",
                     "[CompletedAtUtc] >= [CreatedAtUtc]");
+            });
+
+        // MemberApplication Entity Relationships & Constraints
+        modelBuilder.Entity<MemberApplication>()
+            .HasOne(a => a.SelectedPlan)
+            .WithMany()
+            .HasForeignKey(a => a.SelectedPlanID)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<MemberApplication>()
+            .HasOne(a => a.VerifiedByUser)
+            .WithMany()
+            .HasForeignKey(a => a.VerifiedByUserID)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<MemberApplication>()
+            .ToTable("MemberApplications", table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_MemberApplications_ExactlyOnePlanOrPass",
+                    "([IsOneDayPass] = 1 AND [SelectedPlanID] IS NULL) OR ([IsOneDayPass] = 0 AND [SelectedPlanID] IS NOT NULL)");
+                table.HasCheckConstraint(
+                    "CK_MemberApplications_Status",
+                    "[ApplicationStatus] IN (0, 1, 2)");
+                table.HasCheckConstraint(
+                    "CK_MemberApplications_PaymentStatus",
+                    "[PaymentStatus] IN (0, 1, 2, 3, 4, 5, 6, 7, 8)");
+                table.HasCheckConstraint(
+                    "CK_MemberApplications_PaymentMethod",
+                    "[PaymentMethod] IN (0, 1, 2, 3, 4)");
             });
 
         // Seed Default System Settings

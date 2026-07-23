@@ -1,4 +1,5 @@
 using System;
+using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -34,7 +35,19 @@ public partial class DashboardViewModel : BaseViewModel
     public partial int NewRegistrationsCount { get; set; }
 
     [ObservableProperty]
+    public partial int PendingApplicationsCount { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasCheckedInMembers { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasPlanDistribution { get; set; }
+
+    [ObservableProperty]
     public partial string ErrorMessage { get; set; } = string.Empty;
+
+    public ObservableCollection<LiveOccupancyDto> CurrentlyCheckedIn { get; } = new();
+    public ObservableCollection<PlanMembershipCountDto> MembershipPlanDistribution { get; } = new();
 
     [ObservableProperty]
     public partial bool CanManageStaff { get; set; }
@@ -75,6 +88,27 @@ public partial class DashboardViewModel : BaseViewModel
                 RevenueThisMonth = result.Data.RevenueThisMonth;
                 ExpiringSoonCount = result.Data.ExpiringMembershipsCount;
                 NewRegistrationsCount = result.Data.NewRegistrationsCount;
+                PendingApplicationsCount = result.Data.PendingApplicationsCount;
+
+                CurrentlyCheckedIn.Clear();
+                if (result.Data.CurrentlyCheckedIn != null)
+                {
+                    foreach (var item in result.Data.CurrentlyCheckedIn)
+                    {
+                        CurrentlyCheckedIn.Add(item);
+                    }
+                }
+                HasCheckedInMembers = CurrentlyCheckedIn.Count > 0;
+
+                MembershipPlanDistribution.Clear();
+                if (result.Data.MembershipPlanDistribution != null)
+                {
+                    foreach (var item in result.Data.MembershipPlanDistribution)
+                    {
+                        MembershipPlanDistribution.Add(item);
+                    }
+                }
+                HasPlanDistribution = MembershipPlanDistribution.Count > 0;
             }
             else
             {

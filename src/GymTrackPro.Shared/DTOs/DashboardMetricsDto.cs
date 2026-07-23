@@ -15,8 +15,25 @@ public class DashboardMetricsDto
     public decimal RevenueThisMonth { get; set; }
     public int ExpiringMembershipsCount { get; set; }
     public int NewRegistrationsCount { get; set; }
+    public int PendingApplicationsCount { get; set; }
     public List<HourlyCheckInDto> CheckInsByHour { get; set; } = new();
     public List<PlanRevenueDto> RevenueByPlan { get; set; } = new();
+    public List<LiveOccupancyDto> CurrentlyCheckedIn { get; set; } = new();
+    public List<PlanMembershipCountDto> MembershipPlanDistribution { get; set; } = new();
+}
+
+public class LiveOccupancyDto
+{
+    public string MemberName { get; set; } = string.Empty;
+    public string PlanName { get; set; } = string.Empty;
+    public DateTime CheckInTime { get; set; }
+    public string Status { get; set; } = "Active";
+}
+
+public class PlanMembershipCountDto
+{
+    public string PlanName { get; set; } = string.Empty;
+    public int ActiveMembersCount { get; set; }
 }
 
 public class HourlyCheckInDto

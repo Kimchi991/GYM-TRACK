@@ -8,6 +8,7 @@ using GymTrackPro.Shared.DTOs;
 using GymTrackPro.Shared.Entities;
 using GymTrackPro.Shared.Enums;
 using GymTrackPro.Shared.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace GymTrackPro.API.Services;
 
@@ -24,6 +25,7 @@ public class AttendanceService : IAttendanceService
     private readonly ICurrentUserContext _currentUser;
     private readonly IProjectionVersionProvider _projectionVersionProvider;
     private readonly ILogger<AttendanceService> _logger;
+    private readonly Data.GymDbContext _context;
 
     public AttendanceService(
         IAttendanceRepository repository,
@@ -33,7 +35,8 @@ public class AttendanceService : IAttendanceService
         ITimezoneService timezoneService,
         ICurrentUserContext currentUser,
         IProjectionVersionProvider projectionVersionProvider,
-        ILogger<AttendanceService> logger)
+        ILogger<AttendanceService> logger,
+        Data.GymDbContext context)
     {
         _repository = repository;
         _auditService = auditService;
@@ -43,6 +46,7 @@ public class AttendanceService : IAttendanceService
         _currentUser = currentUser;
         _projectionVersionProvider = projectionVersionProvider;
         _logger = logger;
+        _context = context;
     }
 
     public async Task<AttendanceDto?> GetByIdAsync(
@@ -589,6 +593,42 @@ public class AttendanceService : IAttendanceService
                 EndExclusiveGymDate = endExclusive
             };
         }, cancellationToken);
+    }
+
+    public async Task<EmergencyEvacuationManifestDto> GetEmergencyEvacuationManifestAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var nowUtc = GetUtcNow();
+        var openSessions = await _context.AttendanceLogs
+            .Include(a => a.Member)
+            .Where(a => !a.IsVoided && a.CheckOutTime == null)
+            .OrderBy(a => a.CheckInTime)
+            .ToListAsync(cancellationToken);
+
+        var occupants = openSessions.Select(a => new EmergencyManifestItemDto
+        {
+            AttendanceID = a.AttendanceID,
+            MemberID = a.MemberID,
+            MemberName = a.Member != null ? $"{a.Member.FirstName} {a.Member.LastName}" : "Walk-In Guest",
+            ContactNumber = a.Member?.PhoneNumber ?? "N/A",
+            EmergencyContactName = a.Member?.EmergencyContact ?? "N/A",
+            EmergencyContactPhone = "N/A",
+            CheckInTime = a.CheckInTime,
+            Source = a.Source ?? string.Empty
+        }).ToList();
+
+        var actorUserId = RequireActorUserId();
+        await WriteAuditAsync(
+            actorUserId,
+            "EmergencyEvacuationManifestExported",
+            $"Exported emergency evacuation roster containing {occupants.Count} on-site occupants.");
+
+        return new EmergencyEvacuationManifestDto
+        {
+            ExportedAtUtc = nowUtc,
+            TotalCheckedInOccupants = occupants.Count,
+            Occupants = occupants
+        };
     }
 
     private async Task<AttendanceDto> CheckInCoreAsync(

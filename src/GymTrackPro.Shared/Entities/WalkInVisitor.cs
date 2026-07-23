@@ -22,4 +22,9 @@ public class WalkInVisitor
 
     [StringLength(255)]
     public string? Purpose { get; set; }
+
+    [StringLength(100)]
+    public string? TemporaryQRCode { get; set; }
+
+    public DateTime? ExpiresAtUtc { get; set; }
 }

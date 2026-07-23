@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:GymTrackPro.Mobile.ViewModels"
+             xmlns:dtos="clr-namespace:GymTrackPro.Shared.DTOs;assembly=GymTrackPro.Shared"
+             x:Class="GymTrackPro.Mobile.Views.ApplicationsPage"
+             Title="Registration Approvals"
+             BackgroundColor="{StaticResource Background}">
+
+    <Grid RowDefinitions="Auto, *">
+        <!-- Header -->
+        <Grid ColumnDefinitions="*, Auto" Padding="20,15" ColumnSpacing="15">
+            <Label Text="Pending Registrations" TextColor="{StaticResource TextPrimary}" FontSize="18" FontAttributes="Bold" VerticalOptions="Center" />
+            <Border StrokeShape="RoundRectangle 8" BackgroundColor="{StaticResource CardBackground}" Padding="10" VerticalOptions="Center">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding LoadApplicationsCommand}" />
+                </Border.GestureRecognizers>
+                <Path Data="{StaticResource IconRefresh}" Fill="{StaticResource Primary}" Aspect="Uniform" WidthRequest="20" HeightRequest="20" />
+            </Border>
+        </Grid>
+
+        <!-- Main Body -->
+        <RefreshView Grid.Row="1" IsRefreshing="{Binding IsBusy}" Command="{Binding LoadApplicationsCommand}">
+            <ScrollView Padding="20,0,20,85">
+                <VerticalStackLayout Spacing="15">
+
+                    <!-- Alert Banners -->
+                    <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource SuccessBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="15" IsVisible="{Binding SuccessMessage, Converter={StaticResource NullableToBoolConverter}}">
+                        <Grid ColumnDefinitions="Auto, *" ColumnSpacing="12" VerticalOptions="Center">
+                            <Path Data="{StaticResource IconCheckCircle}" Fill="{StaticResource Success}" Aspect="Uniform" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
+                            <Label Grid.Column="1" Text="{Binding SuccessMessage}" TextColor="{StaticResource Success}" FontAttributes="Bold" VerticalOptions="Center" />
+                        </Grid>
+                    </Border>
+
+                    <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource DangerBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="15" IsVisible="{Binding ErrorMessage, Converter={StaticResource NullableToBoolConverter}}">
+                        <Grid ColumnDefinitions="Auto, *" ColumnSpacing="12" VerticalOptions="Center">
+                            <Path Data="{StaticResource IconErrorCircle}" Fill="{StaticResource Danger}" Aspect="Uniform" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
+                            <Label Grid.Column="1" Text="{Binding ErrorMessage}" TextColor="{StaticResource Danger}" FontAttributes="Bold" VerticalOptions="Center" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Applications List -->
+                    <CollectionView ItemsSource="{Binding Applications}" SelectionMode="None">
+                        <CollectionView.EmptyView>
+                            <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Margin="0,50" Spacing="10">
+                                <Label Text="No pending applications to verify." TextColor="{StaticResource TextMuted}" FontSize="14" HorizontalOptions="Center" />
+                                <Label Text="Walk-in clients will show up here after scanning the reception QR code." TextColor="{StaticResource TextSecondary}" FontSize="12" HorizontalOptions="Center" HorizontalTextAlignment="Center" MaxLines="2" />
+                            </VerticalStackLayout>
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="dtos:ApplicationListItemDto">
+                                <Border StrokeShape="RoundRectangle 12" 
+                                        Stroke="{StaticResource BorderBrush}" 
+                                        BackgroundColor="{StaticResource CardBackground}" 
+                                        Padding="20" 
+                                        Margin="0,0,0,12">
+                                    <Grid RowDefinitions="Auto, Auto, Auto" RowSpacing="15">
+                                        <!-- Header Info -->
+                                        <Grid ColumnDefinitions="*, Auto">
+                                            <VerticalStackLayout Spacing="4">
+                                                <Label Text="{Binding FullName}" TextColor="{StaticResource TextPrimary}" FontSize="16" FontAttributes="Bold" />
+                                                <Label Text="{Binding EmailAddress}" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                                                <Label Text="{Binding ContactNumber, StringFormat='Phone: {0}'}" TextColor="{StaticResource TextSecondary}" FontSize="13" />
+                                            </VerticalStackLayout>
+                                            
+                                            <!-- Type Badge -->
+                                            <Border Grid.Column="1" StrokeShape="RoundRectangle 6" 
+                                                    Stroke="{StaticResource SecondaryBrush}" 
+                                                    BackgroundColor="{StaticResource Secondary}" 
+                                                    Padding="10,6" 
+                                                    VerticalOptions="Start">
+                                                <Label Text="{Binding SelectedPlanName}" TextColor="White" FontSize="11" FontAttributes="Bold" />
+                                            </Border>
+                                        </Grid>
+
+                                        <!-- Payment Info Details -->
+                                        <Border Grid.Row="1" StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="15">
+                                            <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" RowSpacing="8" ColumnSpacing="10">
+                                                <VerticalStackLayout Spacing="2">
+                                                    <Label Text="Payment Method" TextColor="{StaticResource TextSecondary}" FontSize="11" />
+                                                    <Label Text="{Binding PaymentMethod}" TextColor="{StaticResource TextPrimary}" FontSize="13" FontAttributes="Bold" />
+                                                </VerticalStackLayout>
+
+                                                <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                                    <Label Text="Amount Due" TextColor="{StaticResource TextSecondary}" FontSize="11" />
+                                                    <Label Text="{Binding Price, StringFormat='₱{0:F2}'}" TextColor="{StaticResource Success}" FontSize="13" FontAttributes="Bold" />
+                                                </VerticalStackLayout>
+
+                                                <VerticalStackLayout Grid.Row="1" Grid.ColumnSpan="2" Spacing="2" IsVisible="{Binding PaymentReferenceNumber, Converter={StaticResource NullableToBoolConverter}}">
+                                                    <Label Text="GCash/Maya Reference Reference Number" TextColor="{StaticResource TextSecondary}" FontSize="11" />
+                                                    <Label Text="{Binding PaymentReferenceNumber}" TextColor="{StaticResource TextPrimary}" FontSize="13" FontAttributes="Bold" />
+                                                </VerticalStackLayout>
+                                            </Grid>
+                                        </Border>
+
+                                        <!-- Verification Actions -->
+                                        <Grid Grid.Row="2" ColumnDefinitions="*, *" ColumnSpacing="15">
+                                            <Button Text="Reject"
+                                                    BackgroundColor="{StaticResource Danger}"
+                                                    TextColor="White"
+                                                    CornerRadius="6"
+                                                    HeightRequest="44"
+                                                    FontAttributes="Bold"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ApplicationsViewModel}}, Path=RejectApplicationCommand}"
+                                                    CommandParameter="{Binding .}" />
+
+                                            <Button Grid.Column="1"
+                                                    Text="Approve &amp; Activate"
+                                                    BackgroundColor="{StaticResource Success}"
+                                                    TextColor="White"
+                                                    CornerRadius="6"
+                                                    HeightRequest="44"
+                                                    FontAttributes="Bold"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ApplicationsViewModel}}, Path=ApproveApplicationCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                </VerticalStackLayout>
+            </ScrollView>
+        </RefreshView>
+    </Grid>
+</ContentPage>

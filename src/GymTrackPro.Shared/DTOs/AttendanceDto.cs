@@ -50,3 +50,22 @@ public class AttendanceHistoryPageDto
     public DateOnly FromGymDate { get; set; }
     public DateOnly EndExclusiveGymDate { get; set; }
 }
+
+public class EmergencyManifestItemDto
+{
+    public int AttendanceID { get; set; }
+    public int MemberID { get; set; }
+    public string MemberName { get; set; } = string.Empty;
+    public string ContactNumber { get; set; } = string.Empty;
+    public string EmergencyContactName { get; set; } = string.Empty;
+    public string EmergencyContactPhone { get; set; } = string.Empty;
+    public DateTime CheckInTime { get; set; }
+    public string Source { get; set; } = string.Empty;
+}
+
+public class EmergencyEvacuationManifestDto
+{
+    public DateTime ExportedAtUtc { get; set; }
+    public int TotalCheckedInOccupants { get; set; }
+    public List<EmergencyManifestItemDto> Occupants { get; set; } = new();
+}

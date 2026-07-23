@@ -438,6 +438,13 @@ public class AttendanceRepository : IAttendanceRepository
         }
     }
 
+    public Task<int> GetActiveOccupancyCountAsync(CancellationToken cancellationToken = default)
+    {
+        return _attendance
+            .AsNoTracking()
+            .CountAsync(a => !a.IsVoided && a.CheckOutTime == null, cancellationToken);
+    }
+
     private static bool IsSqlUniqueViolation(Exception exception)
     {
         for (var current = exception; current is not null; current = current.InnerException!)

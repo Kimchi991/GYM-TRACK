@@ -4,6 +4,7 @@ using GymTrackPro.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GymTrackPro.API.Migrations
 {
     [DbContext(typeof(GymDbContext))]
-    partial class GymDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260713172447_AddMemberApplications")]
+    partial class AddMemberApplications
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -887,35 +890,6 @@ namespace GymTrackPro.API.Migrations
                         });
                 });
 
-            modelBuilder.Entity("GymTrackPro.Shared.Entities.TrainerClient", b =>
-                {
-                    b.Property<int>("TrainerClientID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TrainerClientID"));
-
-                    b.Property<DateTime>("AssignedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("MemberID")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TrainerUserID")
-                        .HasColumnType("int");
-
-                    b.HasKey("TrainerClientID");
-
-                    b.HasIndex("MemberID");
-
-                    b.HasIndex("TrainerUserID");
-
-                    b.ToTable("TrainerClients");
-                });
-
             modelBuilder.Entity("GymTrackPro.Shared.Entities.User", b =>
                 {
                     b.Property<int>("UserID")
@@ -1019,9 +993,9 @@ namespace GymTrackPro.API.Migrations
 
                             t.HasCheckConstraint("CK_Users_NormalizedEmailNotBlank", "[NormalizedEmail] IS NULL OR LEN([NormalizedEmail]) > 0");
 
-                            t.HasCheckConstraint("CK_Users_Role", "[Role] IN (0, 1, 2, 3)");
+                            t.HasCheckConstraint("CK_Users_Role", "[Role] IN (0, 1, 2)");
 
-                            t.HasCheckConstraint("CK_Users_RoleMemberLink", "([Role] = 2 AND [MemberID] IS NOT NULL) OR ([Role] IN (0, 1, 3) AND [MemberID] IS NULL)");
+                            t.HasCheckConstraint("CK_Users_RoleMemberLink", "([Role] = 2 AND [MemberID] IS NOT NULL) OR ([Role] IN (0, 1) AND [MemberID] IS NULL)");
                         });
                 });
 
@@ -1033,9 +1007,6 @@ namespace GymTrackPro.API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("VisitorID"));
 
-                    b.Property<DateTime?>("ExpiresAtUtc")
-                        .HasColumnType("datetime2");
-
                     b.Property<decimal>("FeePaid")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -1043,10 +1014,6 @@ namespace GymTrackPro.API.Migrations
                     b.Property<string>("Purpose")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
-
-                    b.Property<string>("TemporaryQRCode")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime>("VisitDate")
                         .HasColumnType("datetime2");
@@ -1059,86 +1026,6 @@ namespace GymTrackPro.API.Migrations
                     b.HasKey("VisitorID");
 
                     b.ToTable("WalkInVisitors");
-                });
-
-            modelBuilder.Entity("GymTrackPro.Shared.Entities.WorkoutLog", b =>
-                {
-                    b.Property<int>("LogID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LogID"));
-
-                    b.Property<DateTime>("CompletedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CompletedExercisesJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("MemberID")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<string>("RoutineName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int?>("TrainerUserID")
-                        .HasColumnType("int");
-
-                    b.HasKey("LogID");
-
-                    b.HasIndex("MemberID");
-
-                    b.HasIndex("TrainerUserID");
-
-                    b.ToTable("WorkoutLogs");
-                });
-
-            modelBuilder.Entity("GymTrackPro.Shared.Entities.WorkoutRoutine", b =>
-                {
-                    b.Property<int>("RoutineID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RoutineID"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ExercisesJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("MemberID")
-                        .HasColumnType("int");
-
-                    b.Property<string>("RoutineName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("TrainerUserID")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("RoutineID");
-
-                    b.HasIndex("MemberID");
-
-                    b.HasIndex("TrainerUserID");
-
-                    b.ToTable("WorkoutRoutines");
                 });
 
             modelBuilder.Entity("GymTrackPro.Shared.Entities.AccountInvite", b =>
@@ -1340,25 +1227,6 @@ namespace GymTrackPro.API.Migrations
                     b.Navigation("Plan");
                 });
 
-            modelBuilder.Entity("GymTrackPro.Shared.Entities.TrainerClient", b =>
-                {
-                    b.HasOne("GymTrackPro.Shared.Entities.Member", "Member")
-                        .WithMany()
-                        .HasForeignKey("MemberID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("GymTrackPro.Shared.Entities.User", "TrainerUser")
-                        .WithMany()
-                        .HasForeignKey("TrainerUserID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Member");
-
-                    b.Navigation("TrainerUser");
-                });
-
             modelBuilder.Entity("GymTrackPro.Shared.Entities.User", b =>
                 {
                     b.HasOne("GymTrackPro.Shared.Entities.Member", "Member")
@@ -1367,42 +1235,6 @@ namespace GymTrackPro.API.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Member");
-                });
-
-            modelBuilder.Entity("GymTrackPro.Shared.Entities.WorkoutLog", b =>
-                {
-                    b.HasOne("GymTrackPro.Shared.Entities.Member", "Member")
-                        .WithMany()
-                        .HasForeignKey("MemberID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("GymTrackPro.Shared.Entities.User", "TrainerUser")
-                        .WithMany()
-                        .HasForeignKey("TrainerUserID");
-
-                    b.Navigation("Member");
-
-                    b.Navigation("TrainerUser");
-                });
-
-            modelBuilder.Entity("GymTrackPro.Shared.Entities.WorkoutRoutine", b =>
-                {
-                    b.HasOne("GymTrackPro.Shared.Entities.Member", "Member")
-                        .WithMany()
-                        .HasForeignKey("MemberID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("GymTrackPro.Shared.Entities.User", "TrainerUser")
-                        .WithMany()
-                        .HasForeignKey("TrainerUserID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Member");
-
-                    b.Navigation("TrainerUser");
                 });
 
             modelBuilder.Entity("GymTrackPro.Shared.Entities.Attendance", b =>

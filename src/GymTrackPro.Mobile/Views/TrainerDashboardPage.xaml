@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:GymTrackPro.Mobile.ViewModels"
+             xmlns:dto="clr-namespace:GymTrackPro.Shared.DTOs;assembly=GymTrackPro.Shared"
+             x:Class="GymTrackPro.Mobile.Views.TrainerDashboardPage"
+             Title="Trainer Hub"
+             BackgroundColor="#0F172A">
+
+    <ScrollView Padding="20">
+        <VerticalStackLayout Spacing="20">
+            <!-- Header -->
+            <Grid ColumnDefinitions="*, Auto">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="Trainer Dashboard" FontSize="24" FontAttributes="Bold" TextColor="#F8FAFC" />
+                    <Label Text="Manage assigned clients and workout routines" FontSize="14" TextColor="#94A3B8" />
+                </VerticalStackLayout>
+                <Button Grid.Column="1" Text="🔄 Refresh" Command="{Binding LoadClientsCommand}" BackgroundColor="#3B82F6" TextColor="White" HeightRequest="40" CornerRadius="8" />
+            </Grid>
+
+            <!-- Status Feedback -->
+            <Label Text="{Binding StatusMessage}" TextColor="#34D399" FontSize="14" FontAttributes="Bold" IsVisible="{Binding StatusMessage, Converter={StaticResource NullableToBoolConverter}}" />
+
+            <!-- Client Roster -->
+            <VerticalStackLayout Spacing="10">
+                <Label Text="Assigned Clients" FontSize="18" FontAttributes="Bold" TextColor="#F8FAFC" />
+                <Border BackgroundColor="#1E293B" Padding="15" Stroke="Transparent" StrokeShape="RoundRectangle 12">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="No clients assigned yet." TextColor="#94A3B8" IsVisible="{Binding Clients.Count, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}" />
+                        
+                        <CollectionView ItemsSource="{Binding Clients}" HeightRequest="120">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="dto:AssignedClientDto">
+                                    <Border BackgroundColor="#334155" Padding="12" Margin="0,4" StrokeShape="RoundRectangle 8">
+                                        <Grid ColumnDefinitions="*, Auto">
+                                            <VerticalStackLayout Spacing="2">
+                                                <Label Text="{Binding FullName}" TextColor="#F8FAFC" FontAttributes="Bold" FontSize="14" />
+                                                <Label Text="{Binding PhoneNumber, StringFormat='Tel: {0}'}" TextColor="#94A3B8" FontSize="12" />
+                                            </VerticalStackLayout>
+                                            <Label Grid.Column="1" Text="{Binding MembershipStatus}" TextColor="#10B981" FontAttributes="Bold" VerticalOptions="Center" FontSize="12" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+
+            <!-- Routine Builder Section -->
+            <VerticalStackLayout Spacing="10">
+                <Label Text="Assign Workout Routine" FontSize="18" FontAttributes="Bold" TextColor="#F8FAFC" />
+                <Border BackgroundColor="#1E293B" Padding="15" Stroke="Transparent" StrokeShape="RoundRectangle 12">
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="Routine Name:" TextColor="#94A3B8" FontSize="14" />
+                        <Entry Text="{Binding RoutineName}" Placeholder="e.g. Upper Body Power" TextColor="White" BackgroundColor="#0F172A" Padding="10" />
+
+                        <!-- Add Exercise Inputs -->
+                        <Grid ColumnDefinitions="*, 60, 60, 70" ColumnSpacing="8">
+                            <Entry Text="{Binding NewExerciseName}" Placeholder="Exercise" TextColor="White" BackgroundColor="#0F172A" />
+                            <Entry Grid.Column="1" Text="{Binding NewExerciseSets}" Placeholder="Sets" Keyboard="Numeric" TextColor="White" BackgroundColor="#0F172A" />
+                            <Entry Grid.Column="2" Text="{Binding NewExerciseReps}" Placeholder="Reps" Keyboard="Numeric" TextColor="White" BackgroundColor="#0F172A" />
+                            <Entry Grid.Column="3" Text="{Binding NewExerciseWeight}" Placeholder="Kg" Keyboard="Numeric" TextColor="White" BackgroundColor="#0F172A" />
+                        </Grid>
+                        
+                        <Button Text="+ Add Exercise to Draft" Command="{Binding AddExerciseCommand}" BackgroundColor="#6366F1" TextColor="White" FontAttributes="Bold" CornerRadius="8" />
+
+                        <!-- Draft Exercises List -->
+                        <Label Text="Draft Exercise List:" TextColor="#94A3B8" FontSize="14" Margin="0,10,0,0" />
+                        <BindableLayout.ItemsSource>
+                            <Binding Path="DraftExercises" />
+                        </BindableLayout.ItemsSource>
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding DraftExercises}" Spacing="6">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="dto:WorkoutExerciseValidationDto">
+                                    <Grid ColumnDefinitions="*, Auto" Padding="8" BackgroundColor="#334155">
+                                        <Label Text="{Binding Name}" TextColor="White" FontAttributes="Bold" />
+                                        <Label Grid.Column="1" Text="{Binding Weight, StringFormat='{0}kg | {1} sets x {2} reps', ConverterParameter={Binding Sets}}" TextColor="#60A5FA" />
+                                    </Grid>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+
+                        <Button Text="🚀 Assign Routine to Client" Command="{Binding SubmitRoutineCommand}" BackgroundColor="#10B981" TextColor="White" FontAttributes="Bold" CornerRadius="8" Margin="0,10,0,0" />
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

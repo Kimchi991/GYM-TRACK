@@ -7,6 +7,7 @@ using GymTrackPro.Shared.DTOs;
 using GymTrackPro.Shared.Entities;
 using GymTrackPro.Shared.Enums;
 using GymTrackPro.Shared.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace GymTrackPro.API.Services;
 
@@ -20,6 +21,7 @@ public class GymGoerProjectionService : IGymGoerProjectionService
     private readonly IClockService _clock;
     private readonly ICurrentUserContext _currentUser;
     private readonly IProjectionVersionProvider _versionProvider;
+    private readonly Data.GymDbContext _dbContext;
 
     public GymGoerProjectionService(
         IMemberRepository memberRepository,
@@ -27,7 +29,8 @@ public class GymGoerProjectionService : IGymGoerProjectionService
         ITimezoneService timezoneService,
         IClockService clock,
         ICurrentUserContext currentUser,
-        IProjectionVersionProvider versionProvider)
+        IProjectionVersionProvider versionProvider,
+        Data.GymDbContext dbContext)
     {
         _memberRepository = memberRepository;
         _attendanceRepository = attendanceRepository;
@@ -35,6 +38,7 @@ public class GymGoerProjectionService : IGymGoerProjectionService
         _clock = clock;
         _currentUser = currentUser;
         _versionProvider = versionProvider;
+        _dbContext = dbContext;
     }
 
     public Task<GoerDashboardDto> GetGoerDashboardAsync(
@@ -113,6 +117,15 @@ public class GymGoerProjectionService : IGymGoerProjectionService
             metrics.LongestStreak,
             CanonicalizeBadges(metrics.Badges));
 
+        var activeOccupancy = await _attendanceRepository.GetActiveOccupancyCountAsync(cancellationToken);
+        var maxCapacity = 50;
+        var occupancyLabel = activeOccupancy switch
+        {
+            <= 15 => "Low Crowd",
+            <= 35 => "Moderate Crowd",
+            _ => "High Crowd"
+        };
+
         return new GoerDashboardDto
         {
             Metadata = metadata,
@@ -124,6 +137,9 @@ public class GymGoerProjectionService : IGymGoerProjectionService
             CurrentStreak = metrics.CurrentStreak,
             LongestStreak = metrics.LongestStreak,
             Badges = metrics.Badges,
+            CurrentOccupancy = activeOccupancy,
+            MaxCapacity = maxCapacity,
+            OccupancyStatus = occupancyLabel,
             // One-release mobile compatibility adapter; remove after 2027-01-12.
             UnlockedBadges = metrics.Badges
                 .Where(badge => badge.IsUnlocked)

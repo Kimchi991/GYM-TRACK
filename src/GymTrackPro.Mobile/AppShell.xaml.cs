@@ -48,6 +48,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("memberdetails", typeof(MemberDetailsPage));
         Routing.RegisterRoute("staffprovisioning", typeof(StaffProvisioningPage));
         Routing.RegisterRoute("plans", typeof(PlansPage));
+        Routing.RegisterRoute("applications", typeof(ApplicationsPage));
     }
 
     protected override async void OnAppearing()

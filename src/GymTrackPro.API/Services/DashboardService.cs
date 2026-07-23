@@ -132,6 +132,49 @@ public class DashboardService : IDashboardService
             })
             .ToList();
 
+        var pendingApplicationsCount = await _context.MemberApplications
+            .CountAsync(a => a.ApplicationStatus == ApplicationStatus.Pending);
+
+        var checkedInList = await _context.AttendanceLogs
+            .AsNoTracking()
+            .Include(a => a.Member)
+            .Where(a => !a.IsVoided && a.CheckOutTime == null)
+            .ToListAsync();
+
+        var currentlyCheckedIn = new List<LiveOccupancyDto>();
+        foreach (var session in checkedInList)
+        {
+            var memberName = session.Member != null ? $"{session.Member.FirstName} {session.Member.LastName}" : "Unknown Member";
+            var activeSub = await _context.Subscriptions
+                .AsNoTracking()
+                .Include(s => s.Plan)
+                .FirstOrDefaultAsync(s => s.MemberID == session.MemberID && s.Status == GymMembershipPolicy.Active);
+
+            currentlyCheckedIn.Add(new LiveOccupancyDto
+            {
+                MemberName = memberName,
+                PlanName = activeSub?.Plan?.PlanName ?? "One-Day Pass / None",
+                CheckInTime = session.CheckInTime,
+                Status = session.Member?.Status ?? "Active"
+            });
+        }
+
+        var activeSubs = await _context.Subscriptions
+            .AsNoTracking()
+            .Include(s => s.Plan)
+            .Where(s => s.Status == GymMembershipPolicy.Active && s.Member != null && !s.Member.IsDeleted && s.Member.Status == GymMembershipPolicy.MemberActive)
+            .ToListAsync();
+
+        var planDistribution = activeSubs
+            .GroupBy(s => s.Plan != null ? s.Plan.PlanName : "Unknown Plan")
+            .Select(group => new PlanMembershipCountDto
+            {
+                PlanName = group.Key,
+                ActiveMembersCount = group.Select(s => s.MemberID).Distinct().Count()
+            })
+            .OrderByDescending(item => item.ActiveMembersCount)
+            .ToList();
+
         return new DashboardMetricsDto
         {
             MembersCheckedInCount = openSessions,
@@ -144,8 +187,11 @@ public class DashboardService : IDashboardService
             RevenueThisMonth = revenueThisMonth ?? 0m,
             ExpiringMembershipsCount = expiringMemberships,
             NewRegistrationsCount = newRegistrations,
+            PendingApplicationsCount = pendingApplicationsCount,
             CheckInsByHour = hourlyCheckIns,
-            RevenueByPlan = revenueByPlan
+            RevenueByPlan = revenueByPlan,
+            CurrentlyCheckedIn = currentlyCheckedIn,
+            MembershipPlanDistribution = planDistribution
         };
     }
 

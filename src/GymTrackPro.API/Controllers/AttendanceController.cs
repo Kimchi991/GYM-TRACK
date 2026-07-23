@@ -144,6 +144,14 @@ public class AttendanceController : ControllerBase
         return Ok(ApiResponse<AttendanceDto>.SuccessResponse(attendance, "Voided attendance successfully."));
     }
 
+    [HttpGet("emergency-manifest")]
+    [Authorize(Policy = Policies.BackOffice)]
+    public async Task<IActionResult> GetEmergencyEvacuationManifest(CancellationToken cancellationToken)
+    {
+        var manifest = await _attendanceService.GetEmergencyEvacuationManifestAsync(cancellationToken);
+        return Ok(ApiResponse<EmergencyEvacuationManifestDto>.SuccessResponse(manifest, "Emergency evacuation manifest generated successfully."));
+    }
+
     private void AddLegacyDeprecationHeaders(string successorPath)
     {
         Response.Headers["Deprecation"] = "true";

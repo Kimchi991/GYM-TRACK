@@ -34,4 +34,5 @@ public interface IAttendanceService
         int page = 1,
         int pageSize = 30,
         CancellationToken cancellationToken = default);
+    Task<EmergencyEvacuationManifestDto> GetEmergencyEvacuationManifestAsync(CancellationToken cancellationToken = default);
 }

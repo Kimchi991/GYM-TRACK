@@ -41,6 +41,7 @@ public static class MauiProgram
 		builder.Services.AddTransient<PlansViewModel>();
 		builder.Services.AddTransient<MemberDetailsViewModel>();
 		builder.Services.AddTransient<StaffProvisioningViewModel>();
+		builder.Services.AddTransient<ApplicationsViewModel>();
 
 		// Register Views (Pages)
 		builder.Services.AddTransient<LoginPage>();
@@ -57,6 +58,7 @@ public static class MauiProgram
 		builder.Services.AddTransient<PlansPage>();
 		builder.Services.AddTransient<MemberDetailsPage>();
 		builder.Services.AddTransient<StaffProvisioningPage>();
+		builder.Services.AddTransient<ApplicationsPage>();
 
 		// Register Gym Goer ViewModels and Views
 		builder.Services.AddTransient<GoerDashboardViewModel>();
@@ -65,6 +67,8 @@ public static class MauiProgram
 		builder.Services.AddTransient<GoerDashboardPage>();
 		builder.Services.AddTransient<GoerDigitalCardPage>();
 		builder.Services.AddTransient<GoerProgressPage>();
+		builder.Services.AddTransient<TrainerDashboardViewModel>();
+		builder.Services.AddTransient<TrainerDashboardPage>();
 		builder.Services.AddTransient<GoerAppShell>();
 		builder.Services.AddTransient<AppShell>();
 		builder.Services.AddTransient<Func<GoerAppShell>>(services =>

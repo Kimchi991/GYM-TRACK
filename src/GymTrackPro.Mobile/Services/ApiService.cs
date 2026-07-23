@@ -572,6 +572,40 @@ public class ApiService : IApiService
         return await HandleResponseAsync<GoerDigitalCardDto>(response);
     }
 
+    public async Task<ApiResponse<WorkoutRoutineResponseDto>> GetGoerWorkoutRoutineAsync()
+    {
+        var response = await _httpClient.GetAsync("me/workout-routine");
+        return await HandleResponseAsync<WorkoutRoutineResponseDto>(response);
+    }
+
+    public async Task<ApiResponse<WorkoutLogResponseDto>> LogWorkoutSessionAsync(PostWorkoutLogDto dto)
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(dto);
+        var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync("me/workout-logs", content);
+        return await HandleResponseAsync<WorkoutLogResponseDto>(response);
+    }
+
+    public async Task<ApiResponse<List<AssignedClientDto>>> GetTrainerClientsAsync()
+    {
+        var response = await _httpClient.GetAsync("trainers/clients");
+        return await HandleResponseAsync<List<AssignedClientDto>>(response);
+    }
+
+    public async Task<ApiResponse<WorkoutRoutineResponseDto>> PostTrainerRoutineAsync(PostRoutineDto dto)
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(dto);
+        var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync("trainers/routines", content);
+        return await HandleResponseAsync<WorkoutRoutineResponseDto>(response);
+    }
+
+    public async Task<ApiResponse<List<WorkoutLogResponseDto>>> GetClientWorkoutLogsAsync(int memberId)
+    {
+        var response = await _httpClient.GetAsync($"trainers/clients/{memberId}/logs");
+        return await HandleResponseAsync<List<WorkoutLogResponseDto>>(response);
+    }
+
     public async Task<ProfilePictureData?> GetCurrentProfilePictureAsync(
         CancellationToken cancellationToken = default)
     {
@@ -735,6 +769,26 @@ public class ApiService : IApiService
     {
         var response = await _httpClient.GetAsync($"me/progress?month={month}");
         return await HandleResponseAsync<GoerProgressDto>(response);
+    }
+
+    // --- Member Applications ---
+
+    public async Task<ApiResponse<ApplicationListItemDto>> SubmitApplicationAsync(SubmitApplicationDto dto)
+    {
+        var response = await _httpClient.PostAsJsonAsync("applications", dto, _jsonOptions);
+        return await HandleResponseAsync<ApplicationListItemDto>(response);
+    }
+
+    public async Task<ApiResponse<IEnumerable<ApplicationListItemDto>>> GetPendingApplicationsAsync()
+    {
+        var response = await _httpClient.GetAsync("applications/pending");
+        return await HandleResponseAsync<IEnumerable<ApplicationListItemDto>>(response);
+    }
+
+    public async Task<ApiResponse<ApplicationListItemDto>> VerifyApplicationAsync(int id, VerifyApplicationDto dto)
+    {
+        var response = await _httpClient.PostAsJsonAsync($"applications/{id}/verify", dto, _jsonOptions);
+        return await HandleResponseAsync<ApplicationListItemDto>(response);
     }
 
     // --- Payments ---

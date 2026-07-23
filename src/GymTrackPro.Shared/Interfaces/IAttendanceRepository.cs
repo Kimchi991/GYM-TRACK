@@ -136,6 +136,8 @@ public interface IAttendanceRepository
         DateTime endExclusiveUtc,
         CancellationToken cancellationToken = default);
 
+    Task<int> GetActiveOccupancyCountAsync(CancellationToken cancellationToken = default);
+
     void AddAttendance(Attendance attendance);
     void AddOperation(AttendanceOperation operation);
     void AddAdjustment(AttendanceAdjustment adjustment);

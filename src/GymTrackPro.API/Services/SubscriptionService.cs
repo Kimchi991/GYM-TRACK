@@ -223,6 +223,14 @@ public class SubscriptionService : ISubscriptionService
                 });
                 subscription.Status = GymMembershipPolicy.Paused;
                 subscription.LastModified = operationKey.TimestampUtc;
+
+                var trainerAssignments = await _context.TrainerClients
+                    .Where(tc => tc.MemberID == subscription.MemberID && tc.IsActive)
+                    .ToListAsync(cancellationToken);
+                foreach (var tc in trainerAssignments)
+                {
+                    tc.IsActive = false;
+                }
                 AddAudit(
                     actorUserId,
                     "Subscription Paused",

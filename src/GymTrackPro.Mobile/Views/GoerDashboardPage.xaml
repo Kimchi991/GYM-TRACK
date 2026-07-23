@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodels="clr-namespace:GymTrackPro.Mobile.ViewModels"
+             xmlns:zxing="clr-namespace:ZXing.Net.Maui.Controls;assembly=ZXing.Net.MAUI.Controls"
              x:Class="GymTrackPro.Mobile.Views.GoerDashboardPage"
              Title="{Binding Title}"
              BackgroundColor="#0F172A">
@@ -38,6 +39,29 @@
                        VerticalOptions="Center" />
             </Grid>
 
+            <!-- Digital Gate Pass / QR Code -->
+            <Border StrokeShape="RoundRectangle 16" Stroke="{StaticResource BorderBrush}" Padding="20" BackgroundColor="{StaticResource CardBackground}" HorizontalOptions="Fill">
+                <VerticalStackLayout Spacing="12" HorizontalOptions="Center">
+                    <Label Text="Scan Gate Pass" TextColor="{StaticResource TextSecondary}" FontSize="12" FontAttributes="Bold" HorizontalOptions="Center" />
+                    
+                    <Border StrokeShape="RoundRectangle 8" Padding="10" BackgroundColor="White" WidthRequest="160" HeightRequest="160" HorizontalOptions="Center">
+                        <zxing:BarcodeGeneratorView 
+                            Value="{Binding QrCodeValue}"
+                            Format="QrCode"
+                            HeightRequest="140"
+                            WidthRequest="140"
+                            HorizontalOptions="Center"
+                            VerticalOptions="Center"
+                            BackgroundColor="White" />
+                    </Border>
+                    
+                    <HorizontalStackLayout Spacing="6" HorizontalOptions="Center">
+                        <Label Text="Plan Expiry:" TextColor="{StaticResource TextMuted}" FontSize="12" />
+                        <Label Text="{Binding CountdownMessage}" TextColor="{StaticResource Success}" FontSize="12" FontAttributes="Bold" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
             <!-- Subscription Status -->
             <Border BackgroundColor="#1E293B" Padding="20" Stroke="Transparent" StrokeShape="RoundRectangle 12">
                 <VerticalStackLayout Spacing="10">
@@ -47,8 +71,18 @@
                            FontAttributes="Bold" 
                            TextColor="#F8FAFC" />
                 </VerticalStackLayout>
+            <!-- Live Gym Occupancy Widget -->
+            <Border BackgroundColor="#1E293B" Padding="20" Stroke="Transparent" StrokeShape="RoundRectangle 12">
+                <VerticalStackLayout Spacing="8">
+                    <Grid ColumnDefinitions="*, Auto">
+                        <Label Text="👥 Live Gym Capacity" FontSize="15" TextColor="#94A3B8" FontAttributes="Bold" />
+                        <Label Grid.Column="1" Text="{Binding OccupancyStatus}" FontSize="13" TextColor="#10B981" FontAttributes="Bold" />
+                    </Grid>
+                    <Label Text="{Binding OccupancyText}" FontSize="18" FontAttributes="Bold" TextColor="#F8FAFC" />
+                    <ProgressBar Progress="{Binding OccupancyRatio}" ProgressColor="#3B82F6" HeightRequest="8" />
+                </VerticalStackLayout>
             </Border>
-            
+
             <Border BackgroundColor="#1E293B" Padding="20" Stroke="Transparent" StrokeShape="RoundRectangle 12">
                 <VerticalStackLayout Spacing="10">
                     <Label Text="Current Streak" FontSize="16" TextColor="#94A3B8" />
@@ -96,6 +130,56 @@
                     </CollectionView>
                 </VerticalStackLayout>
             </Border>
+
+            <!-- Option 2: My Workout Routine (Assigned by Trainer) -->
+            <VerticalStackLayout Spacing="12">
+                <Label Text="My Workout Routine" TextColor="#F8FAFC" FontSize="18" FontAttributes="Bold" />
+                <Border StrokeShape="RoundRectangle 12" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource CardBackground}" Padding="15">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="{Binding RoutineName}" TextColor="{StaticResource Primary}" FontSize="15" FontAttributes="Bold" />
+                        
+                        <Label Text="No exercises assigned yet." TextColor="{StaticResource TextMuted}" FontSize="13" IsVisible="{Binding HasAssignedRoutine, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}" />
+                        
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding WorkoutExercises}" IsVisible="{Binding HasAssignedRoutine}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate>
+                                    <VerticalStackLayout>
+                                        <Grid ColumnDefinitions="*, Auto" Padding="0,10">
+                                            <VerticalStackLayout Spacing="4" VerticalOptions="Center">
+                                                <Label Text="{Binding Name}" TextColor="{StaticResource TextPrimary}" FontSize="14" FontAttributes="Bold" />
+                                                <Label Text="{Binding Weight, StringFormat='Weight: {0} kg'}" TextColor="{StaticResource TextSecondary}" FontSize="12" />
+                                            </VerticalStackLayout>
+                                            <VerticalStackLayout Grid.Column="1" HorizontalOptions="End" Spacing="4" VerticalOptions="Center">
+                                                <Label Text="{Binding Sets, StringFormat='{0} Sets'}" TextColor="{StaticResource Info}" FontSize="13" FontAttributes="Bold" HorizontalOptions="End" />
+                                                <Label Text="{Binding Reps, StringFormat='{0} Reps'}" TextColor="{StaticResource TextMuted}" FontSize="11" HorizontalOptions="End" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                        <!-- Separator -->
+                                        <BoxView HeightRequest="1" Color="#334155" HorizontalOptions="Fill" Margin="0,2" />
+                                    </VerticalStackLayout>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                        
+                        <Button Text="✓ Complete Workout Session"
+                                Command="{Binding CompleteWorkoutCommand}"
+                                IsVisible="{Binding HasAssignedRoutine}"
+                                IsEnabled="{Binding IsWorkoutLogging, Converter={StaticResource NullableToBoolConverter}, ConverterParameter=invert}"
+                                BackgroundColor="{StaticResource Success}"
+                                TextColor="White"
+                                FontAttributes="Bold"
+                                CornerRadius="8"
+                                Margin="0,10,0,0" />
+
+                        <Label Text="{Binding WorkoutLogStatusMessage}"
+                               TextColor="{StaticResource Success}"
+                               FontSize="13"
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"
+                               IsVisible="{Binding WorkoutLogStatusMessage, Converter={StaticResource NullableToBoolConverter}}" />
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
 
             <Label Text="{Binding AttendanceStatusMessage}"
                    TextColor="#93C5FD"
