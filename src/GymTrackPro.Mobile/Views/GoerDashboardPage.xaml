@@ -11,7 +11,7 @@
         <VerticalStackLayout Padding="20" Spacing="20">
             <!-- Header. The image bytes are fetched through the authenticated API;
                  the UI never binds to the protected endpoint as a public URI. -->
-            <Grid ColumnDefinitions="72,*" ColumnSpacing="14">
+            <Grid ColumnDefinitions="72,*,Auto" ColumnSpacing="14">
                 <Border WidthRequest="64"
                         HeightRequest="64"
                         Padding="0"
@@ -37,6 +37,27 @@
                        FontAttributes="Bold"
                        TextColor="#F8FAFC"
                        VerticalOptions="Center" />
+                
+                <!-- Logout Button for Member -->
+                <Border Grid.Column="2"
+                        StrokeShape="RoundRectangle 20"
+                        Stroke="#EF4444"
+                        StrokeThickness="1.5"
+                        BackgroundColor="#1F0A0A"
+                        WidthRequest="40"
+                        HeightRequest="40"
+                        Padding="10"
+                        VerticalOptions="Center">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding LogoutCommand}" />
+                    </Border.GestureRecognizers>
+                    <Path Data="M 9 21 H 5 a 2 2 0 0 1 -2 -2 V 5 a 2 2 0 0 1 2 -2 H 9 M 16 17 L 21 12 L 16 7 M 21 12 H 9"
+                          Stroke="#EF4444"
+                          StrokeThickness="2.5"
+                          StrokeLineCap="Round"
+                          StrokeLineJoin="Round"
+                          Aspect="Uniform" />
+                </Border>
             </Grid>
 
             <!-- Digital Gate Pass / QR Code -->
