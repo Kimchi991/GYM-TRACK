@@ -2,7 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="GymTrackPro.Mobile.Views.RegisterPage"
-             Title="Create Account"
+             Title="Create Account &amp; Apply"
              BackgroundColor="{StaticResource Background}">
 
     <ScrollView>
@@ -23,18 +23,20 @@
                                FontSize="24"
                                FontAttributes="Bold"
                                HorizontalOptions="Center" />
-                        <Label Text="After verifying your email; your gym invite grants app access."
+                        <Label Text="Fill out your application below."
                                TextColor="{StaticResource TextSecondary}"
                                FontSize="14"
                                HorizontalOptions="Center" />
                     </VerticalStackLayout>
 
                     <VerticalStackLayout Spacing="20" IsVisible="{Binding ShowRegistration}">
-                        <!-- Member/staff names come from the gym invite target in SQL. -->
+                        
+                        <Label Text="Account Details" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource TextPrimary}" Margin="0,10,0,0"/>
+
                         <VerticalStackLayout Spacing="4">
                             <Label Text="Email Address *" TextColor="{StaticResource TextSecondary}" FontSize="13" FontAttributes="Bold" />
                             <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
-                                <Entry Text="{Binding Email}" Keyboard="Email" TextColor="{StaticResource TextPrimary}" PlaceholderColor="{StaticResource TextMuted}" HeightRequest="42" Placeholder="Use the email on your gym invite" />
+                                <Entry Text="{Binding Email}" Keyboard="Email" TextColor="{StaticResource TextPrimary}" PlaceholderColor="{StaticResource TextMuted}" HeightRequest="42" Placeholder="Enter your email" />
                             </Border>
                         </VerticalStackLayout>
 
@@ -52,13 +54,83 @@
                             </Border>
                         </VerticalStackLayout>
 
-                        <Button Text="Create FitHub Account"
+                        <BoxView HeightRequest="1" Color="{StaticResource BorderBrush}" Margin="0,10" />
+                        
+                        <Label Text="Application Details" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource TextPrimary}" />
+
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Full Name *" TextColor="{StaticResource TextSecondary}" FontSize="13" FontAttributes="Bold" />
+                            <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Entry Text="{Binding FullName}" TextColor="{StaticResource TextPrimary}" PlaceholderColor="{StaticResource TextMuted}" HeightRequest="42" Placeholder="John Doe" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Contact Number *" TextColor="{StaticResource TextSecondary}" FontSize="13" FontAttributes="Bold" />
+                            <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Entry Text="{Binding ContactNumber}" Keyboard="Telephone" TextColor="{StaticResource TextPrimary}" PlaceholderColor="{StaticResource TextMuted}" HeightRequest="42" Placeholder="+1 234 567 890" />
+                            </Border>
+                        </VerticalStackLayout>
+                        
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Emergency Contact" TextColor="{StaticResource TextSecondary}" FontSize="13" FontAttributes="Bold" />
+                            <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Entry Text="{Binding EmergencyContact}" Keyboard="Telephone" TextColor="{StaticResource TextPrimary}" PlaceholderColor="{StaticResource TextMuted}" HeightRequest="42" Placeholder="Optional" />
+                            </Border>
+                        </VerticalStackLayout>
+                        
+                        <!-- Membership Type Toggle -->
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Membership Type *" TextColor="{StaticResource TextSecondary}" FontSize="13" FontAttributes="Bold" />
+                            <HorizontalStackLayout Spacing="15" Margin="0,5">
+                                <HorizontalStackLayout Spacing="5" VerticalOptions="Center">
+                                    <RadioButton Content="One-Day Pass (Walk-in)" IsChecked="{Binding IsOneDayPass}" GroupName="MemType" />
+                                </HorizontalStackLayout>
+                                <HorizontalStackLayout Spacing="5" VerticalOptions="Center">
+                                    <RadioButton Content="Membership Plan" IsChecked="{Binding IsMembershipSelected}" GroupName="MemType" />
+                                </HorizontalStackLayout>
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+
+                        <!-- Plan Picker (Visible if Membership Selected) -->
+                        <VerticalStackLayout Spacing="4" IsVisible="{Binding IsMembershipSelected}">
+                            <Label Text="Select Membership Plan *" TextColor="{StaticResource TextSecondary}" FontSize="13" FontAttributes="Bold" />
+                            <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Picker Title="Choose a Plan" 
+                                        ItemsSource="{Binding MembershipPlans}" 
+                                        ItemDisplayBinding="{Binding PlanName}"
+                                        SelectedItem="{Binding SelectedPlan}" 
+                                        TextColor="{StaticResource TextPrimary}" 
+                                        HeightRequest="42" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Payment Method *" TextColor="{StaticResource TextSecondary}" FontSize="13" FontAttributes="Bold" />
+                            <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Picker Title="Choose a Method" 
+                                        ItemsSource="{Binding PaymentMethods}" 
+                                        SelectedItem="{Binding SelectedPaymentMethod}" 
+                                        TextColor="{StaticResource TextPrimary}" 
+                                        HeightRequest="42" />
+                            </Border>
+                        </VerticalStackLayout>
+                        
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Payment Reference Number" TextColor="{StaticResource TextSecondary}" FontSize="13" FontAttributes="Bold" />
+                            <Border StrokeShape="RoundRectangle 8" Stroke="{StaticResource BorderBrush}" BackgroundColor="{StaticResource Background}" Padding="10,0">
+                                <Entry Text="{Binding PaymentReferenceNumber}" TextColor="{StaticResource TextPrimary}" PlaceholderColor="{StaticResource TextMuted}" HeightRequest="42" Placeholder="For Bank Transfers/E-wallets" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <Button Text="Create FitHub Account &amp; Apply"
                                 TextColor="White"
                                 BackgroundColor="{StaticResource Primary}"
                                 CornerRadius="8"
                                 HeightRequest="48"
                                 FontAttributes="Bold"
-                                Command="{Binding RegisterCommand}" />
+                                Command="{Binding RegisterCommand}" 
+                                Margin="0,15,0,0"/>
                     </VerticalStackLayout>
 
                     <VerticalStackLayout Spacing="12" IsVisible="{Binding ShowActivation}">

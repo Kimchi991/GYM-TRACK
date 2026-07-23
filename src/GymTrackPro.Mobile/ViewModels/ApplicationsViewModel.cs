@@ -89,7 +89,17 @@ public partial class ApplicationsViewModel : BaseViewModel
             var result = await _apiService.VerifyApplicationAsync(app.ApplicationID, dto);
             if (result.Success)
             {
-                SuccessMessage = $"Application for {app.FullName} has been approved. Email notification sent.";
+                if (result.Data != null && !string.IsNullOrWhiteSpace(result.Data.TemporaryQRCode))
+                {
+                    await Shell.Current.DisplayAlert(
+                        "Walk-in Approved", 
+                        $"Application for {app.FullName} has been approved.\n\nTemporary QR Code for today's entry:\n{result.Data.TemporaryQRCode}", 
+                        "OK");
+                }
+                else
+                {
+                    SuccessMessage = $"Application for {app.FullName} has been approved. Email notification sent.";
+                }
                 await LoadApplicationsAsync();
             }
             else

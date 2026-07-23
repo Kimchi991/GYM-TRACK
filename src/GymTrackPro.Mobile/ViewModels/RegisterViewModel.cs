@@ -1,3 +1,7 @@
+using System;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GymTrackPro.Mobile.Helpers;
@@ -5,6 +9,7 @@ using GymTrackPro.Mobile.Services;
 using GymTrackPro.Shared.DTOs;
 using GymTrackPro.Shared.Enums;
 using Firebase.Auth;
+using Microsoft.Maui.Controls;
 
 namespace GymTrackPro.Mobile.ViewModels;
 
@@ -28,6 +33,36 @@ public partial class RegisterViewModel : BaseViewModel
 
     [ObservableProperty]
     public partial string RepeatPassword { get; set; } = string.Empty;
+
+    // --- Application Fields ---
+    [ObservableProperty]
+    public partial string FullName { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ContactNumber { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string EmergencyContact { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsOneDayPass { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMembershipSelected))]
+    public partial MembershipPlanResponseDto? SelectedPlan { get; set; }
+
+    public bool IsMembershipSelected => !IsOneDayPass;
+
+    [ObservableProperty]
+    public partial PaymentMethod SelectedPaymentMethod { get; set; }
+
+    [ObservableProperty]
+    public partial string PaymentReferenceNumber { get; set; } = string.Empty;
+
+    public ObservableCollection<MembershipPlanResponseDto> MembershipPlans { get; } = new();
+    
+    public ObservableCollection<PaymentMethod> PaymentMethods { get; } = new(Enum.GetValues(typeof(PaymentMethod)).Cast<PaymentMethod>());
+    // -------------------------
 
     [ObservableProperty]
     public partial string ErrorMessage { get; set; } = string.Empty;
@@ -72,6 +107,8 @@ public partial class RegisterViewModel : BaseViewModel
         _rootNavigationService = rootNavigationService
             ?? throw new ArgumentNullException(nameof(rootNavigationService));
         Title = "Create Account";
+
+        IsOneDayPass = true; // Default to walk-in pass
     }
 
     partial void OnInviteCodeChanged(string value) =>
@@ -90,25 +127,62 @@ public partial class RegisterViewModel : BaseViewModel
         OnPropertyChanged(nameof(ShowActivation));
     }
 
+    partial void OnIsOneDayPassChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsMembershipSelected));
+        if (value)
+        {
+            SelectedPlan = null;
+        }
+    }
+
+    [RelayCommand]
+    public async Task LoadPlansAsync()
+    {
+        if (MembershipPlans.Any()) return; // already loaded
+
+        try
+        {
+            var response = await _apiService.GetPlansAsync();
+            if (response.Success && response.Data != null)
+            {
+                MembershipPlans.Clear();
+                foreach (var plan in response.Data.Where(p => p.Status == "Active"))
+                {
+                    MembershipPlans.Add(plan);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load plans: {ex.Message}");
+        }
+    }
+
     [RelayCommand]
     private async Task RegisterAsync()
     {
-        if (IsBusy)
-        {
-            return;
-        }
+        if (IsBusy) return;
 
-        if (string.IsNullOrWhiteSpace(Email)
-            || string.IsNullOrWhiteSpace(Password)
-            || string.IsNullOrWhiteSpace(RepeatPassword))
+        if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password) || string.IsNullOrWhiteSpace(RepeatPassword))
         {
             ErrorMessage = "Email and both password fields are required.";
             return;
         }
 
-        if (!System.Text.RegularExpressions.Regex.IsMatch(
-                Email,
-                @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+        if (string.IsNullOrWhiteSpace(FullName) || string.IsNullOrWhiteSpace(ContactNumber))
+        {
+            ErrorMessage = "Full Name and Contact Number are required for the application.";
+            return;
+        }
+
+        if (!IsOneDayPass && SelectedPlan == null)
+        {
+            ErrorMessage = "Please select a Membership Plan.";
+            return;
+        }
+
+        if (!System.Text.RegularExpressions.Regex.IsMatch(Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
         {
             ErrorMessage = "Please enter a valid email address.";
             return;
@@ -120,52 +194,56 @@ public partial class RegisterViewModel : BaseViewModel
             return;
         }
 
-        if (Password.Length < 6
-            || !System.Text.RegularExpressions.Regex.IsMatch(Password, @"[A-Z]")
-            || !System.Text.RegularExpressions.Regex.IsMatch(Password, @"[a-z]")
-            || !System.Text.RegularExpressions.Regex.IsMatch(
-                Password,
-                @"[!@#$%^&*(),.?""':{}|<>]"))
-        {
-            ErrorMessage = "Use at least 6 characters with uppercase, lowercase, and a special character.";
-            return;
-        }
-
         IsBusy = true;
         ErrorMessage = string.Empty;
         SuccessMessage = string.Empty;
 
+        var submitDto = new SubmitApplicationDto
+        {
+            FullName = FullName,
+            ContactNumber = ContactNumber,
+            EmailAddress = Email.Trim(),
+            EmergencyContact = EmergencyContact,
+            IsOneDayPass = IsOneDayPass,
+            SelectedPlanID = SelectedPlan?.PlanID,
+            PaymentMethod = SelectedPaymentMethod,
+            PaymentReferenceNumber = PaymentReferenceNumber
+        };
+
         try
         {
             await _firebaseAuthService.RegisterAsync(Email.Trim(), Password);
-            Password = string.Empty;
-            RepeatPassword = string.Empty;
-            IsAwaitingVerification = true;
-            SuccessMessage =
-                "Firebase account created. Verify the email, then return here and tap 'I've Verified - Activate'.";
+            
+            // Firebase succeeded, now submit application
+            await SubmitApplicationInternalAsync(submitDto);
+            
+            TransitionToAwaitingVerification();
         }
         catch (FirebaseRegistrationVerificationPendingException)
         {
-            Password = string.Empty;
-            RepeatPassword = string.Empty;
-            IsAwaitingVerification = true;
+            // Registration succeeded but email failed to send. Submit application anyway.
+            await SubmitApplicationInternalAsync(submitDto);
+            
+            TransitionToAwaitingVerification();
             if (await _firebaseAuthService.HasSessionAsync())
             {
-                ErrorMessage =
-                    "Your account was created, but the verification email could not be sent. Tap 'Resend Verification Email' to continue.";
-            }
-            else
-            {
-                ErrorMessage =
-                    "Your account may already be created. Sign in again, then return to activation and resend verification.";
+                ErrorMessage = "Your account was created, but the verification email could not be sent. Tap 'Resend Verification Email' to continue.";
             }
         }
         catch (FirebaseAuthException exception) when (exception.Reason == AuthErrorReason.EmailExists)
         {
-            Password = string.Empty;
-            RepeatPassword = string.Empty;
-            ErrorMessage =
-                "This Firebase account already exists. Use 'Sign In' below, then complete email verification and invite activation.";
+            // Fallback: The user already exists in Firebase. Let's just submit the application for them.
+            try
+            {
+                await SubmitApplicationInternalAsync(submitDto);
+                Password = string.Empty;
+                RepeatPassword = string.Empty;
+                ErrorMessage = "Firebase account already exists. We have submitted your application. Use 'Sign In' below, complete email verification and invite activation.";
+            }
+            catch (Exception appEx)
+            {
+                ErrorMessage = $"Account exists, but failed to submit application: {appEx.Message}";
+            }
         }
         catch (Exception exception)
         {
@@ -177,20 +255,32 @@ public partial class RegisterViewModel : BaseViewModel
         }
     }
 
+    private async Task SubmitApplicationInternalAsync(SubmitApplicationDto dto)
+    {
+        var result = await _apiService.SubmitApplicationAsync(dto);
+        if (!result.Success)
+        {
+            throw new Exception(result.Message ?? "Failed to submit application to GymTrackPro.");
+        }
+    }
+
+    private void TransitionToAwaitingVerification()
+    {
+        Password = string.Empty;
+        RepeatPassword = string.Empty;
+        IsAwaitingVerification = true;
+        SuccessMessage = "Account created & Application submitted! Verify your email, wait for receptionist approval, then return here to activate with your Invite Code.";
+    }
+
     [RelayCommand]
     private async Task ResendVerificationAsync()
     {
-        if (IsBusy || IsResendingVerification)
-        {
-            return;
-        }
+        if (IsBusy || IsResendingVerification) return;
 
         var now = DateTimeOffset.UtcNow;
         if (now < _resendAvailableAtUtc)
         {
-            var seconds = Math.Max(
-                1,
-                (int)Math.Ceiling((_resendAvailableAtUtc - now).TotalSeconds));
+            var seconds = Math.Max(1, (int)Math.Ceiling((_resendAvailableAtUtc - now).TotalSeconds));
             ErrorMessage = $"Please wait {seconds} seconds before requesting another verification email.";
             return;
         }
@@ -202,26 +292,18 @@ public partial class RegisterViewModel : BaseViewModel
         {
             if (!await _firebaseAuthService.HasSessionAsync())
             {
-                ErrorMessage =
-                    "Sign in to your Firebase account first, then return here to resend verification.";
+                ErrorMessage = "Sign in to your Firebase account first, then return here to resend verification.";
                 return;
             }
 
-            // Prevent infinite loading — timeout after 15 seconds if Firebase token
-            // refresh or the API call hangs (network issues, dead semaphore, etc.).
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-
-            // Set the cooldown before the provider call so repeated failures cannot be
-            // used to hammer the email endpoint with rapid taps.
             _resendAvailableAtUtc = DateTimeOffset.UtcNow.Add(ResendCooldown);
             await _firebaseAuthService.SendEmailVerificationAsync(timeoutCts.Token);
-            SuccessMessage =
-                "Verification email requested. Check your inbox and spam folder before trying again.";
+            SuccessMessage = "Verification email requested. Check your inbox and spam folder before trying again.";
         }
         catch (Exception)
         {
-            ErrorMessage =
-                "The verification email could not be sent right now. Wait briefly, then try again or sign in again.";
+            ErrorMessage = "The verification email could not be sent right now. Wait briefly, then try again or sign in again.";
         }
         finally
         {
@@ -232,10 +314,7 @@ public partial class RegisterViewModel : BaseViewModel
     [RelayCommand]
     private async Task VerifyAndActivateAsync()
     {
-        if (IsBusy)
-        {
-            return;
-        }
+        if (IsBusy) return;
 
         if (string.IsNullOrWhiteSpace(InviteCode))
         {
@@ -247,10 +326,7 @@ public partial class RegisterViewModel : BaseViewModel
         ErrorMessage = string.Empty;
         SuccessMessage = string.Empty;
 
-        // Prevent infinite loading — timeout after 15 seconds if Firebase token
-        // refresh or the API call hangs (network issues, dead semaphore, etc.).
         using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-
         try
         {
             if (!await _firebaseAuthService.HasSessionAsync(timeoutCts.Token))
@@ -273,9 +349,7 @@ public partial class RegisterViewModel : BaseViewModel
 
             if (!response.Success || response.Data is null)
             {
-                ErrorMessage = string.IsNullOrWhiteSpace(response.Message)
-                    ? "The invite could not be activated."
-                    : response.Message;
+                ErrorMessage = string.IsNullOrWhiteSpace(response.Message) ? "The invite could not be activated." : response.Message;
                 return;
             }
 
