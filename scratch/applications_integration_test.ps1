@@ -58,6 +58,10 @@ function Execute-SqlScalar {
 Write-Host "Cleaning applications database records..." -ForegroundColor Yellow
 try {
     $cleanup = @"
+    DELETE FROM AuditLogs;
+    DELETE FROM WorkoutLogs;
+    DELETE FROM WorkoutRoutines;
+    DELETE FROM TrainerClients;
     DELETE FROM AttendanceAdjustments;
     DELETE FROM AttendanceOperations;
     DELETE FROM AttendanceLogs;
@@ -65,12 +69,11 @@ try {
     DELETE FROM Subscriptions;
     DELETE FROM MemberProjectionVersions;
     DELETE FROM AccountInvites;
+    DELETE FROM MemberApplications;
     DELETE FROM Users;
     DELETE FROM Members;
     DELETE FROM WalkInVisitors;
-    DELETE FROM MemberApplications;
     DELETE FROM MembershipPlans;
-    DELETE FROM AuditLogs;
 "@
     Execute-Sql $cleanup | Out-Null
     Write-Host "Database tables cleaned successfully." -ForegroundColor Green
@@ -80,7 +83,8 @@ try {
 
 # 1. Start the API in the background
 Write-Host "Starting ASP.NET Core API..." -ForegroundColor Yellow
-$apiProcess = Start-Process dotnet -ArgumentList "run --project src/GymTrackPro.API" -WorkingDirectory $PWD -PassThru -WindowStyle Hidden
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+$apiProcess = Start-Process dotnet -ArgumentList ".\bin\Debug\net10.0\GymTrackPro.API.dll --environment Development --urls http://localhost:5221" -WorkingDirectory "$PWD\src\GymTrackPro.API" -PassThru -WindowStyle Hidden
 
 # Wait for API to respond
 $apiReady = $false

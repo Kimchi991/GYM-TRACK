@@ -83,7 +83,8 @@ try {
 
 # 1. Start the API in the background
 Write-Host "Starting ASP.NET Core API..." -ForegroundColor Yellow
-$apiProcess = Start-Process dotnet -ArgumentList "run --project src/GymTrackPro.API" -WorkingDirectory $PWD -PassThru -WindowStyle Hidden
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+$apiProcess = Start-Process dotnet -ArgumentList ".\bin\Debug\net10.0\GymTrackPro.API.dll --environment Development --urls http://localhost:5221" -WorkingDirectory "$PWD\src\GymTrackPro.API" -PassThru -WindowStyle Hidden
 
 # Wait for API to respond
 $apiReady = $false

@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>GymTrackPro.Shared</name>
+    </assembly>
+    <members>
+        <member name="T:GymTrackPro.Shared.DTOs.AttendanceOperationRequestDto">
+            <summary>
+            Identifies an idempotent attendance operation whose member is resolved from
+            the authenticated gym-goer identity rather than from a QR code.
+            </summary>
+        </member>
+        <member name="T:GymTrackPro.Shared.Entities.MemberProjectionVersion">
+            <summary>
+            Durable monotonic version for one member's client-visible projection.
+            </summary>
+        </member>
+        <member name="T:GymTrackPro.Shared.Interfaces.IProjectionVersionProvider">
+            <summary>
+            Reads the durable mutation counter for a member projection. Implementations must
+            use the same scoped database context/transaction as the projection read. The value
+            is incremented by each committed mutation that can affect that member; it is never
+            allocated by a GET request.
+            </summary>
+        </member>
+        <member name="M:GymTrackPro.Shared.Interfaces.IProjectionVersionProvider.IncrementMutationVersionForMemberAsync(System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Atomically increments and returns the member's durable mutation version.
+            Relational callers should invoke this inside the same transaction as the
+            mutation whose commit the version represents.
+            </summary>
+        </member>
+    </members>
+</doc>

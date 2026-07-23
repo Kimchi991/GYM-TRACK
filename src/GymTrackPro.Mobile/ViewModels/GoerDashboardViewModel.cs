@@ -94,7 +94,14 @@ public partial class GoerDashboardViewModel : BaseViewModel
 
         try
         {
-            var exercisesJson = System.Text.Json.JsonSerializer.Serialize(WorkoutExercises);
+            var completedExercises = WorkoutExercises.Where(e => e.IsCompleted).ToList();
+            if (completedExercises.Count == 0)
+            {
+                WorkoutLogStatusMessage = "No exercises checked as completed.";
+                return;
+            }
+
+            var exercisesJson = System.Text.Json.JsonSerializer.Serialize(completedExercises);
             var dto = new PostWorkoutLogDto
             {
                 RoutineName = RoutineName,
@@ -421,6 +428,9 @@ public partial class GoerDashboardViewModel : BaseViewModel
                         {
                             foreach (var ex in exercises)
                             {
+                                ex.ActualSets = ex.Sets;
+                                ex.ActualReps = ex.Reps;
+                                ex.ActualWeight = ex.Weight;
                                 WorkoutExercises.Add(ex);
                             }
                         }
@@ -578,10 +588,29 @@ public partial class GoerDashboardViewModel : BaseViewModel
     }
 }
 
-public class ExerciseModel
+public partial class ExerciseModel : ObservableObject
 {
-    public string Name { get; set; } = string.Empty;
-    public int Sets { get; set; }
-    public int Reps { get; set; }
-    public decimal Weight { get; set; }
+    [ObservableProperty]
+    public partial string Name { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial int Sets { get; set; }
+
+    [ObservableProperty]
+    public partial int Reps { get; set; }
+
+    [ObservableProperty]
+    public partial decimal Weight { get; set; }
+
+    [ObservableProperty]
+    public partial int ActualSets { get; set; }
+
+    [ObservableProperty]
+    public partial int ActualReps { get; set; }
+
+    [ObservableProperty]
+    public partial decimal ActualWeight { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsCompleted { get; set; }
 }

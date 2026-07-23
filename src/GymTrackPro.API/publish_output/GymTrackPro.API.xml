@@ -1,0 +1,483 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>GymTrackPro.API</name>
+    </assembly>
+    <members>
+        <member name="M:GymTrackPro.API.Authentication.FirebaseAuthenticationOptions.ProjectIdPattern">
+            <remarks>
+            Pattern:<br/>
+            <code>^[a-z][a-z0-9-]{4,28}[a-z0-9]$</code><br/>
+            Options:<br/>
+            <code>RegexOptions.CultureInvariant</code><br/>
+            Explanation:<br/>
+            <code>
+            ○ Match if at the beginning of the string.<br/>
+            ○ Match a character in the set [a-z].<br/>
+            ○ Match a character in the set [\-0-9a-z] greedily at least 4 and at most 28 times.<br/>
+            ○ Match a character in the set [0-9a-z].<br/>
+            ○ Match if at the end of the string or if before an ending newline.<br/>
+            </code>
+            </remarks>
+        </member>
+        <member name="T:GymTrackPro.API.Controllers.DashboardController">
+            <summary>
+            Exposes real-time operations, membership, and financial analytics for GymTrackPro.
+            </summary>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.DashboardController.GetMetrics">
+            <summary>
+            Retrieves current key metrics, including active attendees, memberships, revenue figures, and plan performance.
+            </summary>
+            <returns>A standardized API response containing the dashboard metrics.</returns>
+        </member>
+        <member name="T:GymTrackPro.API.Controllers.MembersController">
+            <summary>
+            Provides endpoints for managing gym member profiles.
+            </summary>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.MembersController.GetAll">
+            <summary>
+            Retrieves all active and registered member profiles.
+            </summary>
+            <returns>A standardized API response listing the members.</returns>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.MembersController.GetById(System.Int32)">
+            <summary>
+            Retrieves a specific member profile by their primary identifier.
+            </summary>
+            <param name="id">The unique identifier of the member.</param>
+            <returns>A standardized API response containing the member's profile.</returns>
+            <response code="200">If the member is found.</response>
+            <response code="404">If the member does not exist.</response>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.MembersController.GetByQRCode(GymTrackPro.Shared.DTOs.QrCodeLookupRequestDto)">
+            <summary>
+            Retrieves a specific member profile by their unique QR check-in code.
+            </summary>
+            <param name="request">Body containing the QR code assigned to the member.</param>
+            <returns>A standardized API response containing the member's profile.</returns>
+            <response code="200">If the member is found.</response>
+            <response code="404">If no member matches the QR code.</response>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.MembersController.Create(GymTrackPro.Shared.DTOs.CreateMemberDto)">
+            <summary>
+            Registers and registers a new gym member.
+            </summary>
+            <param name="createDto">The profile creation parameters.</param>
+            <returns>A standardized API response containing the newly registered member profile.</returns>
+            <response code="201">If the member was successfully created.</response>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.MembersController.Update(System.Int32,GymTrackPro.Shared.DTOs.UpdateMemberDto)">
+            <summary>
+            Updates an existing member profile's contact and registration information.
+            </summary>
+            <param name="id">The unique identifier of the member to update.</param>
+            <param name="updateDto">The updated profile parameters.</param>
+            <returns>A standardized API response containing the updated member profile.</returns>
+            <response code="200">If the member was updated successfully.</response>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.MembersController.Search(System.String,System.String,System.Int32,System.Int32)">
+            <summary>
+            Searches and filters member profiles with pagination support.
+            </summary>
+            <param name="search">The search term matching name, phone, member ID, or QR code.</param>
+            <param name="status">The member status filter.</param>
+            <param name="page">The page number (1-indexed).</param>
+            <param name="pageSize">The page size.</param>
+            <returns>A standardized API response containing the paginated search results.</returns>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.MembersController.Delete(System.Int32)">
+            <summary>
+            Soft deletes an existing member profile.
+            </summary>
+            <param name="id">The unique identifier of the member to delete.</param>
+            <returns>A standardized API response indicating successful deletion.</returns>
+            <response code="200">If the member was soft-deleted successfully.</response>
+            <response code="404">If the member does not exist.</response>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.NotificationsController.GetNotifications(System.Nullable{System.Int32})">
+            <summary>
+            Retrieve list of notifications. Optionally filter by member ID.
+            </summary>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.NotificationsController.MarkAsRead(System.Int32)">
+            <summary>
+            Mark a notification as read.
+            </summary>
+        </member>
+        <member name="T:GymTrackPro.API.Controllers.PaymentsController">
+            <summary>
+            Provides endpoints for processing, searching, and refunding member payments.
+            </summary>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.PaymentsController.GetById(System.Int32)">
+            <summary>
+            Retrieves a specific payment record by its unique identifier.
+            </summary>
+            <param name="id">The unique identifier of the payment.</param>
+            <returns>A standardized API response containing the payment details.</returns>
+            <response code="200">If the payment record is found.</response>
+            <response code="404">If the payment record does not exist.</response>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.PaymentsController.GetByMemberId(System.Int32)">
+            <summary>
+            Retrieves all payment records linked to a specific member.
+            </summary>
+            <param name="memberId">The unique identifier of the member.</param>
+            <returns>A standardized API response listing the member's transactions.</returns>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.PaymentsController.Create(GymTrackPro.Shared.DTOs.CreatePaymentDto)">
+            <summary>
+            Processes a new payment for a subscription.
+            </summary>
+            <param name="paymentDto">The transaction parameters.</param>
+            <returns>A standardized API response containing the processed payment receipt details.</returns>
+            <response code="201">If the payment is processed successfully.</response>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.PaymentsController.Refund(System.Int32)">
+            <summary>
+            Refunds an existing completed payment transaction. Restricted to Administrators.
+            </summary>
+            <param name="id">The unique identifier of the payment to refund.</param>
+            <returns>A standardized API response confirming the refund.</returns>
+            <response code="200">If the refund was processed successfully.</response>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.PaymentsController.Search(System.Nullable{System.DateTime},System.String,System.String,System.Nullable{System.Int32},System.String)">
+            <summary>
+            Searches and filters gym payment transactions.
+            </summary>
+            <param name="date">Filter by transaction date.</param>
+            <param name="method">Filter by payment method (e.g. Cash, GCash, Maya, Card, BankTransfer).</param>
+            <param name="status">Filter by payment status (e.g. Pending, Paid, Failed, Cancelled, Refunded).</param>
+            <param name="memberId">Filter by specific member identifier.</param>
+            <param name="receiptNumber">Filter by partial/exact receipt number matching.</param>
+            <returns>A list of matching payment records.</returns>
+        </member>
+        <member name="T:GymTrackPro.API.Controllers.PlansController">
+            <summary>
+            Provides endpoints for managing gym membership plans.
+            </summary>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.PlansController.GetAll">
+            <summary>
+            Retrieves all registered membership plans.
+            </summary>
+            <returns>A standardized API response listing available plans.</returns>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.PlansController.GetById(System.Int32)">
+            <summary>
+            Retrieves details of a specific membership plan by its ID.
+            </summary>
+            <param name="id">The unique identifier of the membership plan.</param>
+            <returns>A standardized API response containing the plan details.</returns>
+            <response code="200">If the plan is found.</response>
+            <response code="404">If the plan does not exist.</response>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.PlansController.Create(GymTrackPro.Shared.DTOs.CreateMembershipPlanDto)">
+            <summary>
+            Creates a new membership plan. Restricted to Administrators.
+            </summary>
+            <param name="createDto">The parameters defining the new plan.</param>
+            <returns>A standardized API response containing the created plan details.</returns>
+            <response code="201">If the plan was created successfully.</response>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.PlansController.Update(System.Int32,GymTrackPro.Shared.DTOs.CreateMembershipPlanDto)">
+            <summary>
+            Updates details of an existing membership plan. Restricted to Administrators.
+            </summary>
+            <param name="id">The unique identifier of the plan to update.</param>
+            <param name="updateDto">The updated plan specifications.</param>
+            <returns>A standardized API response containing the updated plan details.</returns>
+            <response code="200">If the plan was successfully updated.</response>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.PlansController.Delete(System.Int32)">
+            <summary>
+            Deletes a membership plan. Restricted to Administrators.
+            </summary>
+            <param name="id">The unique identifier of the plan to delete.</param>
+            <returns>A standardized API response confirming the deletion.</returns>
+            <response code="200">If the plan was successfully deleted.</response>
+        </member>
+        <member name="T:GymTrackPro.API.Controllers.ReportsController">
+            <summary>
+            Exposes operations and financial reports for GymTrackPro.
+            </summary>
+        </member>
+        <member name="T:GymTrackPro.API.Controllers.SettingsController">
+            <summary>
+            Exposes administrative endpoints to manage system-wide settings.
+            </summary>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.SettingsController.GetAllSettings">
+            <summary>
+            Retrieves all current system settings.
+            </summary>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.SettingsController.UpdateSetting(System.String,GymTrackPro.Shared.DTOs.UpdateSettingDto)">
+            <summary>
+            Updates a system configuration setting value. Restricted to Administrator role.
+            </summary>
+        </member>
+        <member name="T:GymTrackPro.API.Controllers.SubscriptionsController">
+            <summary>
+            Provides endpoints for managing member subscriptions and pauses.
+            </summary>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.SubscriptionsController.GetById(System.Int32)">
+            <summary>
+            Retrieves a specific subscription record by its ID.
+            </summary>
+            <param name="id">The unique identifier of the subscription.</param>
+            <returns>A standardized API response containing the subscription details.</returns>
+            <response code="200">If the subscription is found.</response>
+            <response code="404">If the subscription record does not exist.</response>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.SubscriptionsController.GetByMemberId(System.Int32)">
+            <summary>
+            Retrieves all subscriptions linked to a specific member.
+            </summary>
+            <param name="memberId">The unique identifier of the member.</param>
+            <returns>A standardized API response listing the member's subscriptions.</returns>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.SubscriptionsController.Subscribe(GymTrackPro.Shared.DTOs.CreateSubscriptionDto)">
+            <summary>
+            Enrolls a member in a new subscription plan.
+            </summary>
+            <param name="subscribeDto">The parameters specifying the member and the plan.</param>
+            <returns>A standardized API response containing the newly created subscription details.</returns>
+            <response code="201">If the subscription is successfully registered.</response>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.SubscriptionsController.Pause(System.Int32,GymTrackPro.Shared.DTOs.PauseSubscriptionDto)">
+            <summary>
+            Temporarily pauses an active member subscription.
+            </summary>
+            <param name="id">The unique identifier of the subscription to pause.</param>
+            <param name="pauseDto">The data transfer object containing the reason for pausing.</param>
+            <returns>A standardized API response confirming the pause operation.</returns>
+            <response code="200">If the subscription was successfully paused.</response>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.SubscriptionsController.Resume(System.Int32)">
+            <summary>
+            Resumes a previously paused subscription.
+            </summary>
+            <param name="id">The unique identifier of the subscription to resume.</param>
+            <returns>A standardized API response confirming the resume operation.</returns>
+            <response code="200">If the subscription was successfully resumed.</response>
+        </member>
+        <member name="M:GymTrackPro.API.Controllers.SubscriptionsController.Renew(GymTrackPro.Shared.DTOs.RenewSubscriptionDto)">
+            <summary>
+            Renews an active or expired subscription with a payment atomically inside a transaction.
+            </summary>
+            <param name="renewDto">The subscription details and payment inputs.</param>
+            <returns>A standardized API response containing the new subscription details.</returns>
+            <response code="200">If the renewal was successful.</response>
+        </member>
+        <member name="T:GymTrackPro.API.Maintenance.SqlServerPreflightReadOnlyDataSource">
+            <summary>
+            Executes an allow-listed catalog of SELECT-only SQL. It intentionally does not
+            expose GymDbContext.SaveChanges or arbitrary SQL to the preflight runner.
+            </summary>
+        </member>
+        <member name="T:GymTrackPro.API.Maintenance.ValidatedSqlServerConnection">
+            <summary>
+            Carries a connection string only after it has passed the shared SQL Server
+            transport and endpoint policy. Its string representation is intentionally
+            redacted so routine diagnostics cannot disclose credentials or topology.
+            </summary>
+        </member>
+        <member name="T:GymTrackPro.API.Maintenance.SqlServerConnectionPolicy">
+            <summary>
+            Fail-closed connection policy shared by SQL Server maintenance executables.
+            This validates configuration only; it never opens a database connection.
+            </summary>
+        </member>
+        <member name="T:GymTrackPro.API.Migrations.InitialCreate">
+            <inheritdoc />
+        </member>
+        <member name="M:GymTrackPro.API.Migrations.InitialCreate.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:GymTrackPro.API.Migrations.InitialCreate.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:GymTrackPro.API.Migrations.InitialCreate.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:GymTrackPro.API.Migrations.AddUserTokens">
+            <inheritdoc />
+        </member>
+        <member name="M:GymTrackPro.API.Migrations.AddUserTokens.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:GymTrackPro.API.Migrations.AddUserTokens.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:GymTrackPro.API.Migrations.AddUserTokens.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:GymTrackPro.API.Migrations.MakeAuditLogUserNullable">
+            <inheritdoc />
+        </member>
+        <member name="M:GymTrackPro.API.Migrations.MakeAuditLogUserNullable.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:GymTrackPro.API.Migrations.MakeAuditLogUserNullable.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:GymTrackPro.API.Migrations.MakeAuditLogUserNullable.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:GymTrackPro.API.Migrations.AddSystemSettings">
+            <inheritdoc />
+        </member>
+        <member name="M:GymTrackPro.API.Migrations.AddSystemSettings.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:GymTrackPro.API.Migrations.AddSystemSettings.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:GymTrackPro.API.Migrations.AddSystemSettings.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:GymTrackPro.API.Migrations.StageFirebaseIdentityAndAccountInvites">
+            <inheritdoc />
+        </member>
+        <member name="M:GymTrackPro.API.Migrations.StageFirebaseIdentityAndAccountInvites.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:GymTrackPro.API.Migrations.StageFirebaseIdentityAndAccountInvites.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:GymTrackPro.API.Migrations.StageFirebaseIdentityAndAccountInvites.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:GymTrackPro.API.Migrations.AddAttendanceVoidingAndSource">
+            <summary>
+            Adds the capstone attendance correction model while preserving the original
+            datetime2 attendance value for existing rows.
+            </summary>
+        </member>
+        <member name="M:GymTrackPro.API.Migrations.AddAttendanceVoidingAndSource.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:GymTrackPro.API.Security.PreAuthenticationIpLimiter">
+            <summary>
+            A fixed-capacity, per-IP admission limiter that runs before bearer-token processing.
+            Entries are discarded at the window boundary, so attacker-controlled addresses cannot
+            create an unbounded in-process partition dictionary.
+            </summary>
+        </member>
+        <member name="T:GymTrackPro.API.Services.GymMembershipPolicy">
+            <summary>
+            Canonical membership calendar and status policy. Subscription StartDate/EndDate
+            are inclusive gym-calendar dates stored as midnight DateTimeKind.Unspecified.
+            </summary>
+        </member>
+        <member name="T:GymTrackPro.API.Services.MemberDeletionTransaction">
+            <summary>
+            Commits member soft deletion, linked gym-goer revocation, and its audit as one
+            serializable operation. Back-office identities are never deactivated here.
+            </summary>
+        </member>
+        <member name="T:GymTrackPro.API.Services.ProjectionVersionProvider">
+            <summary>
+            Uses the request-scoped DbContext so a projection version can participate in
+            the exact same transaction as its domain mutation.
+            </summary>
+        </member>
+        <member name="T:Program">
+            <summary>
+            Auto-generated public partial Program class for top-level statement apps.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.OpenApi.Generated.DocumentationCommentIdHelper.CreateDocumentationId(System.Type)">
+            <summary>
+            Generates a documentation comment ID for a type.
+            Example: T:Namespace.Outer+Inner`1 becomes T:Namespace.Outer.Inner`1
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.OpenApi.Generated.DocumentationCommentIdHelper.CreateDocumentationId(System.Reflection.PropertyInfo)">
+            <summary>
+            Generates a documentation comment ID for a property.
+            Example: P:Namespace.ContainingType.PropertyName or for an indexer P:Namespace.ContainingType.Item(System.Int32)
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.OpenApi.Generated.DocumentationCommentIdHelper.CreateDocumentationId(System.Type,System.String)">
+            <summary>
+            Generates a documentation comment ID for a property given its container type and property name.
+            Example: P:Namespace.ContainingType.PropertyName
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.OpenApi.Generated.DocumentationCommentIdHelper.CreateDocumentationId(System.Reflection.MethodInfo)">
+            <summary>
+            Generates a documentation comment ID for a method (or constructor).
+            For example:
+              M:Namespace.ContainingType.MethodName(ParamType1,ParamType2)~ReturnType
+              M:Namespace.ContainingType.#ctor(ParamType)
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.OpenApi.Generated.DocumentationCommentIdHelper.GetTypeDocId(System.Type,System.Boolean,System.Boolean)">
+            <summary>
+            Generates a documentation ID string for a type.
+            This method handles nested types (replacing '+' with '.'),
+            generic types, arrays, pointers, by-ref types, and generic parameters.
+            The <paramref name="includeGenericArguments"/> flag controls whether
+            constructed generic type arguments are emitted, while <paramref name="omitGenericArity"/>
+            controls whether the generic arity marker (e.g. "`1") is appended.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNetCore.OpenApi.Generated.DocumentationCommentIdHelper.NormalizeDocId(System.String)">
+            <summary>
+            Normalizes a documentation comment ID to match the compiler-style format.
+            Strips the return type suffix for ordinary methods but retains it for conversion operators.
+            </summary>
+            <param name="docId">The documentation comment ID to normalize.</param>
+            <returns>The normalized documentation comment ID.</returns>
+        </member>
+        <member name="T:System.Text.RegularExpressions.Generated.ProjectIdPattern_0">
+            <summary>Custom <see cref="T:System.Text.RegularExpressions.Regex"/>-derived type for the ProjectIdPattern method.</summary>
+        </member>
+        <member name="F:System.Text.RegularExpressions.Generated.ProjectIdPattern_0.Instance">
+            <summary>Cached, thread-safe singleton instance.</summary>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.ProjectIdPattern_0.#ctor">
+            <summary>Initializes the instance.</summary>
+        </member>
+        <member name="T:System.Text.RegularExpressions.Generated.ProjectIdPattern_0.RunnerFactory">
+            <summary>Provides a factory for creating <see cref="T:System.Text.RegularExpressions.RegexRunner"/> instances to be used by methods on <see cref="T:System.Text.RegularExpressions.Regex"/>.</summary>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.ProjectIdPattern_0.RunnerFactory.CreateInstance">
+            <summary>Creates an instance of a <see cref="T:System.Text.RegularExpressions.RegexRunner"/> used by methods on <see cref="T:System.Text.RegularExpressions.Regex"/>.</summary>
+        </member>
+        <member name="T:System.Text.RegularExpressions.Generated.ProjectIdPattern_0.RunnerFactory.Runner">
+            <summary>Provides the runner that contains the custom logic implementing the specified regular expression.</summary>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.ProjectIdPattern_0.RunnerFactory.Runner.Scan(System.ReadOnlySpan{System.Char})">
+            <summary>Scan the <paramref name="inputSpan"/> starting from base.runtextstart for the next match.</summary>
+            <param name="inputSpan">The text being scanned by the regular expression.</param>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.ProjectIdPattern_0.RunnerFactory.Runner.TryFindNextPossibleStartingPosition(System.ReadOnlySpan{System.Char})">
+            <summary>Search <paramref name="inputSpan"/> starting from base.runtextpos for the next location a match could possibly start.</summary>
+            <param name="inputSpan">The text being scanned by the regular expression.</param>
+            <returns>true if a possible match was found; false if no more matches are possible.</returns>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.ProjectIdPattern_0.RunnerFactory.Runner.TryMatchAtCurrentPosition(System.ReadOnlySpan{System.Char})">
+            <summary>Determine whether <paramref name="inputSpan"/> at base.runtextpos is a match for the regular expression.</summary>
+            <param name="inputSpan">The text being scanned by the regular expression.</param>
+            <returns>true if the regular expression matches at the current position; otherwise, false.</returns>
+        </member>
+        <member name="T:System.Text.RegularExpressions.Generated.Utilities">
+            <summary>Helper methods used by generated <see cref="T:System.Text.RegularExpressions.Regex"/>-derived implementations.</summary>
+        </member>
+        <member name="F:System.Text.RegularExpressions.Generated.Utilities.s_defaultTimeout">
+            <summary>Default timeout value set in <see cref="T:System.AppContext"/>, or <see cref="F:System.Text.RegularExpressions.Regex.InfiniteMatchTimeout"/> if none was set.</summary>
+        </member>
+        <member name="F:System.Text.RegularExpressions.Generated.Utilities.s_hasTimeout">
+            <summary>Whether <see cref="F:System.Text.RegularExpressions.Generated.Utilities.s_defaultTimeout"/> is non-infinite.</summary>
+        </member>
+        <member name="F:System.Text.RegularExpressions.Generated.Utilities.s_asciiLettersLowerAndDigits">
+            <summary>Supports searching for characters in or not in "0123456789abcdefghijklmnopqrstuvwxyz".</summary>
+        </member>
+    </members>
+</doc>

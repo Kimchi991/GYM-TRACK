@@ -53,7 +53,7 @@
                 <Border BackgroundColor="#1E293B" Padding="15" Stroke="Transparent" StrokeShape="RoundRectangle 12">
                     <VerticalStackLayout Spacing="12">
                         <Label Text="Routine Name:" TextColor="#94A3B8" FontSize="14" />
-                        <Entry Text="{Binding RoutineName}" Placeholder="e.g. Upper Body Power" TextColor="White" BackgroundColor="#0F172A" Padding="10" />
+                        <Entry Text="{Binding RoutineName}" Placeholder="e.g. Upper Body Power" TextColor="White" BackgroundColor="#0F172A" />
 
                         <!-- Add Exercise Inputs -->
                         <Grid ColumnDefinitions="*, 60, 60, 70" ColumnSpacing="8">
